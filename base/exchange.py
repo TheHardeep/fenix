@@ -361,7 +361,7 @@ class Exchange:
     @staticmethod
     def jsonify_expiry(data_frame: DataFrame) -> dict[Any, Any]:
         """
-        Creates a Lofn Unified Dicitonary for BankNifty & Nifty Options,
+        Creates a kronos Unified Dicitonary for BankNifty & Nifty Options,
         in the following Format:
 
             Global[expiry][root][option][strikeprice]
@@ -398,7 +398,7 @@ class Exchange:
             }
 
         Parameters:
-            data_frame (DataFrame): DataFrame to Convert to Voluspa Unified Expiry Dictionary
+            data_frame (DataFrame): DataFrame to Convert to kronos Unified Expiry Dictionary
 
         Returns:
             dict[Any, Any]: Dictioanry With 3 Most Recent Expiries for Both BankNifty & Nifty.

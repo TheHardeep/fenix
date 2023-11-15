@@ -12,7 +12,7 @@ __all__ = [
     "Position",
     "Profile",
     "UniqueID",
-    ]
+]
 
 
 class Side:
@@ -22,12 +22,14 @@ class Side:
     BUY = "BUY"
     SELL = "SELL"
 
+
 class Root:
     """
     BANKNIFTY & NIFTY Constants.
     """
     BNF = "BANKNIFTY"
     NF = "NIFTY"
+
 
 class WeeklyExpiry:
     """
@@ -37,6 +39,7 @@ class WeeklyExpiry:
     NEXT = "NEXT"
     FAR = "FAR"
 
+
 class OrderType:
     """
     Order Type Constants.
@@ -45,6 +48,7 @@ class OrderType:
     LIMIT = "LIMIT"
     SLM = "SLM"
     SL = "SL"
+
 
 class ExchangeCode:
     """
@@ -60,6 +64,7 @@ class ExchangeCode:
     MCX = "MCX"
     CDS = "CDS"
 
+
 class Product:
     """
     Product Type Constants.
@@ -72,6 +77,7 @@ class Product:
     CO = "CO"
     SM = "SM"  # SuperMutlple
 
+
 class Validity:
     """
     Order Validity Constnats.
@@ -82,6 +88,7 @@ class Validity:
     GTC = "GTC"
     FOK = "FOK"
     TTL = "TTL"
+
 
 class Variety:
     """
@@ -95,6 +102,7 @@ class Variety:
     ICEBERG = "ICEBERG"
     AUCTION = "AUCTION"
 
+
 class Status:
     """
     Order Status Constants.
@@ -107,6 +115,7 @@ class Status:
     CANCELLED = "CANCELLED"
     PARTIALLYFILLED = "PARTIALLYFILLED"
     MODIFIED = "MODIFIED"
+
 
 class Order:
     """
@@ -140,6 +149,7 @@ class Order:
     VARIETY = "variety"
     INFO = "info"
 
+
 class Position:
     """
     Unified Account Positions Response Dicitonary Keys Constants.
@@ -159,6 +169,7 @@ class Position:
     EXCHANGE = "exchange"
     INFO = "info"
 
+
 class Profile:
     """
     Unified Account Profile Response Dicitonary Keys Constants.
@@ -175,6 +186,7 @@ class Profile:
     EXHCNAGESENABLED = "exchangesEnabled"
     ENABLED = "enabled"
     INFO = "info"
+
 
 class UniqueID:
     """

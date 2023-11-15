@@ -21,7 +21,8 @@ from requests.exceptions import TooManyRedirects
 from requests.exceptions import RequestException
 from requests.exceptions import ConnectionError as requestsConnectionError
 
-from kronos.base.constants import Order
+from kronos.base.constants import Root
+from kronos.base.constants import WeeklyExpiry
 
 from kronos.base.errors import InputError
 from kronos.base.errors import ResponseError
@@ -56,7 +57,7 @@ class Exchange:
             requests.sessions.session: returns a reqeusts.sessions.session Object
         """
         return req_session()
-    
+
     @classmethod
     def fetch(cls,
               method: str,
@@ -90,18 +91,18 @@ class Exchange:
         Returns:
             Response: Response Object
         """
+
         try:
             response = cls.session.request(method=method,
-                                                 url=url,
-                                                 headers=headers,
-                                                 data=data,
-                                                 json=json,
-                                                 params=params,
-                                                 auth=auth,
-                                                 timeout=timeout,
-                                                 )
-            # print()
-            print(response.url,response.text)
+                                           url=url,
+                                           headers=headers,
+                                           data=data,
+                                           json=json,
+                                           params=params,
+                                           auth=auth,
+                                           timeout=timeout,
+                                           )
+
             response.raise_for_status()
 
             return response
@@ -404,11 +405,11 @@ class Exchange:
         """
 
         expiry_data = {
-            WeeklyExpiry.CURRENT: { Root.BNF:{}, Root.NF:{}, Root.FNF:{} },
-            WeeklyExpiry.NEXT: { Root.BNF:{}, Root.NF:{}, Root.FNF:{} },
-            WeeklyExpiry.FAR: { Root.BNF:{}, Root.NF:{}, Root.FNF:{} },
-            "Expiry": { Root.BNF:[], Root.NF:[], Root.FNF:[] },
-            "LotSize": { Root.BNF:[], Root.NF:[], Root.FNF:[] },
+            WeeklyExpiry.CURRENT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
+            WeeklyExpiry.NEXT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
+            WeeklyExpiry.FAR: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
+            "Expiry": {Root.BNF: [], Root.NF: [], Root.FNF: []},
+            "LotSize": {Root.BNF: [], Root.NF: [], Root.FNF: []},
         }
 
         data_frame = data_frame.sort_values(by=['Expiry'])
@@ -416,9 +417,9 @@ class Exchange:
         for root in [Root.BNF, Root.NF, Root.FNF]:
 
 
-            expiries = data_frame[data_frame['Root'] ==  root]['Expiry'].unique()
+            expiries = data_frame[data_frame['Root'] == root]['Expiry'].unique()
             expiries = expiries[expiries >= str(datetime.now().date())]
-            lotsize = data_frame[data_frame['Root'] ==  root]['LotSize'].unique()[0]
+            lotsize = data_frame[data_frame['Root'] == root]['LotSize'].unique()[0]
 
             dfex1 = data_frame[data_frame['Expiry'] == expiries[0]]
             dfex2 = data_frame[data_frame['Expiry'] == expiries[1]]
@@ -430,15 +431,13 @@ class Exchange:
 
                 dfex['ExpiryName'] = expiry_name
 
-                global_dict =  {'CE': {}, "PE": {}}
+                global_dict = {'CE': {}, "PE": {}}
 
-                for j, i in dfex.groupby([ 'Option', 'StrikePrice']):
+                for j, i in dfex.groupby(['Option', 'StrikePrice']):
                     global_dict[j[0]][j[1]] = i.to_dict('records')[0]
                     expiry_data[expiry_name][root] = global_dict
 
                 expiry_data['Expiry'][root] = expiries
                 expiry_data['LotSize'][root] = lotsize
-
-
 
         return expiry_data

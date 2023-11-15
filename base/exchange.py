@@ -360,13 +360,13 @@ class Exchange:
     @staticmethod
     def jsonify_expiry(data_frame: DataFrame) -> dict[Any, Any]:
         """
-        Creates a kronos Unified Dicitonary for BankNifty & Nifty Options,
+        Creates a Lofn Unified Dicitonary for BankNifty & Nifty Options,
         in the following Format:
 
             Global[expiry][root][option][strikeprice]
 
             expiry: 'CURRENT' | 'NEXT' | 'FAR' | 'Expiries'(A List of All Expiries).
-            root: 'BANKNIFTY' | 'NIFTY'.
+            root: 'BANKNIFTY' | 'NIFTY' | 'FINNIFTY.
             option: 'CE' | 'PE'.
             strikeprice: Integer Values for Strike Price.
 
@@ -385,72 +385,8 @@ class Exchange:
                                 'TickSize': 0.05,
                                 'ExpiryName': 'CURRENT'
                                 },
-                    'NIFTY': {
-                        'CE': {
-                            15650: {
-                                'Token': 55508,
-                                'Symbol': 'NIFTY2331615650CE',
-                                'Expiry': '2023-03-16',
-                                'Option': 'CE',
-                                'StrikePrice': 15650,
-                                'LotSize': 50,
-                                'Root': 'NIFTY',
-                                'TickSize': 0.05,
-                                'ExpiryName': 'CURRENT'},
-                'NEXT': {
-                    'BANKNIFTY': {
-                        'CE': {
-                            34500: {
-                                'Token': 41503,
-                                'Symbol': 'BANKNIFTY2332334500CE',
-                                'Expiry': '2023-03-23',
-                                'Option': 'CE',
-                                'StrikePrice': 34500,
-                                'LotSize': 25,
-                                'Root': 'BANKNIFTY',
-                                'TickSize': 0.05,
-                                'ExpiryName': 'NEXT'
-                                },
-                    'NIFTY': {
-                        'CE': {
-                            15650: {
-                                'Token': 41806,
-                                'Symbol': 'NIFTY2332315650CE',
-                                'Expiry': '2023-03-23',
-                                'Option': 'CE',
-                                'StrikePrice': 15650,
-                                'LotSize': 50,
-                                'Root': 'NIFTY',
-                                'TickSize': 0.05,
-                                'ExpiryName': 'NEXT'
-                                },
-                'FAR': {
-                    'BANKNIFTY': {
-                        'CE': {
-                            25500: {
-                                'Token': 53090,
-                                'Symbol': 'BANKNIFTY23MAR25500CE',
-                                'Expiry': '2023-03-29',
-                                'Option': 'CE',
-                                'StrikePrice': 25500,
-                                'LotSize': 25,
-                                'Root': 'BANKNIFTY',
-                                'TickSize': 0.05,
-                                'ExpiryName': 'FAR'
-                                },
-                    'NIFTY': {
-                        'CE': {
-                            11000: {
-                                'Token': 42446,
-                                'Symbol': 'NIFTY23MAR11000CE',
-                                'Expiry': '2023-03-29',
-                                'Option': 'CE',
-                                'StrikePrice': 11000,
-                                'LotSize': 50,
-                                'Root': 'NIFTY',
-                                'TickSize': 0.05,
-                                'ExpiryName': 'FAR'
-                                },
+                    ...
+
                 'Expiries': [
                      '2023-03-16', '2023-03-23', '2023-03-29', '2023-04-06',
                      '2023-04-13', '2023-04-27', '2023-05-25', '2023-06-29',
@@ -467,34 +403,42 @@ class Exchange:
             dict[Any, Any]: Dictioanry With 3 Most Recent Expiries for Both BankNifty & Nifty.
         """
 
-        expiry_data = {}
+        expiry_data = {
+            WeeklyExpiry.CURRENT: { Root.BNF:{}, Root.NF:{}, Root.FNF:{} },
+            WeeklyExpiry.NEXT: { Root.BNF:{}, Root.NF:{}, Root.FNF:{} },
+            WeeklyExpiry.FAR: { Root.BNF:{}, Root.NF:{}, Root.FNF:{} },
+            "Expiry": { Root.BNF:[], Root.NF:[], Root.FNF:[] },
+            "LotSize": { Root.BNF:[], Root.NF:[], Root.FNF:[] },
+        }
 
         data_frame = data_frame.sort_values(by=['Expiry'])
 
-        expiries = data_frame['Expiry'].unique()
-        expiries = expiries[expiries >= str(datetime.now().date())]
+        for root in [Root.BNF, Root.NF, Root.FNF]:
 
-        dfex1 = data_frame[data_frame['Expiry'] == expiries[0]]
-        dfex2 = data_frame[data_frame['Expiry'] == expiries[1]]
-        dfex3 = data_frame[data_frame['Expiry'] == expiries[2]]
 
-        dfexs = [("CURRENT", dfex1), ("NEXT", dfex2), ("FAR", dfex3)]
+            expiries = data_frame[data_frame['Root'] ==  root]['Expiry'].unique()
+            expiries = expiries[expiries >= str(datetime.now().date())]
+            lotsize = data_frame[data_frame['Root'] ==  root]['LotSize'].unique()[0]
 
-        for expiry_name, dfex in dfexs:
+            dfex1 = data_frame[data_frame['Expiry'] == expiries[0]]
+            dfex2 = data_frame[data_frame['Expiry'] == expiries[1]]
+            dfex3 = data_frame[data_frame['Expiry'] == expiries[2]]
 
-            dfex['ExpiryName'] = expiry_name
+            dfexs = [("CURRENT", dfex1), ("NEXT", dfex2), ("FAR", dfex3)]
 
-            global_dict: dict = {
-                "BANKNIFTY": {'CE': {}, "PE": {}},
-                "NIFTY": {'CE': {}, "PE": {}}
-                }
+            for expiry_name, dfex in dfexs:
 
-            for j, i in dfex.groupby(['Root', 'Option', 'StrikePrice']):
+                dfex['ExpiryName'] = expiry_name
 
-                global_dict[j[0]][j[1]][j[2]] = i.to_dict('records')[0]
+                global_dict =  {'CE': {}, "PE": {}}
 
-            expiry_data[expiry_name] = global_dict
+                for j, i in dfex.groupby([ 'Option', 'StrikePrice']):
+                    global_dict[j[0]][j[1]] = i.to_dict('records')[0]
+                    expiry_data[expiry_name][root] = global_dict
 
-        expiry_data['Expiries'] = data_frame['Expiry'].unique()
+                expiry_data['Expiry'][root] = expiries
+                expiry_data['LotSize'][root] = lotsize
+
+
 
         return expiry_data

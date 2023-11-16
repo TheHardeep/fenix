@@ -154,7 +154,6 @@ class Exchange:
         """
         try:
             response = loads(response.text.strip())
-            print(response)
             return response
         except Exception as exc:
             raise ResponseError({"Status": response.status_code,
@@ -408,8 +407,8 @@ class Exchange:
             WeeklyExpiry.CURRENT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
             WeeklyExpiry.NEXT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
             WeeklyExpiry.FAR: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
-            "Expiry": {Root.BNF: [], Root.NF: [], Root.FNF: []},
-            "LotSize": {Root.BNF: [], Root.NF: [], Root.FNF: []},
+            WeeklyExpiry.Expiry: {Root.BNF: [], Root.NF: [], Root.FNF: []},
+            WeeklyExpiry.LotSize: {Root.BNF: [], Root.NF: [], Root.FNF: []},
         }
 
         data_frame = data_frame.sort_values(by=['Expiry'])

@@ -29,6 +29,7 @@ class Root:
     """
     BNF = "BANKNIFTY"
     NF = "NIFTY"
+    FNF = "FINNIFTY"
 
 
 class WeeklyExpiry:
@@ -38,6 +39,8 @@ class WeeklyExpiry:
     CURRENT = "CURRENT"
     NEXT = "NEXT"
     FAR = "FAR"
+    EXPIRY = "Expiry"
+    LOTSIZE = "LotSize"
 
 
 class OrderType:
@@ -75,7 +78,7 @@ class Product:
     MIS = "MIS"
     BO = "BO"
     CO = "CO"
-    SM = "SM"  # SuperMutlple
+    SM = "SM"  # SuperMutilple
 
 
 class Validity:

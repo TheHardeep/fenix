@@ -407,8 +407,8 @@ class Exchange:
             WeeklyExpiry.CURRENT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
             WeeklyExpiry.NEXT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
             WeeklyExpiry.FAR: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
-            WeeklyExpiry.Expiry: {Root.BNF: [], Root.NF: [], Root.FNF: []},
-            WeeklyExpiry.LotSize: {Root.BNF: [], Root.NF: [], Root.FNF: []},
+            WeeklyExpiry.EXPIRY: {Root.BNF: [], Root.NF: [], Root.FNF: []},
+            WeeklyExpiry.LOTSIZE: {Root.BNF: [], Root.NF: [], Root.FNF: []},
         }
 
         data_frame = data_frame.sort_values(by=['Expiry'])

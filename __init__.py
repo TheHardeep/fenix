@@ -39,7 +39,7 @@ from kronos.aliceblue import aliceblue                  # noqa :F401
 
 exchanges = [
     'aliceblue',
-    ]
+]
 
 base = [
     'Exchange',

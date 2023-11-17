@@ -43,13 +43,13 @@ class Exchange:
     """ Base Class Common to All Brokers """
 
     id = ''
-    session = None
+    _session = None
 
     def __repr__(self):
         return f"kronos.{self.id}()"
 
     @staticmethod
-    def create_session():
+    def _create_session():
         """
         Creates A request Session.
 
@@ -93,15 +93,15 @@ class Exchange:
         """
 
         try:
-            response = cls.session.request(method=method,
-                                           url=url,
-                                           headers=headers,
-                                           data=data,
-                                           json=json,
-                                           params=params,
-                                           auth=auth,
-                                           timeout=timeout,
-                                           )
+            response = cls._session.request(method=method,
+                                            url=url,
+                                            headers=headers,
+                                            data=data,
+                                            json=json,
+                                            params=params,
+                                            auth=auth,
+                                            timeout=timeout,
+                                            )
 
             response.raise_for_status()
 
@@ -182,7 +182,7 @@ class Exchange:
 
 
     @staticmethod
-    def key_mapper(dictionary: dict, key: str, name: str) -> str:
+    def _key_mapper(dictionary: dict, key: str, name: str) -> str:
         """
         A Simple Function to help the User if they input a wrong Key in the Dictionary,
         also tells the User the possible Keys for the Dicitonary.

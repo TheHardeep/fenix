@@ -630,7 +630,7 @@ class aliceblue(Exchange):
                      unique_id: str,
                      headers: dict,
                      price: float = 0,
-                     trigger_price: float = 0,
+                     trigger: float = 0,
                      target: float = 0,
                      stoploss: float = 0,
                      trailing_sl: float = 0,
@@ -656,23 +656,23 @@ class aliceblue(Exchange):
             dict: kronos Unified Order Response
         """
 
-        if not price and trigger_price:
+        if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
             order_type = OrderType.MARKET
-        elif not trigger_price:
+        elif not trigger:
             order_type = OrderType.LIMIT
         else:
             order_type = OrderType.SL
 
-        if order_type != Product.BO:
+        if not target:
             json_data = [
                 {
                     "symbol_id": token,
                     "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                     "trading_symbol": symbol,
                     "price": price,
-                    "trigPrice": trigger_price,
+                    "trigPrice": trigger,
                     "qty": quantity,
                     "transtype": cls._key_mapper(cls.req_side, side, 'side'),
                     "prctyp": cls.req_order_type[order_type],
@@ -692,7 +692,7 @@ class aliceblue(Exchange):
                     "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                     "trading_symbol": symbol,
                     "price": price,
-                    "trigPrice": trigger_price,
+                    "trigPrice": trigger,
                     "target": target,
                     "stopLoss": stoploss,
                     "trailing_stop_loss": trailing_sl,
@@ -832,7 +832,7 @@ class aliceblue(Exchange):
                  exchange: str,
                  symbol: str,
                  price: float,
-                 trigger_price: float,
+                 trigger: float,
                  quantity: int,
                  side: str,
                  unique_id: str,
@@ -867,7 +867,7 @@ class aliceblue(Exchange):
                 "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "trading_symbol": symbol,
                 "price": price,
-                "trigPrice": trigger_price,
+                "trigPrice": trigger,
                 "qty": quantity,
                 "transtype": cls._key_mapper(cls.req_side, side, 'side'),
                 "prctyp": cls.req_order_type[OrderType.SL],
@@ -890,7 +890,7 @@ class aliceblue(Exchange):
                   token: int,
                   exchange: str,
                   symbol: str,
-                  trigger_price: float,
+                  trigger: float,
                   quantity: int,
                   side: str,
                   unique_id: str,
@@ -925,7 +925,7 @@ class aliceblue(Exchange):
                 "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "trading_symbol": symbol,
                 "price": 0,
-                "trigPrice": trigger_price,
+                "trigPrice": trigger,
                 "qty": quantity,
                 "transtype": cls._key_mapper(cls.req_side, side, 'side'),
                 "prctyp": cls.req_order_type[OrderType.SLM],
@@ -955,7 +955,7 @@ class aliceblue(Exchange):
                          option: str,
                          strike_price: int,
                          price: float,
-                         trigger_price: float,
+                         trigger: float,
                          quantity: int,
                          side: str,
                          product: str,
@@ -969,7 +969,7 @@ class aliceblue(Exchange):
 
         Parameters:
             price (float): price of the order.
-            trigger_price (float): trigger price of the order.
+            trigger (float): trigger price of the order.
             quantity (int): Order quantity.
             option (str): Option Type: 'CE', 'PE'.
             root (str): Derivative: BANKNIFTY, NIFTY.
@@ -1001,11 +1001,11 @@ class aliceblue(Exchange):
         token = detail['Token']
         symbol = detail['Symbol']
 
-        if not price and trigger_price:
+        if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
             order_type = OrderType.MARKET
-        elif not trigger_price:
+        elif not trigger:
             order_type = OrderType.LIMIT
         else:
             order_type = OrderType.SL
@@ -1016,7 +1016,7 @@ class aliceblue(Exchange):
                 "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "trading_symbol": symbol,
                 "price": price,
-                "trigPrice": trigger_price,
+                "trigPrice": trigger,
                 "qty": quantity,
                 "transtype": cls._key_mapper(cls.req_side, side, 'side'),
                 "prctyp": cls.req_order_type[order_type],
@@ -1189,7 +1189,7 @@ class aliceblue(Exchange):
                      option: str,
                      strike_price: int,
                      price: float,
-                     trigger_price: float,
+                     trigger: float,
                      quantity: int,
                      side: str,
                      headers: dict,
@@ -1206,7 +1206,7 @@ class aliceblue(Exchange):
 
         Parameters:
             price (float): price of the order.
-            trigger_price (float): trigger price of the order.
+            trigger (float): trigger price of the order.
             quantity (int): Order quantity.
             option (str): Option Type: 'CE', 'PE'.
             root (str): Derivative: BANKNIFTY, NIFTY.
@@ -1244,7 +1244,7 @@ class aliceblue(Exchange):
                 "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "trading_symbol": symbol,
                 "price": price,
-                "trigPrice": trigger_price,
+                "trigPrice": trigger,
                 "qty": quantity,
                 "transtype": cls._key_mapper(cls.req_side, side, 'side'),
                 "prctyp": cls.req_order_type[OrderType.SL],
@@ -1266,7 +1266,7 @@ class aliceblue(Exchange):
     def slm_order_nfo(cls,
                       option: str,
                       strike_price: int,
-                      trigger_price: float,
+                      trigger: float,
                       quantity: int,
                       side: str,
                       headers: dict,
@@ -1283,7 +1283,7 @@ class aliceblue(Exchange):
 
         Parameters:
             price (float): price of the order.
-            trigger_price (float): trigger price of the order.
+            trigger (float): trigger price of the order.
             quantity (int): Order quantity.
             option (str): Option Type: 'CE', 'PE'.
             root (str): Derivative: BANKNIFTY, NIFTY.
@@ -1321,7 +1321,7 @@ class aliceblue(Exchange):
                 "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "trading_symbol": symbol,
                 "price": 0,
-                "trigPrice": trigger_price,
+                "trigPrice": trigger,
                 "qty": quantity,
                 "transtype": cls._key_mapper(cls.req_side, side, 'side'),
                 "prctyp": cls.req_order_type[OrderType.SLM],
@@ -1350,7 +1350,7 @@ class aliceblue(Exchange):
                         exchange: str,
                         symbol: str,
                         price: float,
-                        trigger_price: float,
+                        trigger: float,
                         quantity: int,
                         side: str,
                         unique_id: str,
@@ -1386,11 +1386,11 @@ class aliceblue(Exchange):
         Returns:
             dict: kronos Unified Order Response
         """
-        if not price and trigger_price:
+        if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
             order_type = OrderType.MARKET
-        elif not trigger_price:
+        elif not trigger:
             order_type = OrderType.LIMIT
         else:
             order_type = OrderType.SL
@@ -1402,7 +1402,7 @@ class aliceblue(Exchange):
                 "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "trading_symbol": symbol,
                 "price": price,
-                "trigPrice": trigger_price,
+                "trigPrice": trigger,
                 "qty": quantity,
                 "transtype": cls._key_mapper(cls.req_side, side, 'side'),
                 "prctyp": cls.req_order_type[order_type],
@@ -1556,7 +1556,7 @@ class aliceblue(Exchange):
     @classmethod
     def sl_order_bo(cls,
                     price: float,
-                    trigger_price: float,
+                    trigger: float,
                     symbol: str,
                     token: int,
                     side: str,
@@ -1601,7 +1601,7 @@ class aliceblue(Exchange):
                 "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "trading_symbol": symbol,
                 "price": price,
-                "trigPrice": trigger_price,
+                "trigPrice": trigger,
                 "target": target,
                 "stopLoss": stoploss,
                 "trailing_stop_loss": trailing_sl,
@@ -1624,7 +1624,7 @@ class aliceblue(Exchange):
 
     @classmethod
     def slm_order_bo(cls,
-                     trigger_price: float,
+                     trigger: float,
                      symbol: str,
                      token: int,
                      side: str,
@@ -1669,7 +1669,7 @@ class aliceblue(Exchange):
                 "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "trading_symbol": symbol,
                 "price": 0,
-                "trigPrice": trigger_price,
+                "trigPrice": trigger,
                 "target": target,
                 "stopLoss": stoploss,
                 "trailing_stop_loss": trailing_sl,
@@ -1853,7 +1853,7 @@ class aliceblue(Exchange):
                      order_id: str,
                      headers: dict,
                      price: float | None = None,
-                     trigger_price: float | None = None,
+                     trigger: float | None = None,
                      quantity: int | None = None,
                      order_type: str | None = None,
                      validity: str | None = None,
@@ -1887,7 +1887,7 @@ class aliceblue(Exchange):
             "prctyp": order["Ordtype"],
             "price": price or order["Prc"],
             "qty": quantity or order["Qty"],
-            "trigPrice": trigger_price or order["triggerprice"],
+            "trigPrice": trigger or order["triggerprice"],
             "filledQuantity": order["filledShares"],
             "pCode": order["productcode"],
         }

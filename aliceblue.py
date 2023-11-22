@@ -175,6 +175,7 @@ class aliceblue(Exchange):
 
     req_variety = {
         Variety.REGULAR: "REGULAR",
+        Variety.STOPLOSS: "REGULAR",
         Variety.BO: "BO",
         Variety.AMO: "AMO",
     }
@@ -839,7 +840,7 @@ class aliceblue(Exchange):
                  headers: dict,
                  product: str = Product.MIS,
                  validity: str = Validity.DAY,
-                 variety: str = Variety.REGULAR,
+                 variety: str = Variety.STOPLOSS,
                  ) -> dict[Any, Any]:
 
         """
@@ -897,7 +898,7 @@ class aliceblue(Exchange):
                   headers: dict,
                   product: str = Product.MIS,
                   validity: str = Validity.DAY,
-                  variety: str = Variety.REGULAR,
+                  variety: str = Variety.STOPLOSS,
                   ) -> dict[Any, Any]:
 
         """
@@ -1198,7 +1199,7 @@ class aliceblue(Exchange):
                      exchange: str = ExchangeCode.NFO,
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
-                     variety: str = Variety.REGULAR,
+                     variety: str = Variety.STOPLOSS,
                      unique_id: str = UniqueID.SLORDER,
                      ) -> dict[Any, Any]:
         """
@@ -1275,7 +1276,7 @@ class aliceblue(Exchange):
                       exchange: str = ExchangeCode.NFO,
                       product: str = Product.MIS,
                       validity: str = Validity.DAY,
-                      variety: str = Variety.REGULAR,
+                      variety: str = Variety.STOPLOSS,
                       unique_id: str = UniqueID.SLORDER,
                       ) -> dict[Any, Any]:
         """
@@ -1358,7 +1359,7 @@ class aliceblue(Exchange):
                         target: float = 0,
                         stoploss: float = 0,
                         trailing_sl: float = 0,
-                        product: str = Product.MIS,
+                        product: str = Product.BO,
                         validity: str = Validity.DAY,
                         variety: str = Variety.BO,
                         ) -> dict[Any, Any]:
@@ -1435,7 +1436,7 @@ class aliceblue(Exchange):
                         target: float = 0,
                         stoploss: float = 0,
                         trailing_sl: float = 0,
-                        product: str = Product.MIS,
+                        product: str = Product.BO,
                         validity: str = Validity.DAY,
                         variety: str = Variety.BO,
                         ) -> dict[Any, Any]:
@@ -1567,7 +1568,7 @@ class aliceblue(Exchange):
                     target: float = 0,
                     stoploss: float = 0,
                     trailing_sl: float = 0,
-                    product: str = Product.MIS,
+                    product: str = Product.BO,
                     validity: str = Validity.DAY,
                     variety: str = Variety.BO,
                     ) -> dict[Any, Any]:
@@ -1635,7 +1636,7 @@ class aliceblue(Exchange):
                      target: float = 0,
                      stoploss: float = 0,
                      trailing_sl: float = 0,
-                     product: str = Product.MIS,
+                     product: str = Product.BO,
                      validity: str = Validity.DAY,
                      variety: str = Variety.BO,
                      ) -> dict[Any, Any]:

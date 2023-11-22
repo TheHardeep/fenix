@@ -13,9 +13,13 @@ from kronos.base.constants import OrderType
 from kronos.base.constants import ExchangeCode
 from kronos.base.constants import Product
 from kronos.base.constants import Validity
-from kronos.base.constants import Order
+from kronos.base.constants import Variety
 from kronos.base.constants import Status
+from kronos.base.constants import Order
 from kronos.base.constants import Profile
+from kronos.base.constants import Root
+from kronos.base.constants import WeeklyExpiry
+from kronos.base.constants import UniqueID
 
 from kronos.base.errors import TokenDownloadError
 from kronos.base.errors import ResponseError
@@ -46,37 +50,51 @@ class choice(Exchange):
     """ Class for Choice """
 
 
+    # Market Data Dictonaries
 
     nfo_tokens = {}
     id = 'choice'
-    session = Exchange.create_session()
+    _session = Exchange._create_session()
 
-    api_documentation_link = "https://uat.jiffy.in/api/OpenAPI/Info"
-    market_data_url = "https://scripmaster-ftp.s3.ap-south-1.amazonaws.com/scripmaster"
-    base_url = "https://finx.choiceindia.com/api/OpenAPI"
 
+    # Base URLs
+
+    base_urls = {
+        "api_documentation_link": "https://uat.jiffy.in/api/OpenAPI/Info",
+        "market_data_url": "https://scripmaster-ftp.s3.ap-south-1.amazonaws.com/scripmaster",
+        "base_url": "https://finx.choiceindia.com/api/OpenAPI",
+    }
+
+
+    # Access Token Generation URLs
 
     token_urls = {
-        "login": f"{base_url}/LoginTOTP",
-        "totp": f"{base_url}/GetClientLoginTOTP",
-        "validate_totp": f"{base_url}/ValidateTOTP",
+        "login": f"{base_urls['base_url']}/LoginTOTP",
+        "totp": f"{base_urls['base_url']}/GetClientLoginTOTP",
+        "validate_totp": f"{base_urls['base_url']}/ValidateTOTP",
     }
+
+
+    # Order Placing URLs
 
     urls = {
-        "place_order": f"{base_url}/NewOrder",
-        "modify_order": f"{base_url}/ModifyOrder",
-        "cancel_order": f"{base_url}/CancelOrder",
-        "order_history": f"{base_url}/OrderBookByOrderNo",
-        "orderbook": f"{base_url}/OrderBook",
-        "tradebook": f"{base_url}/TradeBook",
+        "place_order": f"{base_urls['base_url']}/NewOrder",
+        "modify_order": f"{base_urls['base_url']}/ModifyOrder",
+        "cancel_order": f"{base_urls['base_url']}/CancelOrder",
+        "order_history": f"{base_urls['base_url']}/OrderBookByOrderNo",
+        "orderbook": f"{base_urls['base_url']}/OrderBook",
+        "tradebook": f"{base_urls['base_url']}/TradeBook",
 
-        "positions": f"{base_url}/NetPosition",
-        "holdings": f"{base_url}/Holdings",
-        "funds": f"{base_url}/FundsView",
+        "positions": f"{base_urls['base_url']}/NetPosition",
+        "holdings": f"{base_urls['base_url']}/Holdings",
+        "funds": f"{base_urls['base_url']}/FundsView",
 
-        "profile": f"{base_url}/UserProfile",
+        "profile": f"{base_urls['base_url']}/UserProfile",
 
     }
+
+
+    # Request Parameters Dictionaries
 
     req_exchange = {
         ExchangeCode.NSE: 1,
@@ -88,32 +106,34 @@ class choice(Exchange):
         "NCDEX-S": 8,
         "NCDS-D": 13,
         "NCDS-S": 14
-        }
+    }
 
     req_order_type = {
         OrderType.MARKET: "RL_MKT",
         OrderType.LIMIT: "RL_LIMIT",
         OrderType.SL: "SL_LIMIT",
         OrderType.SLM: "SL_MKT"
-        }
+    }
 
     req_product = {
         Product.MIS: "M",
         Product.NRML: "D"
-        }
+    }
 
     req_side = {
         Side.BUY: 1,
         Side.SELL: 2
-        }
+    }
 
     req_validity = {
         Validity.DAY: 1,
         Validity.IOC: 4,
         Validity.GTD: 11,
         Validity.GTC: 11
-        }
+    }
 
+
+    # Response Parameters Dictionaries
 
     resp_exchange = {
         1: ExchangeCode.NSE,
@@ -125,24 +145,24 @@ class choice(Exchange):
         8: "NCDEX-S",
         13: "NCDS-D",
         14: "NCDS-S",
-        }
+    }
 
     resp_order_type = {
         '2': OrderType.MARKET,
-        }
+    }
 
     resp_product = {
         "M": Product.MIS,
         "D": Product.NRML
-        }
+    }
 
     resp_side = {
         '1': Side.BUY,
         '2': Side.SELL
-        }
+    }
 
     resp_status = {
-        "CLIENT XMITTED" : Status.PENDING,
+        "CLIENT XMITTED": Status.PENDING,
         "GATEWAY XMITTED": Status.PENDING,
         "OMS XMITTED": Status.PENDING,
         "EXCHANGE XMITTED": Status.PENDING,
@@ -150,18 +170,22 @@ class choice(Exchange):
         "GATEWAY REJECT": Status.REJECTED,
         "OMS REJECT": Status.REJECTED,
         "ORDER ERROR": Status.REJECTED,
-        "FROZEN" : Status.REJECTED,
+        "FROZEN": Status.REJECTED,
         "CANCELLED": Status.CANCELLED,
-        "AMO CANCELLED" : Status.CANCELLED,
-        "AMO SUBMITTED" : Status.OPEN,
+        "AMO CANCELLED": Status.CANCELLED,
+        "AMO SUBMITTED": Status.OPEN,
         "EXECUTED": Status.FILLED,
-        }
+    }
 
     resp_validity = {
         1: Validity.DAY,
         4: Validity.IOC,
         11: f"{Validity.GTD}/{Validity.GTC}",
-        }
+    }
+
+
+    # NFO Script Fetch
+
 
     @classmethod
     def expiry_markets(cls) -> None:
@@ -177,7 +201,7 @@ class choice(Exchange):
                 days = 2
 
             date_obj = cls.time_delta(todaysdate, days, dtformat="%d%b%Y")
-            link = f"{cls.market_data_url}/SCRIP_MASTER_{date_obj}.csv"
+            link = f"{cls.base_urls['market_data_url']}/SCRIP_MASTER_{date_obj}.csv"
             df = cls.data_reader(link, filetype='csv', dtype={"ISIN": str, "SecName": str, 'Instrument': str, "PriceUnit": str, "QtyUnit": str, "DeliveryUnit": str})
 
             df = df[((df['Symbol'] == 'BANKNIFTY') | (df['Symbol'] == 'NIFTY')) & (df['Instrument'] == 'OPTIDX')]
@@ -204,46 +228,54 @@ class choice(Exchange):
         except Exception as exc:
             raise TokenDownloadError({"Error": exc.args}) from exc
 
+
+    # Headers & Json Parsers
+
+
     @classmethod
-    def create_token(cls,
-                     user_name: str,
-                     password: str,
-                     vendor_id: str,
-                     vendor_key: str,
-                     encryption_key: str,
-                     encryption_iv: str,
-                     ) -> dict[str, str]:
+    def create_headers(cls,
+                       params: dict,
+                       ) -> dict[str, str]:
 
-        encryption_client = EncryptionClient(encryption_key.encode(), encryption_iv.encode())
-        username = encryption_client.encrypt(user_name.encode())
-        password = encryption_client.encrypt(password.encode())
 
-        headers = {'VendorId': vendor_id, 'VendorKey': vendor_key, 'Content-Type': 'application/json'}
-        json_data = {"UserId": user_name, "Pwd": password}
-        response = cls.fetch("POST", cls.token_urls["login"], headers=headers, json=json_data)
+        for key in ["user_name", "password", "vendor_id", "vendor_key", "encryption_key", "encryption_iv"]:
+            if key not in params:
+                raise KeyError(f"Please provide {key}")
+
+
+        encryption_client = EncryptionClient(params["encryption_key"].encode(), params["encryption_iv"].encode())
+        username = encryption_client.encrypt(params["user_name"].encode())
+        password = encryption_client.encrypt(params["password"].encode())
+
+        headers = {'VendorId': params["vendor_id"], 'VendorKey': params["vendor_key"], 'Content-Type': 'application/json'}
+        json_data = {"UserId": params["user_name"], "Pwd": password}
+        response = cls.fetch(method="POST", url=cls.token_urls["login"],
+                             json=json_data, headers=headers)
         # print(response.text, 'AAAAAAAAAAAAAAAAAA')
-        cls.json_parser(response)
+        cls._json_parser(response)
 
         json_data = {"UserId": username}
         response = cls.fetch(method="POST", url=cls.token_urls["totp_url"], headers=headers, json=json_data)
-        response = cls.json_parser(response)
+        response = cls._json_parser(response)
         # print(response,'AAAAAAAAA')
         totp = response#['Response']
 
-        json_data = {"UserId": user_name, "Otp": totp}
+        json_data = {"UserId": params["user_name"], "Otp": totp}
         response = cls.fetch(method="POST", url=cls.token_urls["validate_totp"], headers=headers, json=json_data)
-        response = cls.json_parser(response)
+        response = cls._json_parser(response)
 
         session_id = response['Response']['SessionId']
 
         headers = {
-            "VendorId": vendor_id,
-            "VendorKey": vendor_key,
-            "Authorization": f"SessionId {session_id}",
-            "Content-Type": "application/json"
+            "headers": {
+                "VendorId": params["vendor_id"],
+                "VendorKey": params["vendor_key"],
+                "Authorization": f"SessionId {session_id}",
+                "Content-Type": "application/json"
             }
+        }
 
-        cls.session = cls.create_session()
+        cls._session = cls._create_session()
 
         return headers
 
@@ -261,7 +293,7 @@ class choice(Exchange):
             raise ResponseError(cls.id + " " + error)
 
     @classmethod
-    def orderbook_json_parser(cls, order):
+    def _orderbook_json_parser(cls, order):
 
         parsed_order = {
             Order.ID: order['ClientOrderNo'],
@@ -336,7 +368,7 @@ class choice(Exchange):
         # }
 
     @classmethod
-    def profile_json_parser(cls,
+    def _profile_json_parser(cls,
                             profile: dict
                             ) -> dict[Any, Any]:
 
@@ -358,12 +390,12 @@ class choice(Exchange):
         return parsed_profile
 
     @classmethod
-    def create_order_parser(cls,
+    def _create_order_parser(cls,
                             response: Response,
                             headers: dict
                             ) -> dict[Any, Any]:
 
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
 
         if 'fault' in info:
             order_id = info['fault']['orderId']
@@ -384,18 +416,24 @@ class choice(Exchange):
                 "price": order_nse['orderId'],
                 "qauntity": order_nse['quantity'],
                 "message": order_nse['message']
-                },
+            },
+
             "BSE": {
                 "id": order_bse['orderId'],
                 "userOrderId": order_bse['tag'],
                 "price": order_bse['orderId'],
                 "qauntity": order_bse['quantity'],
                 "message": order_bse['message']
-                },
+            },
+
             "info": info
-            }
+        }
 
         return data
+
+
+    # Order Functions
+
 
     @classmethod
     def market_order(cls,
@@ -426,7 +464,7 @@ class choice(Exchange):
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"], headers=headers, json=json_data)
 
-        return cls.create_order_parser(response=response,headers=headers)
+        return cls._create_order_parser(response=response,headers=headers)
 
     @classmethod
     def limit_order(cls,
@@ -458,7 +496,7 @@ class choice(Exchange):
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"], headers=headers, json=json_data)
 
-        return cls.create_order_parser(response=response,headers=headers)
+        return cls._create_order_parser(response=response,headers=headers)
 
     @classmethod
     def sl_order(cls,
@@ -491,7 +529,11 @@ class choice(Exchange):
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"], headers=headers, json=json_data)
 
-        return cls.create_order_parser(response=response,headers=headers)
+        return cls._create_order_parser(response=response,headers=headers)
+
+
+    # Order Details, OrderBook & TradeBook
+
 
     @classmethod
     def fetch_order(cls,
@@ -501,10 +543,10 @@ class choice(Exchange):
 
         final_url = f'{cls.urls["order_history"]}/{order_id}'
         response = cls.fetch(method="GET", url=final_url, headers=headers)
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
 
         detail = info[0]
-        order = cls.orderbook_json_parser(detail)
+        order = cls._orderbook_json_parser(detail)
 
         return order
 
@@ -514,11 +556,11 @@ class choice(Exchange):
                         ) -> list[dict]:
 
         response = cls.fetch(method="GET", url=cls.urls["orderbook"], headers=headers)
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
 
         orders = []
         for order in info['Orders']:
-            detail = cls.orderbook_json_parser(order)
+            detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
@@ -529,11 +571,11 @@ class choice(Exchange):
                         ) -> list[dict]:
 
         response = cls.fetch(method="GET", url=cls.urls["orderbook"], headers=headers)
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
 
         orders = []
         for order in info['Orders']:
-            detail = cls.orderbook_json_parser(order)
+            detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
@@ -544,14 +586,18 @@ class choice(Exchange):
                         ) -> list[dict]:
 
         response = cls.fetch(method="GET", url=cls.urls["tradebook"], headers=headers)
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
 
         orders = []
         for order in info['Trades']:
-            detail = cls.orderbook_json_parser(order)
+            detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
+
+
+    # Order Modification & Sq Off
+
 
     @classmethod
     def modify_order(cls,
@@ -564,7 +610,7 @@ class choice(Exchange):
 
         final_url = f"{cls.urls['order_history']}/{order_id}"
         response = cls.fetch(method="GET", url=final_url, headers=headers)
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
         order = info[0]
 
         json_data = {
@@ -585,8 +631,8 @@ class choice(Exchange):
 
         response = cls.fetch("POST", cls.urls["modify_order"], headers=headers, json=json_data)
 
-        # return cls.create_order_parser(response=response, headers=headers)
-        return cls.json_parser(response)
+        # return cls._create_order_parser(response=response, headers=headers)
+        return cls._json_parser(response)
 
     @classmethod
     def cancel_order(cls,
@@ -596,7 +642,7 @@ class choice(Exchange):
 
         final_url = f"{cls.urls['order_history']}/{order_id}"
         response = cls.fetch(method="GET", url=final_url, headers=headers)
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
         order = info[0]
 
         json_data = {
@@ -618,8 +664,12 @@ class choice(Exchange):
 
         response = cls.fetch("POST", cls.urls["cancel_order"], headers=headers, json=json_data)
 
-        # return cls.create_order_parser(response=response, headers=headers)
-        return cls.json_parser(response)
+        # return cls._create_order_parser(response=response, headers=headers)
+        return cls._json_parser(response)
+
+
+    # Positions, Account Limits & Profile
+
 
     @classmethod
     def fetch_holdings(cls,
@@ -627,7 +677,7 @@ class choice(Exchange):
                    ) -> list[dict]:
 
         response = cls.fetch(method="GET", url=cls.urls["holdings"], headers=headers)
-        return cls.json_parser(response)
+        return cls._json_parser(response)
 
     @classmethod
     def fetch_positions(cls,
@@ -635,7 +685,7 @@ class choice(Exchange):
                    ) -> list[dict]:
 
         response = cls.fetch(method="GET", url=cls.urls["positions"], headers=headers)
-        return cls.json_parser(response)
+        return cls._json_parser(response)
 
     @classmethod
     def fetch_funds(cls,
@@ -643,7 +693,7 @@ class choice(Exchange):
                    ) -> list[dict]:
 
         response = cls.fetch(method="GET", url=cls.urls["funds"], headers=headers)
-        return cls.json_parser(response)
+        return cls._json_parser(response)
 
     @classmethod
     def profile(cls,
@@ -651,6 +701,6 @@ class choice(Exchange):
                    ) -> list[dict]:
 
         response = cls.fetch(method="GET", url=cls.urls["profile"], headers=headers)
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
 
-        return cls.profile_json_parser(info)
+        return cls._profile_json_parser(info)

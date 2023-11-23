@@ -173,9 +173,7 @@ class finvasia(Exchange):
         try:
             df = cls.data_reader(cls.base_urls["market_data_url"], filetype='csv')
 
-            df = df[((df['Symbol'] == 'BANKNIFTY') | (df['Symbol'] == 'NIFTY') | (df['Symbol'] == 'FINNIFTY')) &
-                    (df['Instrument'] == "OPTIDX")
-                    ]
+            df = df[((df['Symbol'] == 'BANKNIFTY') | (df['Symbol'] == 'NIFTY') | (df['Symbol'] == 'FINNIFTY')) & (df['Instrument'] == "OPTIDX")]
 
             df = df[['Token', 'TradingSymbol', 'Expiry', 'OptionType',
                      'StrikePrice', 'LotSize', 'Symbol', 'TickSize', 'Exchange',
@@ -248,8 +246,8 @@ class finvasia(Exchange):
 
     @classmethod
     def _json_parser(cls,
-                    response: Response
-                    ) -> dict[Any, Any] | list[dict[Any, Any]]:
+                     response: Response
+                     ) -> dict[Any, Any] | list[dict[Any, Any]]:
 
         json_response = cls.on_json_response(response)
         print(json_response)
@@ -268,8 +266,8 @@ class finvasia(Exchange):
 
     @classmethod
     def _orderbook_json_parser(cls,
-                              order: dict,
-                              ) -> dict[Any, Any]:
+                               order: dict,
+                               ) -> dict[Any, Any]:
 
         parsed_order = {
             Order.ID: order["norenordno"],
@@ -278,8 +276,8 @@ class finvasia(Exchange):
             Order.SYMBOL: order["tsym"],
             Order.TOKEN: order["token"],
             Order.SIDE: cls.resp_side[order["trantype"]],
-            Order.TYPE: cls.resp_order_type.get(order["prctyp"],  order["prctyp"]),
-            Order.AVGPRICE: float(order.get("avgprc",0.0)),
+            Order.TYPE: cls.resp_order_type.get(order["prctyp"], order["prctyp"]),
+            Order.AVGPRICE: float(order.get("avgprc", 0.0)),
             Order.PRICE: float(order["prc"]),
             Order.TRIGGERPRICE: float(order.get("trgprc", 0.0)),
             Order.TARGETPRICE: float(order.get("bpprc", 0.0)),
@@ -287,13 +285,13 @@ class finvasia(Exchange):
             Order.TRAILINGSTOPLOSS: float(order.get("trailprc", 0.0)),
             Order.QUANTITY: int(order["qty"]),
             Order.FILLEDQTY: int(order.get("fillshares", 0)),
-            Order.REMAININGQTY:  int(order["qty"]) - int(order.get("fillshares", 0)),
+            Order.REMAININGQTY: int(order["qty"]) - int(order.get("fillshares", 0)),
             Order.CANCELLEDQTY: int(order.get("cancelqty", 0.0)),
-            Order.STATUS: cls.resp_status.get(order["status"],  order["status"]),
+            Order.STATUS: cls.resp_status.get(order["status"], order["status"]),
             Order.REJECTREASON: order.get("rejreason", ""),
-            Order.DISCLOSEDQUANTITY: 0,#int(order["dscqty"]),
+            Order.DISCLOSEDQUANTITY: 0,  # int(order["dscqty"]),
             Order.PRODUCT: cls.resp_product.get(order["prd"], order["prd"]),
-            Order.EXCHANGE: cls.req_exchange.get(order["exch"],  order["exch"]),
+            Order.EXCHANGE: cls.req_exchange.get(order["exch"], order["exch"]),
             Order.SEGMENT: "",
             Order.VALIDITY: cls.req_validity.get(order["ret"], order["ret"]),
             Order.VARIETY: "",
@@ -302,47 +300,10 @@ class finvasia(Exchange):
 
         return parsed_order
 
-        # {
-        #     'stat': 'Ok',
-        #     'norenordno': '23032100905568',
-        #     'kidid': '2',
-        #     'uid': 'FA83737',
-        #     'actid': 'FA83737',
-        #     'exch': 'NFO',
-        #     'tsym': 'BANKNIFTY23MAR23P39000',
-        #     'qty': '25',
-        #     'rorgqty': '25',
-        #     'ordenttm': '1679392783',
-        #     'trantype': 'S',
-        #     'prctyp': 'LMT',
-        #     'ret': 'DAY',
-        #     'token': '41587',
-        #     'mult': '1',
-        #     'prcftr': '1.000000',
-        #     'dname': 'BANKNIFTY 23MAR23 39000 PE ',
-        #     'pp': '2',
-        #     'ls': '25',
-        #     'ti': '0.05',
-        #     'prc': '40.00',
-        #     'rorgprc': '42.00',
-        #     'rprc': '40.00',
-        #     'avgprc': '40.00',
-        #     'dscqty': '0',
-        #     's_prdt_ali': 'NRML',
-        #     'prd': 'M',
-        #     'status': 'COMPLETE',
-        #     'st_intrn': 'COMPLETE',
-        #     'fillshares': '25',
-        #     'norentm': '15:29:44 21-03-2023',
-        #     'exch_tm': '21-03-2023 15:29:43',
-        #     'exchordid': '1700000144198591',
-        #     'rqty': '25'
-        # }
-
     @classmethod
     def _tradebook_json_parser(cls,
-                              order: dict,
-                              ) -> dict[Any, Any]:
+                               order: dict,
+                               ) -> dict[Any, Any]:
 
         parsed_order = {
             Order.ID: order["norenordno"],
@@ -351,8 +312,8 @@ class finvasia(Exchange):
             Order.SYMBOL: order["tsym"],
             Order.TOKEN: order["token"],
             Order.SIDE: cls.resp_side[order["trantype"]],
-            Order.TYPE: cls.resp_order_type.get(order["prctyp"],  order["prctyp"]),
-            Order.AVGPRICE: float(order.get("flprc",0.0)),
+            Order.TYPE: cls.resp_order_type.get(order["prctyp"], order["prctyp"]),
+            Order.AVGPRICE: float(order.get("flprc", 0.0)),
             Order.PRICE: float(order["prc"]),
             Order.TRIGGERPRICE: float(order.get("trgprc", 0.0)),
             Order.TARGETPRICE: float(order.get("bpprc", 0.0)),
@@ -360,54 +321,25 @@ class finvasia(Exchange):
             Order.TRAILINGSTOPLOSS: float(order.get("trailprc", 0.0)),
             Order.QUANTITY: int(order["qty"]),
             Order.FILLEDQTY: int(order.get("fillshares", 0)),
-            Order.REMAININGQTY:  int(order["qty"]) - int(order.get("fillshares", 0)),
+            Order.REMAININGQTY: int(order["qty"]) - int(order.get("fillshares", 0)),
             Order.CANCELLEDQTY: int(order.get("cancelqty", 0.0)),
             Order.STATUS: "",
             Order.REJECTREASON: "",
             Order.DISCLOSEDQUANTITY: 0,
             Order.PRODUCT: cls.resp_product.get(order["prd"], order["prd"]),
-            Order.EXCHANGE: cls.req_exchange.get(order["exch"],  order["exch"]),
+            Order.EXCHANGE: cls.req_exchange.get(order["exch"], order["exch"]),
             Order.SEGMENT: "",
             Order.VALIDITY: cls.req_validity.get(order["ret"], order["ret"]),
             Order.VARIETY: "",
             Order.INFO: order,
-            }
+        }
 
         return parsed_order
 
-        # {
-        #     'stat': 'Ok',
-        #     'norenordno': '23032100905568',
-        #     'uid': 'FA83737',
-        #     'actid': 'FA83737',
-        #     'exch': 'NFO',
-        #     'prctyp': 'LMT',
-        #     'ret': 'DAY',
-        #     's_prdt_ali': 'NRML',
-        #     'prd': 'M',
-        #     'flid': '609019077',
-        #     'fltm': '21-03-2023 15:29:44',
-        #     'trantype': 'S',
-        #     'tsym': 'BANKNIFTY23MAR23P39000',
-        #     'qty': '25',
-        #     'token': '41587',
-        #     'fillshares': '25',
-        #     'flqty': '25',
-        #     'pp': '2',
-        #     'ls': '25',
-        #     'ti': '0.05',
-        #     'prc': '40.00',
-        #     'prcftr': '1.000000',
-        #     'flprc': '40.00',
-        #     'norentm': '15:29:44 21-03-2023',
-        #     'exch_tm': '21-03-2023 15:29:43',
-        #     'exchordid': '1700000144198591'
-        # }
-
     @classmethod
     def _profile_json_parser(cls,
-                            profile: dict
-                            ) -> dict[Any, Any]:
+                             profile: dict
+                             ) -> dict[Any, Any]:
 
         parsed_profile = {
             Profile.CLIENTID: profile['actid'],
@@ -422,32 +354,9 @@ class finvasia(Exchange):
             Profile.EXHCNAGESENABLED: profile['exarr'],
             Profile.ENABLED: profile['act_sts'] == 'Activated',
             Profile.INFO: profile,
-            }
+        }
 
         return parsed_profile
-
-        # {
-        #     'request_time': '00:58:16 20-03-2023',
-        #     'actid': 'XXXXXXXXX',
-        #     'cliname': 'XXXXXXXXX',
-        #     'act_sts': 'Activated',
-        #     'creatdte': '0',
-        #     'creattme': '0',
-        #     'm_num': '0000000000',
-        #     'email': 'xxxx@gmail.com',
-        #     'pan': 'XXXXXXX',
-        #     'addr': '',
-        #     'addroffice': '',
-        #     'addrcity': '',
-        #     'addrstate': '',
-        #     'mandate_id_list': [],
-        #     'exarr': ['NSE', 'NIPO', 'BSE', 'BSTAR'],
-        #     'bankdetails': [{'bankn': 'XXXXXX',
-        #     'acctnum': '1112213213245',
-        #     'ifsc_code': 'XXXX051514'}],
-        #     'dp_acct_num': [{'dpnum': 'XXXXXXXXXXXX'}],
-        #     'stat': 'Ok'
-        #     }
 
     @classmethod
     def _position_json_parser(cls,
@@ -467,62 +376,17 @@ class finvasia(Exchange):
             Position.SELLPRICE: float(position["daysellavgprc"]),
             Position.LTP: float(position["lp"]),
             Position.PRODUCT: cls.resp_product.get(position["prd"], position["prd"]),
-            Position.EXCHANGE: cls.req_exchange.get(position["exch"],  position["exch"]),
+            Position.EXCHANGE: cls.req_exchange.get(position["exch"], position["exch"]),
             Position.INFO: position,
         }
 
         return parsed_position
 
-
-        # {
-        #     'stat': 'Ok',
-        #     'uid': 'FA83737',
-        #     'actid': 'FA83737',
-        #     'exch': 'NFO',
-        #     'tsym': 'BANKNIFTY23MAR23C40400',
-        #     's_prdt_ali': 'NRML',
-        #     'prd': 'M',
-        #     'token': '41622',
-        #     'dname': 'BANKNIFTY 23MAR23 40400 CE ',
-        #     'frzqty': '901',
-        #     'pp': '2',
-        #     'ls': '25',
-        #     'ti': '0.05',
-        #     'mult': '1',
-        #     'prcftr': '1.000000',
-        #     'daybuyqty': '50',
-        #     'daysellqty': '50',
-        #     'daybuyamt': '1975.00',
-        #     'daybuyavgprc': '39.50',
-        #     'daysellamt': '2025.00',
-        #     'daysellavgprc': '40.50',
-        #     'cfbuyqty': '0',
-        #     'cfsellqty': '0',
-        #     'openbuyqty': '0',
-        #     'opensellqty': '0',
-        #     'openbuyamt': '0.00',
-        #     'openbuyavgprc': '0.00',
-        #     'opensellamt': '0.00',
-        #     'opensellavgprc': '0.00',
-        #     'dayavgprc': '0.00',
-        #     'netqty': '0',
-        #     'netavgprc': '0.00',
-        #     'upldprc': '0.00',
-        #     'netupldprc': '0.00',
-        #     'lp': '77.95',
-        #     'urmtom': '0.00',
-        #     'totbuyamt': '1975.00',
-        #     'totsellamt': '2025.00',
-        #     'totbuyavgprc': '39.50',
-        #     'totsellavgprc': '40.50',
-        #     'rpnl': '50.00'
-        # }
-
     @classmethod
     def _create_order_parser(cls,
-                            response: Response,
-                            headers: dict
-                            ) -> dict[Any, Any]:
+                             response: Response,
+                             headers: dict
+                             ) -> dict[Any, Any]:
 
         info = cls._json_parser(response)
         order_id = info['norenordno']
@@ -834,7 +698,7 @@ class finvasia(Exchange):
             side (str): Order Side: 'BUY', 'SELL'.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
             unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-            exchange (str, optional):  Exchange to place the order in.. Defaults to ExchangeCode.NFO.
+            exchange (str, optional): Exchange to place the order in.. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
@@ -915,7 +779,7 @@ class finvasia(Exchange):
             quantity (int): Order quantity.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
             unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-            exchange (str, optional):  Exchange to place the order in.. Defaults to ExchangeCode.NFO.
+            exchange (str, optional): Exchange to place the order in.. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
@@ -989,7 +853,7 @@ class finvasia(Exchange):
             side (str): Order Side: 'BUY', 'SELL'.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
             unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            exchange (str, optional): Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
@@ -1065,7 +929,7 @@ class finvasia(Exchange):
             side (str): Order Side: 'BUY', 'SELL'.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
             unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-            exchange (str, optional):  Exchange to place the order in.. Defaults to ExchangeCode.NFO.
+            exchange (str, optional): Exchange to place the order in.. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
@@ -1141,7 +1005,7 @@ class finvasia(Exchange):
             side (str): Order Side: 'BUY', 'SELL'.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
             unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-            exchange (str, optional):  Exchange to place the order in.. Defaults to ExchangeCode.NFO.
+            exchange (str, optional): Exchange to place the order in.. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
@@ -1467,21 +1331,21 @@ class finvasia(Exchange):
 
     @classmethod
     def slm_order_bo(cls,
-                    trigger: float,
-                    symbol: str,
-                    token: int,
-                    side: str,
-                    unique_id: str,
-                    quantity: int,
-                    exchange: str,
-                    headers: dict,
-                    target: float = 0,
-                    stoploss: float = 0,
-                    trailing_sl: float = 0,
-                    product: str = Product.BO,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.BO,
-                    ) -> dict[Any, Any]:
+                     trigger: float,
+                     symbol: str,
+                     token: int,
+                     side: str,
+                     unique_id: str,
+                     quantity: int,
+                     exchange: str,
+                     headers: dict,
+                     target: float = 0,
+                     stoploss: float = 0,
+                     trailing_sl: float = 0,
+                     product: str = Product.BO,
+                     validity: str = Validity.DAY,
+                     variety: str = Variety.BO,
+                     ) -> dict[Any, Any]:
 
         """
         Place Stoploss-Market Order
@@ -1546,7 +1410,7 @@ class finvasia(Exchange):
         jdata = {
             "uid": headers['uid'],
             "norenordno": order_id,
-            }
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1575,7 +1439,7 @@ class finvasia(Exchange):
         jdata = {
             "uid": headers['uid'],
             "norenordno": order_id,
-            }
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1591,12 +1455,12 @@ class finvasia(Exchange):
 
     @classmethod
     def fetch_orders(cls,
-                        headers: dict,
-                        ) -> list[dict]:
+                     headers: dict,
+                     ) -> list[dict]:
 
         jdata = {
             "uid": headers['uid'],
-            }
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1621,7 +1485,7 @@ class finvasia(Exchange):
 
         jdata = {
             "uid": headers['uid'],
-            }
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1647,7 +1511,7 @@ class finvasia(Exchange):
         jdata = {
             "uid": headers['uid'],
             "actid": headers['uid'],
-            }
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1683,7 +1547,7 @@ class finvasia(Exchange):
         jdata = {
             "uid": headers['uid'],
             "norenordno": order_id,
-            }
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1701,15 +1565,13 @@ class finvasia(Exchange):
             "tsym": order['tsym'],
             "norenordno": order["norenordno"],
             "qty": quantity or order["qty"],
-            "prc": price or order["prc"] ,
+            "prc": price or order["prc"],
             "trgprc": trigger or order["trgprc"],
             "prctyp": cls.req_order_type.get(order_type, order['prctyp']),
             "ret": cls.req_validity.get(validity, order["ret"]),
             "ordersource": "API",
-            }
-        print("$$$$$$$$$$$$$$$$")
-        print(jdata)
-        print("$$$$$$$$$$$$$$$$")
+        }
+
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
         response = cls.fetch(method="POST", url=cls.urls["modify_order"], data=data)
@@ -1730,7 +1592,7 @@ class finvasia(Exchange):
         jdata = {
             "uid": headers['uid'],
             "norenordno": order_id,
-            }
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1805,12 +1667,12 @@ class finvasia(Exchange):
         jdata = {
             "uid": headers['uid'],
             "actid": headers['uid'],
-            }
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
         response = cls.fetch(method="POST", url=cls.urls["profile"], data=data)
-        response =  cls._json_parser(response)
+        response = cls._json_parser(response)
 
         profile = cls._profile_json_parser(response)
         return profile

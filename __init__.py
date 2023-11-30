@@ -37,12 +37,14 @@ from kronos.base.constants import UniqueID              # noqa: F401
 from kronos.aliceblue import aliceblue                  # noqa :F401
 from kronos.angelone import angelone                    # noqa :F401
 from kronos.finvasia import finvasia                    # noqa :F401
+from kronos.zerodha import zerodha                    # noqa :F401
 
 
 exchanges = [
     'aliceblue',
     'angelone',
     'finvasia',
+    'zerodha'
 ]
 
 base = [

@@ -2,6 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
+import io
+
 from kronos.base.exchange import Exchange
 
 from kronos.base.constants import Side
@@ -47,7 +49,8 @@ class iifl(Exchange):
         "api_marketdata_docuemtnation_link": "https://ttblaze.iifl.com/doc/marketdata",
         "access_token_url": "https://ttblaze.iifl.com/interactive/user/session",
         "base_url": "https://ttblaze.iifl.com/interactive",
-        "market_data_url": "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json"
+        "market_data_url": "https://ttblaze.iifl.com/apimarketdata/instruments/master",
+        "index_data_url": "https://ttblaze.iifl.com/apimarketdata/instruments/indexlist"
     }
 
 
@@ -153,42 +156,61 @@ class iifl(Exchange):
             dict: Unified kronos nfo_dict format
         """
 
-        df = cls.data_reader(cls.base_urls["market_data_url"], filetype='json')
-        df = df[(df['exch_seg'] == 'NSE') & ((df['tick_size'] == -1) | (df['name'] == 'FINNIFTY') )]
+        params = {"exchangeSegment": 1}
+        response = cls.fetch(method="GET", url=cls.base_urls["index_data_url"], params=params)
 
-        bnf_details = df[df['symbol'] == "BANKNIFTY"].iloc[0]
-        nf_details = df[df['symbol'] == "NIFTY"].iloc[0]
-        fnf_details = df[df['symbol'] == "Nifty Fin Service"].iloc[0]
-        indices = {
-            "BANKNIFTY": {"Symbol": bnf_details["symbol"], "Token": bnf_details["token"]},
-            "NIFTY": {"Symbol": nf_details["symbol"], "Token": nf_details["token"]},
-            "FINIFTY": {"Symbol": fnf_details["symbol"], "Token": fnf_details["token"][3:]},
-        }
+
+        df = cls._json_parser(response)['result']['indexList']
+
+        indices = {}
+
+        for i in df:
+            if ("NIFTY BANK" in i):
+                symbol, token = i.split("_")
+                indices["BANKNIFTY"] = {"Symbol": symbol, "Token": int(token)}
+
+            if ("NIFTY 50_" in i):
+                symbol, token = i.split("_")
+                indices["NIFTY"] = {"Symbol": symbol, "Token": int(token)}
+
+            if ("NIFTY FIN SERVICE" in i):
+                symbol, token = i.split("_")
+                indices["FINNIFTY"] = {"Symbol": symbol, "Token": int(token)}
 
         return indices
 
     @classmethod
     def nfo_dict(cls):
         try:
-            df = cls.data_reader(cls.base_urls["market_data_url"], filetype='json')
-            df = df[((df['name'] == 'BANKNIFTY') | (df['name'] == 'NIFTY') | (df['name'] == 'FINNIFTY')) & (df['exch_seg'] == 'NFO') & (df['instrumenttype'] == "OPTIDX")]
+            json_data = {"exchangeSegmentList": ["NSEFO"]}
+            headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
-            df.rename({"token": "Token", "name": "Root", "expiry": "Expiry", "symbol": "Symbol",
-                       "instrument_type": "Option", "tick_size": "TickSize", "lotsize": "LotSize",
-                       "strike": "StrikePrice"},
+            req_data = cls.fetch(method="POST", url=cls.base_urls["market_data_url"], json=json_data, headers=headers)
+            csv_bytes = cls._json_parser(req_data)['result']
+            str_file = io.StringIO(csv_bytes, newline="\n")
+
+            col_names = ["ExchangeSegment", "ExchangeInstrumentID", "InstrumentType", "Name",
+                         "Description", "Series", "NameWithSeries", "InstrumentID", "PriceBand.High", "PriceBand.Low",
+                         "FreezeQty", "TickSize", "LotSize", "Multiplier", "UnderlyingInstrumentId","UnderlyingIndexName",
+                         "ContractExpiration", "StrikePrice", "OptionType", "AA", "AWS", "AAQ", "Symbol"]
+            df = cls.data_reader(link=str_file, filetype="csv",
+                                 sep="|", col_names=col_names)
+
+            df = df[((df['Name'] == "BANKNIFTY") | (df['Name'] == "NIFTY") | (df['Name'] == "FINNIFTY")) & ((df['Series'] == "OPTIDX"))]
+
+            df.rename({"ExchangeInstrumentID": "Token", "Name": "Root",
+                       "ContractExpiration": "Expiry", "OptionType": "Option"},
                       axis=1, inplace=True)
 
             df['Option'] = df['Symbol'].str.extract(r"(CE|PE)")
-            df['StrikePrice'] = df['StrikePrice'] // 100
-            df['TickSize'] = df['TickSize'] / 100
             df['Token'] = df['Token'].astype(int)
+            df['StrikePrice'] = df['StrikePrice'].astype(int)
+            df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
 
             df = df[['Token', 'Symbol', 'Expiry', 'Option',
                      'StrikePrice', 'LotSize',
                      'Root', 'TickSize'
                      ]]
-
-            df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
 
@@ -288,8 +310,9 @@ class iifl(Exchange):
             dict: json response obtained from exchange.
         """
         json_response = cls.on_json_response(response)
-        print(json_response)
-        if json_response['status']:
+        # print(json_response)
+
+        if json_response['type'] == "success":
             return json_response
 
         raise ResponseError(cls.id + " " + json_response['message'])

@@ -262,6 +262,7 @@ class Exchange:
                             sep=sep
                             )
 
+
         raise InputError(f"Wrong Filetype: {filetype}, the possible values are: 'json', 'csv'")
 
     @staticmethod

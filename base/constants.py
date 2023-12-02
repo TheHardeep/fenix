@@ -198,3 +198,8 @@ class UniqueID:
     MARKETORDER = "MarketOrder"
     LIMITORDER = "LIMITOrder"
     SLORDER = "SLOrder"
+    SLMORDER = "SLMOrder"
+    MARKETORDERNO = 101
+    LIMITORDERNO = 102
+    SLORDERNO = 102
+    SLMORDERNO = 103

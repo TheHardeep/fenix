@@ -320,16 +320,18 @@ class symphony(Exchange):
 
         parsed_position = {
             Position.SYMBOL: position['TradingSymbol'],
-            Position.TOKEN: position['token'],
+            Position.TOKEN: position['ExchangeInstrumentID'],
+            Position.NETQTY: position['Quantity'],
+            Position.AVGPRICE: (position["SumOfTradedQuantityAndPriceBuy"]+position["SumOfTradedQuantityAndPriceSell"])/(position["BuyAmount"]+position["SellAmount"]),
+            Position.MTM: position['RealizedMTM'],
+            Position.PNL: position['MTM'],
+            Position.BUYQTY: position['OpenBuyQuantity'],
+            Position.BUYPRICE: position['BuyAveragePrice'],
+            Position.SELLQTY: position['OpenSellQuantity'],
+            Position.SELLPRICE: position['SellAveragePrice'],
+            Position.LTP: 0.0,
+            Position.EXCHANGE: cls.resp_exchange.get(position['ExchangeSegment'], position['ExchangeSegment']),
             Position.PRODUCT: cls.req_product.get(position['product'], position['product']),
-            Position.NETQTY: position['net_quantity'],
-            Position.AVGPRICE: position['net_amount'],
-            Position.MTM: position['realized_mtm'],
-            Position.BUYQTY: position['buy_quantity'],
-            Position.BUYPRICE: position['buy_amount'],
-            Position.SELLQTY: position['sell_quantity'],
-            Position.SELLPRICE: position['sell_amount'],
-            Position.LTP: position['ltp'],
             Position.INFO: position,
         }
 

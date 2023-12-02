@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 
 
 class mastertrust(Exchange):
-
     """
     MasterTrust kronos Broker Class
 
@@ -48,6 +47,8 @@ class mastertrust(Exchange):
     # Base URLs
 
     base_urls = {
+        "api_documentation_url": "http://139.180.212.2/mastertrust",
+        "marketdata_docuemtnation_url": " http://139.180.212.2/ray-websocket",
         "market_data_url": "https://masterswift.mastertrust.co.in/api/v2/contracts.json",
         "base_url": "https://masterswift-beta.mastertrust.co.in/api/v1",
     }
@@ -127,7 +128,6 @@ class mastertrust(Exchange):
     }
 
 
-
     # NFO Script Fetch
 
 
@@ -159,7 +159,7 @@ class mastertrust(Exchange):
     def nfo_dict(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the aliceblue.nfo_tokens Dictionary.
+        Stores them in the mastertrust.nfo_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.
@@ -210,7 +210,7 @@ class mastertrust(Exchange):
                        ) -> dict[str, str]:
 
         """
-        Generate Headers used to access Endpoints in AliceBlue.
+        Generate Headers used to access Endpoints in mastertrust.
 
         Parameters:
             Params (dict) : A dictionary which should consist the following keys:
@@ -221,7 +221,7 @@ class mastertrust(Exchange):
                 api_key (str): API Key of the Account.
 
         Returns:
-            dict[str, str]: AliceBlue Headers.
+            dict[str, str]: mastertrust Headers.
         """
         for key in ["user_id", "password", "api_id", "totpstr", "api_secret"]:
             if key not in params:
@@ -311,33 +311,60 @@ class mastertrust(Exchange):
         return headers
 
     @classmethod
-    def _create_order_parser(cls,
-                             response: Response,
-                             headers: dict
-                             ) -> dict[Any, Any]:
+    def _orderhistory_json_parser(cls,
+                                  order: dict,
+                                  ) -> dict[Any, Any]:
         """
-        Parse Json Response Obtained from Broker After Placing Order to get Orderid
-        and fetching the json repsone for the said order_id
+        Parses Order History Json Response to a kronos Unified Order Response.
 
         Parameters:
-            response (Response): Json Repsonse Obtained from broker after Placing an Order
+            order (dict): Order History Json Response from Broker
 
         Returns:
             dict: Unified kronos Order Response
         """
 
-        info = cls._json_parser(response)
+        parsed_order = {
+            Order.ID: order['order_id'],
+            Order.USERID: order['client_order_id'],
+            Order.TIMESTAMP: cls.from_timestamp(order['created_at']),
+            Order.SYMBOL: order['symbol'],
+            Order.TOKEN: order['token'],
+            Order.SIDE: order['order_side'],
+            Order.TYPE: cls.req_order_type.get(order['order_type'], order['order_type']),
+            Order.AVGPRICE: order['avg_price'],
+            Order.PRICE: order['price'],
+            Order.TRIGGERPRICE: order['trigger_price'],
+            Order.QUANTITY: order['quantity'],
+            Order.FILLEDQTY: order['fill_quantity'],
+            Order.REMAININGQTY: order['quantity'] - order['fill_quantity'],
+            Order.CANCELLEDQTY: 0,
+            Order.STATUS: cls.resp_status.get(order['status'], order['status']),
+            Order.REJECTREASON: order['reject_reason'],
+            Order.DISCLOSEDQUANTITY: int(order['disclosed_quantity'] or 0),
+            Order.PRODUCT: order['product'],
+            Order.EXCHANGE: "",
+            Order.SEGMENT: order['segment'],
+            Order.VALIDITY: order['validity'],
+            Order.VARIETY: "",
+            Order.INFO: order,
+        }
 
-        order_id = info['data']['oms_order_id']
-        order = cls.fetch_order(order_id=order_id, headers=headers)
-
-        return order
+        return parsed_order
 
     @classmethod
     def _orderbook_json_parser(cls,
-                               order: dict
+                               order: dict,
                                ) -> dict[Any, Any]:
+        """
+        Parse Orderbook Order Json Response.
 
+        Parameters:
+            order (dict): Orderbook Order Json Response from Broker
+
+        Returns:
+            dict: Unified kronos Order Response
+        """
         parsed_order = {
             Order.ID: order['oms_order_id'],
             Order.USERID: order['user_order_id'],
@@ -423,122 +450,343 @@ class mastertrust(Exchange):
         return parsedPosition
 
     @classmethod
-    def _orderhistory_json_parser(cls,
-                               order: dict,
-                               ) -> dict[Any, Any]:
+    def _create_order_parser(cls,
+                             response: Response,
+                             headers: dict
+                             ) -> dict[Any, Any]:
+        """
+        Parse Json Response Obtained from Broker After Placing Order to get Orderid
+        and fetching the json repsone for the said order_id
 
-        parsedOrder = {
-            Order.ID: order['order_id'],
-            Order.USERID: order['client_order_id'],
-            Order.TIMESTAMP: cls.from_timestamp(order['created_at']),
-            Order.SYMBOL: order['symbol'],
-            Order.TOKEN: order['token'],
-            Order.SIDE: order['order_side'],
-            Order.TYPE: cls.req_order_type.get(order['order_type'], order['order_type']),
-            Order.AVGPRICE: order['avg_price'],
-            Order.PRICE: order['price'],
-            Order.TRIGGERPRICE: order['trigger_price'],
-            Order.QUANTITY: order['quantity'],
-            Order.FILLEDQTY: order['fill_quantity'],
-            Order.REMAININGQTY: order['quantity'] - order['fill_quantity'],
-            Order.CANCELLEDQTY: 0,
-            Order.STATUS: cls.resp_status.get(order['status'], order['status']),
-            Order.REJECTREASON: order['reject_reason'],
-            Order.DISCLOSEDQUANTITY: int(order['disclosed_quantity'] or 0),
-            Order.PRODUCT: order['product'],
-            Order.EXCHANGE: "",
-            Order.SEGMENT: order['segment'],
-            Order.VALIDITY: order['validity'],
-            Order.VARIETY: "",
-            Order.INFO: order,
-        }
+        Parameters:
+            response (Response): Json Repsonse Obtained from broker after Placing an Order
 
-        return parsedOrder
-
-    @classmethod
-    def orderhistory_parser(cls,
-                            response: Response,
-                            ) -> dict[Any, Any]:
+        Returns:
+            dict: Unified kronos Order Response
+        """
 
         info = cls._json_parser(response)
-        detail = info['data'][0]
 
-        order = cls._orderhistory_json_parser(detail)
+        order_id = info['data']['oms_order_id']
+        order = cls.fetch_order(order_id=order_id, headers=headers)
+
         return order
 
 
+    # Order Functions
 
 
-    def market_order(cls, token: int, side: str,  uniqueid: str, quantity: int,
-                     exchange=ExchangeCode.NFO, product=Product.MIS, validity=Validity.DAY):
+    @classmethod
+    def create_order(cls,
+                     token: int,
+                     exchange: str,
+                     symbol: str,
+                     quantity: int,
+                     side: str,
+                     product: str,
+                     validity: str,
+                     variety: str,
+                     unique_id: str,
+                     headers: dict,
+                     price: float = 0,
+                     trigger: float = 0,
+                     target: float = 0,
+                     stoploss: float = 0,
+                     trailing_sl: float = 0,
+                     ) -> dict[Any, Any]:
+
+        """
+        Place an Order
+
+        Parameters:
+            price (float): Order price
+            triggerprice (float): order trigger price
+            symbol (str): Trading symbol
+            token (int): Exchange token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique user order_id
+            quantity (int): Order quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+
+        if not price and trigger:
+            order_type = OrderType.SLM
+        elif not price:
+            order_type = OrderType.MARKET
+        elif not trigger:
+            order_type = OrderType.LIMIT
+        else:
+            order_type = OrderType.SL
+
+        if not target:
+            params = {
+                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "instrument_token": token,
+                "price": price,
+                "trigger_price": trigger,
+                "quantity": quantity,
+                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+                "order_type": cls.req_order_type[order_type],
+                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "product": cls._key_mapper(cls.req_product, product, 'product'),
+                "user_order_id": unique_id,
+                "disclosed_quantity": "0",
+                "market_protection_percentage": "0",
+                "client_id": headers["user_id"],
+            }
+
+            final_url = cls.urls["place_order"]
+
+        else:
+            params = {
+                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "instrument_token": token,
+                "price": price,
+                "trigger_price": trigger,
+                "square_off_value": target,
+                "stop_loss_value": stoploss,
+                "trailing_stop_loss": trailing_sl,
+                "quantity": quantity,
+                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+                "order_type": cls.req_order_type[order_type],
+                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "product": cls._key_mapper(cls.req_product, product, 'product'),
+                "user_order_id": unique_id,
+                "disclosed_quantity": "0",
+                "is_trailing": True if trailing_sl else False,
+                "market_protection_percentage": "0",
+                "client_id": headers["user_id"],
+            }
+
+            final_url = f"{cls.urls['place_order']}/bracket"
+
+
+        response = cls.fetch(method="POST", url=final_url,
+                             params=params, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def market_order(cls,
+                     token: int,
+                     exchange: str,
+                     symbol: str,
+                     quantity: int,
+                     side: str,
+                     unique_id: str,
+                     headers: dict,
+                     product: str = Product.MIS,
+                     validity: str = Validity.DAY,
+                     variety: str = Variety.REGULAR,
+                     ) -> dict[Any, Any]:
+        """
+        Place Market Order
+
+        Parameters:
+            symbol (str): Trading Symbol
+            token (int): Exchange Token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique User Orderid
+            quantity (int): Order Quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            product (str, optional): Order Product. Defaults to Product.MIS.
+            validity (str, optional): Order Validity. Defaults to Validity.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
 
         params = {
-            "exchange": cls.key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "order_type": cls.req_order_type[OrderType.MARKET],
-            "instrument_token": str(token),
-            "quantity": str(quantity),
-            "disclosed_quantity": "0",
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
             "price": "0",
-            "order_side": cls.key_mapper(cls.req_side, side, 'side'),
             "trigger_price": "0",
-            "validity": cls.key_mapper(cls.req_validity, validity, 'validity'),
-            "product": cls.key_mapper(cls.req_product, product, 'product'),
-            "client_id": headers["user_id"],
-            "user_order_id": uniqueid,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.MARKET],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
             "market_protection_percentage": "0",
-            }
+            "client_id": headers["user_id"],
+        }
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], params=params, headers=cls.headers)
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             params=params, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
 
-    def limit_order(cls, price: float,
-                    token: int, side: str,  uniqueid: str, quantity: int,
-                    exchange=ExchangeCode.NFO, product=Product.MIS, validity=Validity.DAY):
+    @classmethod
+    def limit_order(cls,
+                    token: int,
+                    exchange: str,
+                    symbol: str,
+                    price: float,
+                    quantity: int,
+                    side: str,
+                    unique_id: str,
+                    headers: dict,
+                    product: str = Product.MIS,
+                    validity: str = Validity.DAY,
+                    variety: str = Variety.REGULAR,
+                    ) -> dict[Any, Any]:
+        """
+        Place Limit Order
 
+        Parameters:
+            price (float): Order price
+            symbol (str): Trading symbol
+            token (int): Exchange token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique user order_id
+            quantity (int): Order quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
         params = {
-            "exchange": cls.key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": "0",
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
             "order_type": cls.req_order_type[OrderType.LIMIT],
-            "instrument_token": str(token),
-            "quantity": str(quantity),
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
             "disclosed_quantity": "0",
-            "price": str(price),
-            "order_side": cls.key_mapper(cls.req_side, side, 'side'),
-            "trigger_price": "0",
-            "validity": cls.key_mapper(cls.req_validity, validity, 'validity'),
-            "product": cls.key_mapper(cls.req_product, product, 'product'),
-            "client_id": headers["user_id"],
-            "user_order_id": uniqueid,
             "market_protection_percentage": "0",
-            }
+            "client_id": headers["user_id"],
+        }
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], params=params, headers=cls.headers)
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             params=params, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
 
-    def sl_order(cls, price: float, triggerprice: float,
-                 token: int, side: str,  uniqueid: str, quantity: int,
-                 exchange=ExchangeCode.NFO, product=Product.MIS, validity=Validity.DAY):
+    @classmethod
+    def sl_order(cls,
+                 token: int,
+                 exchange: str,
+                 symbol: str,
+                 price: float,
+                 trigger: float,
+                 quantity: int,
+                 side: str,
+                 unique_id: str,
+                 headers: dict,
+                 product: str = Product.MIS,
+                 validity: str = Validity.DAY,
+                 variety: str = Variety.STOPLOSS,
+                 ) -> dict[Any, Any]:
 
+        """
+        Place Stoploss Order
+
+        Parameters:
+            price (float): Order price
+            triggerprice (float): order trigger price
+            symbol (str): Trading symbol
+            token (int): Exchange token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique user order_id
+            quantity (int): Order quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
         params = {
-            "exchange": cls.key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
             "order_type": cls.req_order_type[OrderType.SL],
-            "instrument_token": str(token),
-            "quantity": str(quantity),
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
             "disclosed_quantity": "0",
-            "price": str(price),
-            "order_side": cls.key_mapper(cls.req_side, side, 'side'),
-            "trigger_price": str(triggerprice),
-            "validity": cls.key_mapper(cls.req_validity, validity, 'validity'),
-            "product": cls.key_mapper(cls.req_product, product, 'product'),
-            "client_id": headers["user_id"],
-            "user_order_id": uniqueid,
             "market_protection_percentage": "0",
-            }
+            "client_id": headers["user_id"],
+        }
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], params=params, headers=cls.headers)
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             params=params, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def slm_order(cls,
+                  token: int,
+                  exchange: str,
+                  symbol: str,
+                  trigger: float,
+                  quantity: int,
+                  side: str,
+                  unique_id: str,
+                  headers: dict,
+                  product: str = Product.MIS,
+                  validity: str = Validity.DAY,
+                  variety: str = Variety.STOPLOSS,
+                  ) -> dict[Any, Any]:
+
+        """
+        Place Stoploss-Market Order
+
+        Parameters:
+            price (float): Order price
+            triggerprice (float): order trigger price
+            symbol (str): Trading symbol
+            token (int): Exchange token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique user order_id
+            quantity (int): Order quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+        params = {
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
+            "price": "0",
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.SLM],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             params=params, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
 
 
     # NFO Order Functions
@@ -583,7 +831,7 @@ class mastertrust(Exchange):
             KeyError: If Strike Price Does not Exist
 
         Returns:
-            dict: Voluspa Unified Order Response
+            dict: Mastertrust Unified Order Response
         """
 
         if not cls.nfo_tokens:
@@ -596,7 +844,6 @@ class mastertrust(Exchange):
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
-        symbol = detail['Symbol']
 
         if not price and trigger:
             order_type = OrderType.SLM
@@ -607,29 +854,26 @@ class mastertrust(Exchange):
         else:
             order_type = OrderType.SL
 
-        json_data = [
-            {
-                "symbol_id": token,
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "trading_symbol": symbol,
-                "price": price,
-                "trigPrice": trigger,
-                "qty": quantity,
-                "transtype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[order_type],
-                "pCode": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "complexty": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "orderTag": unique_id,
-                "discqty": 0,
-            }
-        ]
+        params = {
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[order_type],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
+                             params=params, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
     def market_order_nfo(cls,
@@ -644,7 +888,7 @@ class mastertrust(Exchange):
                          product: str = Product.MIS,
                          validity: str = Validity.DAY,
                          variety: str = Variety.REGULAR,
-                         unique_id: str = UniqueID.MARKETORDER,
+                         unique_id: str = UniqueID.MARKETORDERNO,
                          ) -> dict[Any, Any]:
         """
         Place Market Order in F&O Segment.
@@ -666,7 +910,7 @@ class mastertrust(Exchange):
             KeyError: If Strike Price Does not Exist
 
         Returns:
-            dict: Voluspa Unified Order Response
+            dict: Mastertrust Unified Order Response
         """
 
         if not cls.nfo_tokens:
@@ -715,7 +959,7 @@ class mastertrust(Exchange):
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
                         variety: str = Variety.REGULAR,
-                        unique_id: str = UniqueID.LIMITORDER,
+                        unique_id: str = UniqueID.LIMITORDERNO,
                         ) -> dict[Any, Any]:
         """
         Place Limit Order in F&O Segment.
@@ -738,7 +982,7 @@ class mastertrust(Exchange):
             KeyError: If Strike Price Does not Exist
 
         Returns:
-            dict: Voluspa Unified Order Response
+            dict: Mastertrust Unified Order Response
         """
 
         if not cls.nfo_tokens:
@@ -788,7 +1032,7 @@ class mastertrust(Exchange):
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
                      variety: str = Variety.STOPLOSS,
-                     unique_id: str = UniqueID.SLORDER,
+                     unique_id: str = UniqueID.SLORDERNO,
                      ) -> dict[Any, Any]:
         """
         Place Stoploss Order in F&O Segment.
@@ -812,7 +1056,7 @@ class mastertrust(Exchange):
             KeyError: If Strike Price Does not Exist
 
         Returns:
-            dict: Voluspa Unified Order Response
+            dict: Mastertrust Unified Order Response
         """
 
         if not cls.nfo_tokens:
@@ -861,7 +1105,7 @@ class mastertrust(Exchange):
                       product: str = Product.MIS,
                       validity: str = Validity.DAY,
                       variety: str = Variety.STOPLOSS,
-                      unique_id: str = UniqueID.SLORDER,
+                      unique_id: str = UniqueID.SLMORDERNO,
                       ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order in F&O Segment.
@@ -885,7 +1129,7 @@ class mastertrust(Exchange):
             KeyError: If Strike Price Does not Exist
 
         Returns:
-            dict: Voluspa Unified Order Response
+            dict: Mastertrust Unified Order Response
         """
 
         if not cls.nfo_tokens:
@@ -921,11 +1165,376 @@ class mastertrust(Exchange):
         return cls._create_order_parser(response=response, headers=headers)
 
 
+    # BO Order Functions
+
+
+    @classmethod
+    def create_order_bo(cls,
+                        token: int,
+                        exchange: str,
+                        symbol: str,
+                        price: float,
+                        trigger: float,
+                        quantity: int,
+                        side: str,
+                        unique_id: str,
+                        headers: dict,
+                        target: float = 0,
+                        stoploss: float = 0,
+                        trailing_sl: float = 0,
+                        product: str = Product.BO,
+                        validity: str = Validity.DAY,
+                        variety: str = Variety.BO,
+                        ) -> dict[Any, Any]:
+
+        """
+        Place BO Order
+
+        Parameters:
+            price (float): Order price
+            triggerprice (float): order trigger price
+            symbol (str): Trading symbol
+            token (int): Exchange token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique user order_id
+            quantity (int): Order quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaulsts to 0.
+            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+        if not price and trigger:
+            order_type = OrderType.SLM
+        elif not price:
+            order_type = OrderType.MARKET
+        elif not trigger:
+            order_type = OrderType.LIMIT
+        else:
+            order_type = OrderType.SL
+
+        params = {
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": trigger,
+            "square_off_value": target,
+            "stop_loss_value": stoploss,
+            "trailing_stop_loss": trailing_sl,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[order_type],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "is_trailing": True if trailing_sl else False,
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
+
+        final_url = f"{cls.urls['place_order']}/bracket"
+
+        response = cls.fetch(method="POST", url=final_url,
+                             params=params, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def market_order_bo(cls,
+                        symbol: str,
+                        token: int,
+                        side: str,
+                        quantity: int,
+                        exchange: str,
+                        unique_id: str,
+                        headers: dict,
+                        target: float = 0,
+                        stoploss: float = 0,
+                        trailing_sl: float = 0,
+                        product: str = Product.BO,
+                        validity: str = Validity.DAY,
+                        variety: str = Variety.BO,
+                        ) -> dict[Any, Any]:
+        """
+        Place BO Market Order
+
+        Parameters:
+            symbol (str): Trading Symbol
+            token (int): Exchange Token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique User Orderid
+            quantity (int): Order Quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaulsts to 0.
+            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            product (str, optional): Order Product. Defaults to Product.MIS.
+            validity (str, optional): Order Validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+
+        params = {
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
+            "price": "0",
+            "trigger_price": "0",
+            "square_off_value": target,
+            "stop_loss_value": stoploss,
+            "trailing_stop_loss": trailing_sl,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.MARKET],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "is_trailing": True if trailing_sl else False,
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
+
+        final_url = f"{cls.urls['place_order']}/bracket"
+
+        response = cls.fetch(method="POST", url=final_url,
+                             params=params, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def limit_order_bo(cls,
+                       price: float,
+                       symbol: str,
+                       token: int,
+                       side: str,
+                       unique_id: str,
+                       quantity: int,
+                       exchange: str,
+                       headers: dict,
+                       target: float = 0,
+                       stoploss: float = 0,
+                       trailing_sl: float = 0,
+                       product: str = Product.MIS,
+                       validity: str = Validity.DAY,
+                       variety: str = Variety.BO,
+                       ) -> dict[Any, Any]:
+        """
+        Place Limit Order
+
+        Parameters:
+            price (float): Order price
+            symbol (str): Trading symbol
+            token (int): Exchange token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique user order_id
+            quantity (int): Order quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaulsts to 0.
+            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+        params = {
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": "0",
+            "square_off_value": target,
+            "stop_loss_value": stoploss,
+            "trailing_stop_loss": trailing_sl,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.LIMIT],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "is_trailing": True if trailing_sl else False,
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
+
+        final_url = f"{cls.urls['place_order']}/bracket"
+
+        response = cls.fetch(method="POST", url=final_url,
+                             params=params, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def sl_order_bo(cls,
+                    price: float,
+                    trigger: float,
+                    symbol: str,
+                    token: int,
+                    side: str,
+                    unique_id: str,
+                    quantity: int,
+                    exchange: str,
+                    headers: dict,
+                    target: float = 0,
+                    stoploss: float = 0,
+                    trailing_sl: float = 0,
+                    product: str = Product.BO,
+                    validity: str = Validity.DAY,
+                    variety: str = Variety.BO,
+                    ) -> dict[Any, Any]:
+
+        """
+        Place Stoploss Order
+
+        Parameters:
+            price (float): Order price
+            triggerprice (float): order trigger price
+            symbol (str): Trading symbol
+            token (int): Exchange token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique user order_id
+            quantity (int): Order quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaulsts to 0.
+            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+        params = {
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": trigger,
+            "square_off_value": target,
+            "stop_loss_value": stoploss,
+            "trailing_stop_loss": trailing_sl,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.SL],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "is_trailing": True if trailing_sl else False,
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
+
+        final_url = f"{cls.urls['place_order']}/bracket"
+
+        response = cls.fetch(method="POST", url=final_url,
+                             params=params, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def slm_order_bo(cls,
+                     trigger: float,
+                     symbol: str,
+                     token: int,
+                     side: str,
+                     unique_id: str,
+                     quantity: int,
+                     exchange: str,
+                     headers: dict,
+                     target: float = 0,
+                     stoploss: float = 0,
+                     trailing_sl: float = 0,
+                     product: str = Product.BO,
+                     validity: str = Validity.DAY,
+                     variety: str = Variety.BO,
+                     ) -> dict[Any, Any]:
+
+        """
+        Place Stoploss-Market Order
+
+        Parameters:
+            price (float): Order price
+            triggerprice (float): order trigger price
+            symbol (str): Trading symbol
+            token (int): Exchange token
+            side (str): Order Side: BUY, SELL
+            unique_id (str): Unique user order_id
+            quantity (int): Order quantity
+            exchange (str): Exchange to place the order in.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaulsts to 0.
+            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+        params = {
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "instrument_token": token,
+            "price": "0",
+            "trigger_price": trigger,
+            "square_off_value": target,
+            "stop_loss_value": stoploss,
+            "trailing_stop_loss": trailing_sl,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.SLM],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "is_trailing": True if trailing_sl else False,
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
+
+        final_url = f"{cls.urls['place_order']}/bracket"
+
+        response = cls.fetch(method="POST", url=final_url,
+                             params=params, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+
+    # Order Details, OrderBook & TradeBook
+
+
     @classmethod
     def fetch_order(cls,
                     order_id: str,
                     headers: dict
                     ) -> dict[Any, Any]:
+        """
+        Fetch Order Details.
+
+        Paramters:
+            order_id (str): id of the order
+
+        Raises:
+            InputError: If order does not exist.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
 
         order_id = str(order_id)
         params = {
@@ -994,48 +1603,170 @@ class mastertrust(Exchange):
 
         return orders
 
-    def modify_order(cls, order_id, token, ordertype, price, triggerprice, quantity, exchange="NFO", product="MIS", validity="DAY"):
+    @classmethod
+    def fetch_orderbook(cls,
+                        headers: dict
+                        ) -> list[dict]:
+        """
+        Fetch Orderbook Details
+
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
+
+        Returns:
+            list[dict]: List of dicitonaries of orders using kronos Unified Order Response
+        """
 
         params = {
-
-            "exchange": exchange,
-            "product": product,
-            "validity": validity,
-
-            'oms_order_id': str(order_id),
-            'instrument_token': str(token),
-            'order_type': ordertype,
-            'price': str(price),
-            'trigger_price': str(triggerprice),
-            'quantity': str(quantity),
-            'client_id': headers["user_id"],
+            "type": "completed",
+            "client_id": headers["user_id"],
         }
 
-        response = cls.fetch(method="GET", url=cls.urls["place_order"], params=params, headers=cls.headers)
+        response = cls.fetch(method="GET", url=cls.urls["orderbook"],
+                             params=params, headers=headers["headers"])
+        info = cls._json_parser(response)
 
-        return cls.Parser(response)
+        orders = []
 
-    def cancel_order(cls, order_id):
+        for order in info['data']['orders']:
+            detail = cls._orderbook_json_parser(order)
+            orders.append(detail)
+
 
         params = {
-            'client_id': headers["user_id"]
-            }
+            "type": "pending",
+            "client_id": headers["user_id"],
+        }
+
+        response = cls.fetch(method="GET", url=cls.urls["orderbook"],
+                             params=params, headers=headers["headers"])
+        info = cls._json_parser(response)
+
+        for order in info['data']['orders']:
+            detail = cls._orderbook_json_parser(order)
+            orders.append(detail)
+
+        return orders
+
+    @classmethod
+    def fetch_tradebook(cls,
+                        headers: dict
+                        ) -> list[dict]:
+        """
+        Fetch Tradebook Details
+
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
+
+        Returns:
+            list[dict]: List of dicitonaries of orders using kronos Unified Order Response
+        """
+
+        params = {"client_id": headers["user_id"]}
+
+        response = cls.fetch(method="GET", url=cls.urls["tradebook"],
+                             params=params, headers=headers["headers"])
+
+        info = cls._json_parser(response)
+
+        orders = []
+
+        for order in info['data']['orders']:
+            detail = cls._tradebook_json_parser(order)
+            orders.append(detail)
+
+        return orders
+
+
+    # Order Modification & Sq Off
+
+
+    @classmethod
+    def modify_order(cls,
+                     order_id: str,
+                     headers: dict,
+                     price: float | None = None,
+                     trigger: float | None = None,
+                     quantity: int | None = None,
+                     order_type: str | None = None,
+                     validity: str | None = None,
+                     ) -> dict[Any, Any]:
+        """
+        Modify an open order
+
+        Parameters:
+            order_id (str): id of the order to modify.
+            headers (dict): headers to send modify_order request with.
+            price (float | None, optional): price of the order. Defaults to None.
+            triggerprice (float | None, optional): trigger price of the order. Defaults to None.
+            quantity (int | None, optional): order quantity. Defaults to None.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+        order = cls.fetch_order(order_id=order_id, headers=headers)
+
+        params = {
+            "exchange": cls.req_exchange[order[Order.EXCHANGE]],
+            "instrument_token": order[Order.TOKEN],
+            "price": price or order[Order.PRICE],
+            "trigger_price": trigger or order[Order.TRIGGERPRICE],
+            "quantity": quantity or order[Order.QUANTITY],
+            "order_type": order_type or cls.req_order_type[Order.TYPE],
+            "validity": validity or cls.req_validity[order[Order.VALIDITY]],
+            "product": cls.req_product[order[Order.PRODUCT]],
+            "oms_order_id": order_id,
+            "client_id": headers["user_id"],
+        }
+
+        response = cls.fetch(method="GET", url=cls.urls["place_order"],
+                             params=params, headers=headers["headers"])
+
+        return cls._create_order_parser(response)
+
+    @classmethod
+    def cancel_order(cls,
+                     order_id: str,
+                     headers: dict
+                     ) -> dict[Any, Any]:
+        """
+        Cancel an open order.
+
+        Parameters:
+            order_id (str): id of the order
+            headers (dict): headers to send cancel_order request with.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+
+        params = {"client_id": headers["user_id"]}
 
         final_url = f"{cls.urls['place_order']}/{order_id}"
 
         response = cls.fetch(method="DELETE", url=final_url, params=params, headers=cls.headers)
-        response = cls._json_parser(response)
-        info = response.json()
+        info = cls._json_parser(response)
 
-        order_id = info['data']['oms_order_id']
-        order = cls.fetch_order(order_id)
 
-        return order
+        return cls._create_order_parser(info)
+
+
+    # Positions, Account Limits & Profile
+
 
     @classmethod
-    def fetch_position(cls,
-                       headers: dict
-                       ) -> dict[Any, Any]:
+    def fetch_day_positions(cls,
+                            headers: dict,
+                            ) -> dict[Any, Any]:
+        """
+        Fetch the Day's Account Positions
+
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Position Response
+        """
 
         params = {
             "type": "live",
@@ -1047,10 +1778,94 @@ class mastertrust(Exchange):
 
         positions = []
         for position in info['data']:
-            parsedPosition = cls._position_json_parser(position)
-            positions.append(parsedPosition)
+            detail = cls._position_json_parser(position)
+            positions.append(detail)
 
         return positions
+
+    @classmethod
+    def fetch_net_positions(cls,
+                            headers: dict,
+                            ) -> dict[Any, Any]:
+        """
+        Fetch Total Account Positions
+
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Position Response
+        """
+
+        params = {
+            "type": "historical",
+            "client_id": headers["user_id"],
+        }
+
+        response = cls.fetch(method="GET", url=cls.urls["positions"], headers=cls.headers, params=params)
+        info = cls._json_parser(response)
+
+        positions = []
+        for position in info['data']:
+            detail = cls._position_json_parser(position)
+            positions.append(detail)
+
+        return positions
+
+    @classmethod
+    def fetch_positions(cls,
+                       headers: dict
+                       ) -> dict[Any, Any]:
+        """
+        Fetch the All Account Positions
+
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Position Response
+        """
+        params = {
+            "type": "historical",
+            "client_id": headers["user_id"],
+        }
+
+        response = cls.fetch(method="GET", url=cls.urls["positions"], headers=cls.headers, params=params)
+        info = cls._json_parser(response)
+
+        positions = []
+        for position in info['data']:
+            detail = cls._position_json_parser(position)
+            positions.append(detail)
+
+        return positions
+
+    @classmethod
+    def fetch_holdings(cls,
+                       headers: dict,
+                       ) -> dict[Any, Any]:
+        """
+        Fetch Account Holdings
+
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Positions Response
+        """
+
+        params = {"client_id": headers["user_id"]}
+
+        response = cls.fetch(method="GET", url=cls.urls["holdings"], headers=cls.headers, params=params)
+        info = cls._json_parser(response)
+
+        # holdings = []
+        # for holding in info['data']:
+        #     detail = cls._position_json_parser(holding)
+        #     holdings.append(detail)
+
+        # return holdings
+        return info
 
     @classmethod
     def profile(cls,

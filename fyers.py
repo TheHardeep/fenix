@@ -17,6 +17,7 @@ from kronos.base.constants import Validity
 from kronos.base.constants import Variety
 from kronos.base.constants import Status
 from kronos.base.constants import Order
+from kronos.base.constants import Position
 from kronos.base.constants import Profile
 from kronos.base.constants import Root
 from kronos.base.constants import WeeklyExpiry
@@ -24,6 +25,7 @@ from kronos.base.constants import UniqueID
 
 
 from kronos.base.errors import InputError
+from kronos.base.errors import BrokerError
 from kronos.base.errors import ResponseError
 from kronos.base.errors import TokenDownloadError
 
@@ -68,8 +70,6 @@ class fyers(Exchange):
     }
 
 
-# https://api-t1.fyers.in/api/v3/orders
-
     # Order Placing URLs
 
     urls = {
@@ -85,7 +85,6 @@ class fyers(Exchange):
 
 
     # Request Parameters Dictionaries
-
 
     req_side = {
         Side.BUY: 1,
@@ -123,6 +122,27 @@ class fyers(Exchange):
 
     # Response Parameters Dictionaries
 
+    resp_exchange = {
+        10: ExchangeCode.NSE,
+        11: ExchangeCode.MCX,
+        12: ExchangeCode.BSE,
+    }
+
+    resp_segment = {
+        "1010": ExchangeCode.NSE,
+        "1011": ExchangeCode.NFO,
+        "1210": ExchangeCode.BSE,
+        "1211": ExchangeCode.BFO,
+        "1120": ExchangeCode.MCX,
+
+
+    }
+
+    resp_side = {
+        1: Side.BUY,
+        -1: Side.SELL,
+    }
+
     resp_status = {
         6: Status.PENDING,
         5: Status.REJECTED,
@@ -132,25 +152,19 @@ class fyers(Exchange):
     }
 
     resp_order_type = {
-        "MARKET": OrderType.MARKET,
-        "LIMIT": OrderType.LIMIT,
-        "STOPLOSS_LIMIT": OrderType.SL,
-        "STOPLOSS_MARKET": OrderType.SLM,
+        2: OrderType.MARKET,
+        1: OrderType.LIMIT,
+        4: OrderType.SL,
+        3: OrderType.SLM
     }
 
     resp_product = {
-        "DELIVERY": Product.CNC,
-        "CARRYFORWARD": Product.NRML,
-        "MARGIN": Product.MARGIN,
         "INTRADAY": Product.MIS,
+        "CARRYFORWARD": Product.NRML,
+        "CNC": Product.CNC,
+        "MARGIN": Product.MARGIN,
         "BO": Product.BO,
-    }
-
-    resp_variety = {
-        "NORMAL": Variety.REGULAR,
-        "STOPLOSS": Variety.STOPLOSS,
-        "AMO": Variety.AMO,
-        "ROBO": Variety.BO,
+        "CO": Product.CO,
     }
 
 
@@ -174,7 +188,7 @@ class fyers(Exchange):
         ]
 
         df = cls.data_reader(cls.base_urls["market_data_url"].replace("NSE_FO", "NSE_CM"), filetype='csv', col_names=col_names)
-        df = df[((df['Underlying scrip code'] == 'BANKNIFTY') | (df['Underlying scrip code'] == 'NIFTY') | (df['Underlying scrip code'] == 'FINNIFTY')) ]
+        df = df[((df['Underlying scrip code'] == 'BANKNIFTY') | (df['Underlying scrip code'] == 'NIFTY') | (df['Underlying scrip code'] == 'FINNIFTY'))]
 
         bnf_details = df[df['Underlying scrip code'] == "BANKNIFTY"].iloc[0]
         nf_details = df[df['Underlying scrip code'] == "NIFTY"].iloc[0]
@@ -211,7 +225,8 @@ class fyers(Exchange):
             df = df[['Token', 'Symbol', 'Expiry', 'Option',
                      'StrikePrice', 'LotSize',
                      'Root', 'TickSize'
-                    ]]
+                     ]
+                    ]
 
             df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
 
@@ -223,6 +238,10 @@ class fyers(Exchange):
 
         except Exception as exc:
             raise TokenDownloadError({"Error": exc.args}) from exc
+
+
+    # Headers & Json Parsers
+
 
     @classmethod
     def create_headers(cls,
@@ -316,10 +335,6 @@ class fyers(Exchange):
 
         return headers
 
-
-    # Headers & Json Parsers
-
-
     @classmethod
     def _json_parser(cls,
                      response: Response,
@@ -357,31 +372,31 @@ class fyers(Exchange):
             dict: Unified Kronos Order Response
         """
         parsed_order = {
-            Order.ID: order["orderid"],
-            Order.USERID: order["ordertag"],
-            Order.TIMESTAMP: cls.datetime_strp(order["updatetime"], "%d-%b-%Y %H:%M:%S"),
-            Order.SYMBOL: order["tradingsymbol"],
-            Order.TOKEN: order["symboltoken"],
-            Order.SIDE: cls.req_side.get(order["transactiontype"], order["transactiontype"]),
-            Order.TYPE: cls.resp_order_type.get(order["ordertype"], order["ordertype"]),
-            Order.AVGPRICE: order["averageprice"],
-            Order.PRICE: order["price"],
-            Order.TRIGGERPRICE: order["triggerprice"],
-            Order.TARGETPRICE: order['squareoff'],
-            Order.STOPLOSSPRICE: order['stoploss'],
-            Order.TRAILINGSTOPLOSS: order['trailingstoploss'],
-            Order.QUANTITY: int(order["quantity"]),
-            Order.FILLEDQTY: int(order["filledshares"]),
-            Order.REMAININGQTY: int(order["unfilledshares"]),
-            Order.CANCELLEDQTY: int(order["cancelsize"]),
+            Order.ID: order["id"],
+            Order.USERID: "",
+            Order.TIMESTAMP: cls.datetime_strp(order["orderDateTime"], "%d-%b-%Y %H:%M:%S"),
+            Order.SYMBOL: order["symbol"],
+            Order.TOKEN: order["fyToken"][10:],
+            Order.SIDE: cls.resp_side.get(order["side"], order["side"]),
+            Order.TYPE: cls.resp_order_type.get(order["type"], order["type"]),
+            Order.AVGPRICE: order["tradedPrice"],
+            Order.PRICE: order["limitPrice"],
+            Order.TRIGGERPRICE: order["stopPrice"],
+            Order.TARGETPRICE: 0.0,
+            Order.STOPLOSSPRICE: 0.0,
+            Order.TRAILINGSTOPLOSS: 0.0,
+            Order.QUANTITY: order["qty"],
+            Order.FILLEDQTY: order["filledQty"],
+            Order.REMAININGQTY: order["remainingQuantity"],
+            Order.CANCELLEDQTY: 0,
             Order.STATUS: cls.resp_status.get(order["status"], order["status"]),
-            Order.REJECTREASON: order["text"],
-            Order.DISCLOSEDQUANTITY: int(order["disclosedquantity"]),
-            Order.PRODUCT: cls.resp_product.get(order["producttype"], order["producttype"]),
-            Order.EXCHANGE: cls.req_exchange.get(order["exchange"], order["exchange"]),
-            Order.SEGMENT: cls.req_exchange.get(order["exchange"], order["exchange"]),
-            Order.VALIDITY: cls.req_validity.get(order["duration"], order["duration"]),
-            Order.VARIETY: cls.resp_variety.get(order["variety"], order["variety"]),
+            Order.REJECTREASON: order["message"],
+            Order.DISCLOSEDQUANTITY: order["disclosedQty"],
+            Order.PRODUCT: cls.resp_product.get(order["productType"], order["productType"]),
+            Order.EXCHANGE: cls.resp_exchange.get(order["exchange"], order["exchange"]),
+            Order.SEGMENT: cls.resp_segment.get(f"{order['exchange']}{order['segment']}", order["segment"]),
+            Order.VALIDITY: cls.req_validity.get(order["orderValidity"], order["orderValidity"]),
+            Order.VARIETY: "",
             Order.INFO: order,
         }
 
@@ -401,36 +416,59 @@ class fyers(Exchange):
             dict: Unified Kronos Order Response
         """
         parsed_order = {
-            Order.ID: order["orderid"],
+            Order.ID: order["orderNumber"],
             Order.USERID: "",
-            Order.TIMESTAMP: cls.datetime_strp(order["updatetime"], "%d-%b-%Y %H:%M:%S"),
-            Order.SYMBOL: order["tradingsymbol"],
-            Order.TOKEN: order["symboltoken"],
-            Order.SIDE: cls.req_side.get(order["transactiontype"], order["transactiontype"]),
-            Order.TYPE: cls.resp_order_type.get(order["ordertype"], order["ordertype"]),
-            Order.AVGPRICE: order["averageprice"],
-            Order.PRICE: order["price"],
-            Order.TRIGGERPRICE: order["triggerprice"],
-            Order.TARGETPRICE: order['squareoff'],
-            Order.STOPLOSSPRICE: order['stoploss'],
-            Order.TRAILINGSTOPLOSS: order['trailingstoploss'],
-            Order.QUANTITY: int(order["quantity"]),
-            Order.FILLEDQTY: int(order["filledshares"]),
-            Order.REMAININGQTY: int(order["unfilledshares"]),
-            Order.CANCELLEDQTY: int(order["cancelsize"]),
-            Order.STATUS: cls.resp_status.get(order["status"], order["status"]),
-            Order.REJECTREASON: order["text"],
-            Order.DISCLOSEDQUANTITY: int(order["disclosedquantity"]),
-            Order.PRODUCT: cls.resp_product.get(order["producttype"], order["producttype"]),
-            Order.EXCHANGE: cls.req_exchange.get(order["exchange"], order["exchange"]),
-            Order.SEGMENT: cls.req_exchange.get(order["exchange"], order["exchange"]),
-            Order.VALIDITY: cls.req_validity.get(order["duration"], order["duration"]),
-            Order.VARIETY: cls.resp_variety.get(order["variety"], order["variety"]),
+            Order.TIMESTAMP: cls.datetime_strp(order["orderDateTime"], "%d-%b-%Y %H:%M:%S"),
+            Order.SYMBOL: order["symbol"],
+            Order.TOKEN: order["fyToken"][10:],
+            Order.SIDE: cls.resp_side.get(order["side"], order["side"]),
+            Order.TYPE: "",
+            Order.AVGPRICE: 0.0,
+            Order.PRICE: 0.0,
+            Order.TRIGGERPRICE: 0.0,
+            Order.TARGETPRICE: 0.0,
+            Order.STOPLOSSPRICE: 0.0,
+            Order.TRAILINGSTOPLOSS: 0.0,
+            Order.QUANTITY: order["tradedQty"],
+            Order.FILLEDQTY: 0,
+            Order.REMAININGQTY: 0,
+            Order.CANCELLEDQTY: 0,
+            Order.STATUS: "",
+            Order.REJECTREASON: "",
+            Order.DISCLOSEDQUANTITY: "",
+            Order.PRODUCT: "",
+            Order.EXCHANGE: cls.resp_exchange.get(order["exchange"], order["exchange"]),
+            Order.SEGMENT: cls.resp_segment.get(f"{order['exchange']}{order['segment']}", order["segment"]),
+            Order.VALIDITY: "",
+            Order.VARIETY: "",
             Order.INFO: order,
         }
 
         return parsed_order
 
+    @classmethod
+    def _position_json_parser(cls,
+                              position: dict,
+                              ) -> dict[Any, Any]:
+
+        parsed_position = {
+            Position.SYMBOL: position["symbol"],
+            Position.TOKEN: position["fyToken"][10:],
+            Position.NETQTY: position["netQty"],
+            Position.AVGPRICE: position["netAvg"],
+            Position.MTM: position["realized_profit"],
+            Position.PNL: position["pl"],
+            Position.BUYQTY: position["buyQty"],
+            Position.BUYPRICE: position["buyAvg"],
+            Position.SELLQTY: position["sellQty"],
+            Position.SELLPRICE: position["sellAvg"],
+            Position.LTP: position["ltp"],
+            Position.PRODUCT: cls.resp_product.get(position["productType"], position["productType"]),
+            Position.EXCHANGE: cls.resp_segment.get(f"{position['exchange']}{position['segment']}", position["segment"]),
+            Position.INFO: position,
+        }
+
+        return parsed_position
 
     @classmethod
     def _profile_json_parser(cls,
@@ -468,12 +506,18 @@ class fyers(Exchange):
                              headers: dict
                              ) -> dict[Any, Any]:
 
-        info = cls._json_parser(response)
+        info = cls.on_json_response(response)
+        print(info)
 
-        order_id = info["data"]["orderid"]
-        order = cls.fetch_order(order_id=order_id, headers=headers)
+        if info['s'] == "ok" or info.get("id"):
 
-        return order
+            order_id = info["id"]
+            order = cls.fetch_order(order_id=order_id, headers=headers)
+
+            return order
+
+        else:
+            raise ResponseError(cls.id + " " + info['message'])
 
 
     # Order Functions
@@ -894,13 +938,10 @@ class fyers(Exchange):
         }
 
 
-
-
-
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._json_parser(response)#cls._create_order_parser(response=response, headers=headers)
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
     def limit_order_nfo(cls,
@@ -952,8 +993,6 @@ class fyers(Exchange):
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         symbol = detail['Symbol']
-        token = detail['Token']
-
 
         json_data = {
             "symbol": symbol,
@@ -1125,7 +1164,6 @@ class fyers(Exchange):
                              json=json_data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
-
 
 
     # BO Order Functions
@@ -1389,17 +1427,18 @@ class fyers(Exchange):
                     headers: dict
                     ) -> dict[Any, Any]:
 
-        order_id = str(order_id)
-        response = cls.fetch(method="GET", url=cls.urls['orderbook'], headers=headers["headers"])
+        params = {'id': order_id}
+        try:
+            response = cls.fetch(method="GET", url=cls.urls['orderbook'],
+                                 params=params, headers=headers["headers"])
+        except BrokerError as exc:
+            if "invalid order id" in exc.args[0]:
+                raise InputError({"This order_id does not exist."})
+
         info = cls._json_parser(response)
+        order = cls._orderbook_json_parser(info['orderBook'][0])
 
-        if info['data']:
-            for order in info['data']:
-                if order["orderid"] == order_id:
-                    detail = cls._orderbook_json_parser(order)
-                    return detail
-
-        raise InputError({"This orderid does not exist."})
+        return order
 
     @classmethod
     def fetch_orders(cls,
@@ -1409,7 +1448,10 @@ class fyers(Exchange):
         response = cls.fetch(method="GET", url=cls.urls['orderbook'], headers=headers["headers"])
         info = cls._json_parser(response)
 
-        orders = info["orderBook"]
+        orders = []
+        for order in info['orderBook']:
+            detail = cls._orderbook_json_parser(order)
+            orders.append(detail)
 
         return orders
 
@@ -1421,7 +1463,10 @@ class fyers(Exchange):
         response = cls.fetch(method="GET", url=cls.urls['orderbook'], headers=headers["headers"])
         info = cls._json_parser(response)
 
-        orders = info["orderBook"]
+        orders = []
+        for order in info['orderBook']:
+            detail = cls._orderbook_json_parser(order)
+            orders.append(detail)
 
         return orders
 
@@ -1434,8 +1479,8 @@ class fyers(Exchange):
         info = cls._json_parser(response)
 
         orders = []
-        if info['data']:
-            for order in info['data']:
+        if info['tradeBook']:
+            for order in info['tradeBook']:
                 detail = cls._tradebook_json_parser(order)
                 orders.append(detail)
 
@@ -1450,7 +1495,7 @@ class fyers(Exchange):
                      order_id: str,
                      headers: dict,
                      price: float | None = None,
-                     trigger_price: float | None = None,
+                     trigger: float | None = None,
                      quantity: int | None = None,
                      order_type: str | None = None,
                      validity: str | None = None,
@@ -1466,31 +1511,26 @@ class fyers(Exchange):
             quantity (int | None, optional): order quantity. Defaults to None.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: kronos Unified Order Response
         """
+        json_data = {
+            "id": order_id,
+            "qty": quantity,
+            "limitPrice": price,
+            "stopPrice": trigger,
+            "type": cls.req_order_type.get(order_type, None),
+        }
 
-        response = cls.fetch(method="GET", url=cls.urls['orderbook'], headers=headers["headers"])
-        info = cls._json_parser(response)
+        for key in list(json_data):
+            if not json_data[key]:
+                del json_data[key]
 
-        order = {}
-        if info['data']:
-            for order_detail in info['data']:
-                if order_detail["orderid"] == order_id:
-                    order = order_detail
-                    break
-        if not order:
-            raise InputError({"This orderid does not exist."})
+        response = cls.fetch(method="PATCH", url=cls.urls["orderbook"],
+                             json=json_data, headers=headers["headers"])
 
+        _ = cls._json_parser(response)
 
-        # json_data = {
-        #     "variety": order["variety"],
-        #     "orderid": order["orderid"],
-        #     "ordertype": order["ordertype"],
-        #     "producttype": order["producttype"],
-        #     "duration": order["duration"],
-        # }
-
-        return cls._json_parser(response)
+        return cls.fetch_order(order_id=order_id, headers=headers)
 
     @classmethod
     def cancel_order(cls,
@@ -1498,23 +1538,78 @@ class fyers(Exchange):
                      headers: dict
                      ) -> dict[Any, Any]:
 
-        order = cls.fetch_order(order_id=order_id, headers=headers)
 
-        json_data = {
-            "variety": order['variety'],  # cls.req_variety[order['variety']],
-            "orderid": order['id'],
-        }
 
-        response = cls.fetch(method="POST", url=cls.urls["cancel_order"],
+        json_data = {"id": order_id}
+
+
+        response = cls.fetch(method="DELETE", url=cls.urls["cancel_order"],
                              json=json_data, headers=headers["headers"])
 
         info = cls._json_parser(response)
 
-        return cls.fetch_order(order_id=info["data"]["orderid"], headers=headers)
+        return cls.fetch_order(order_id=info["id"], headers=headers)
 
 
-    # Account Limits & Profile
+    # Positions, Account Limits & Profile
 
+
+    @classmethod
+    def fetch_day_positions(cls,
+                            headers: dict,
+                            ) -> dict[Any, Any]:
+        """
+        Fetch the Day's Account Holdings
+
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Position Response
+        """
+
+        response = cls.fetch(method="GET", url=cls.urls['positions'], headers=headers["headers"])
+        info = cls._json_parser(response)
+
+        positions = []
+        for position in info['netPositions']:
+            detail = cls._position_json_parser(position)
+            positions.append(detail)
+
+        return positions
+
+    @classmethod
+    def fetch_net_positions(cls,
+                            headers: dict,
+                            ) -> dict[Any, Any]:
+        """
+        Fetch Total Account Holdings
+
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Position Response
+        """
+        return cls.fetch_day_positions(headers=headers)
+
+    @classmethod
+    def fetch_holdings(cls,
+                       headers: dict,
+                       ) -> dict[Any, Any]:
+        """
+        Fetch Account Holdings
+
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Positions Response
+        """
+
+        response = cls.fetch(method="GET", url=cls.urls['holdings'], headers=headers["headers"])
+
+        return cls._json_parser(response)
 
     @classmethod
     def rms_limits(cls,

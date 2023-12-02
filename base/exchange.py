@@ -227,7 +227,8 @@ class Exchange:
     def data_reader(link: str,
                     filetype: str,
                     dtype: dict | None = None,
-                    sep: str = ","
+                    sep: str = ",",
+                    col_names: list = [],
                     ) -> DataFrame:
         """
         Pandas.read_csv & Pandas.read_json Functions Wrapper
@@ -248,10 +249,17 @@ class Exchange:
             return read_json(link)
 
         if filetype == "csv":
-            return read_csv(link,
-                            dtype=dtype,
-                            sep=sep
-                            )
+            if col_names:
+                return read_csv(link,
+                                dtype=dtype,
+                                sep=sep,
+                                names=col_names
+                                )
+            else:
+                return read_csv(link,
+                                dtype=dtype,
+                                sep=sep,
+                                )
 
         raise InputError(f"Wrong Filetype: {filetype}, the possible values are: 'json', 'csv'")
 

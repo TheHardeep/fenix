@@ -322,7 +322,7 @@ class symphony(Exchange):
             Position.SYMBOL: position['TradingSymbol'],
             Position.TOKEN: position['ExchangeInstrumentID'],
             Position.NETQTY: position['Quantity'],
-            Position.AVGPRICE: (position["SumOfTradedQuantityAndPriceBuy"]+position["SumOfTradedQuantityAndPriceSell"])/(position["BuyAmount"]+position["SellAmount"]),
+            Position.AVGPRICE: (position["SumOfTradedQuantityAndPriceBuy"] + position["SumOfTradedQuantityAndPriceSell"]) / (position["BuyAmount"] + position["SellAmount"]),
             Position.MTM: position['RealizedMTM'],
             Position.PNL: position['MTM'],
             Position.BUYQTY: position['OpenBuyQuantity'],

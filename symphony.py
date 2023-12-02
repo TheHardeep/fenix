@@ -19,7 +19,6 @@ from kronos.base.constants import WeeklyExpiry
 from kronos.base.constants import UniqueID
 
 
-from kronos.base.errors import InputError
 from kronos.base.errors import ResponseError
 from kronos.base.errors import TokenDownloadError
 
@@ -159,11 +158,10 @@ class symphony(Exchange):
             df['StrikePrice'] = df['StrikePrice'].astype(int)
             df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
 
-            expiry_data = cls.jsonify_expiry(df=df)
+            expiry_data = cls.jsonify_expiry(data_frame=df)
+            cls.nfo_tokens = expiry_data
 
-            cls.Global = expiry_data
-
-            print("Expiry Data Acquired!!")
+            return expiry_data
 
         except Exception as exc:
             raise TokenDownloadError({"Error": exc.args}) from exc

@@ -125,7 +125,7 @@ class Exchange:
 
         except requestsConnectionError as exc:
             error_string = str(exc)
-            details = ' '.join([cls.id, method, url])
+            details = ' '.join([cls.id, method, url, error_string])
             if 'Read timed out' in error_string:
                 raise RequestTimeout(details) from exc
             raise NetworkError(details) from exc
@@ -142,7 +142,7 @@ class Exchange:
             raise BrokerError(exc) from exc
 
     @staticmethod
-    def json_parser(response: Response) -> dict[Any, Any] | list[dict[Any, Any]]:
+    def _json_parser(response: Response) -> dict[Any, Any] | list[dict[Any, Any]]:
         """
         Get json object from a request Response.
 
@@ -154,6 +154,7 @@ class Exchange:
         """
         try:
             response = loads(response.text.strip())
+            print(response)
             return response
         except Exception as exc:
             raise ResponseError({"Status": response.status_code,

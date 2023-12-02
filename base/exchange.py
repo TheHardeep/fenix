@@ -254,6 +254,7 @@ class Exchange:
                 return read_csv(link,
                                 dtype=dtype,
                                 sep=sep,
+<<<<<<< HEAD
                                 names=col_names,
                                 )
 
@@ -261,6 +262,15 @@ class Exchange:
                             dtype=dtype,
                             sep=sep
                             )
+=======
+                                names=col_names
+                                )
+            else:
+                return read_csv(link,
+                                dtype=dtype,
+                                sep=sep,
+                                )
+>>>>>>> iifl
 
 
         raise InputError(f"Wrong Filetype: {filetype}, the possible values are: 'json', 'csv'")

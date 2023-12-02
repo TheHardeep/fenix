@@ -249,9 +249,12 @@ class iifl(Exchange):
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> iifl
         json_data = {
             "secretKey": params["api_secret"],
             "appKey": params["api_key"],

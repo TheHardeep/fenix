@@ -1,7 +1,7 @@
 #  ------------------------------------------------------------------------------
 
 
-__version__ = '1.0.0'
+__version__ = "1.0.0"
 
 
 #  ------------------------------------------------------------------------------
@@ -36,23 +36,33 @@ from kronos.base.constants import UniqueID              # noqa: F401
 
 from kronos.aliceblue import aliceblue                  # noqa :F401
 from kronos.angelone import angelone                    # noqa :F401
+from kronos.choice import choice                        # noqa :F401
 from kronos.finvasia import finvasia                    # noqa :F401
+from kronos.fivepaisa import fivepaisa                  # noqa :F401
+from kronos.fyers import fyers                          # noqa :F401
 from kronos.iifl import iifl                            # noqa :F401
+from kronos.mastertrust import mastertrust              # noqa :F401
+from kronos.symphony import symphony                    # noqa :F401
 from kronos.zerodha import zerodha                      # noqa :F401
 
 
 exchanges = [
-    'aliceblue',
-    'angelone',
-    'finvasia',
-    'iifl',
-    'zerodha',
+    "aliceblue",
+    "angelone",
+    "choice",
+    "finvasia",
+    "fivepaisa",
+    "fyers",
+    "iifl",
+    "mastertrust",
+    "symphony",
+    "zerodha",
 ]
 
 base = [
-    'Exchange',
-    'exchanges',
-    'constants',
+    "Exchange",
+    "exchanges",
+    "constants",
 ]
 
 __all__ = base + errors.__all__ + exchanges + constants.__all__

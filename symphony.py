@@ -138,7 +138,7 @@ class symphony(Exchange):
 
             df = cls.data_frame(data)
 
-            df = df[(df[5] == 'OPTIDX') & (df[3].str.startswith(("NIFTY", "BANKNIFTY")))]
+            df = df[(df[5] == 'OPTIDX') & (df[3].str.startswith(("BANKNIFTY", "NIFTY")))]
             df[4] = df[4].str[-2:]
             df[10] = df[10].astype(int) - 1
 
@@ -238,8 +238,8 @@ class symphony(Exchange):
 
     @classmethod
     def _orderbook_json_parser(cls,
-                                  order: dict,
-                                  ) -> dict[Any, Any]:
+                               order: dict,
+                               ) -> dict[Any, Any]:
         """
         Parses Order History Json Response to a kronos Unified Order Response.
 
@@ -1455,8 +1455,8 @@ class symphony(Exchange):
 
     @classmethod
     def fetch_orderbook(cls,
-                     headers: dict
-                     ) -> list[dict]:
+                        headers: dict
+                        ) -> list[dict]:
         """
         Fetch Orderbook Details
 
@@ -1677,4 +1677,3 @@ class symphony(Exchange):
         profile = cls._profile_json_parser(info["result"])
 
         return profile
-

@@ -221,8 +221,8 @@ class choice(Exchange):
                       axis=1, inplace=True)
 
             df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
-            df['StrikePrice'] = (df['StrikePrice']/df['PriceDivisor']).astype(int)
-            df['TickSize'] = df['TickSize']/df['PriceDivisor']
+            df['StrikePrice'] = (df['StrikePrice'] / df['PriceDivisor']).astype(int)
+            df['TickSize'] = df['TickSize'] / df['PriceDivisor']
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
 
@@ -355,7 +355,7 @@ class choice(Exchange):
             Order.TRAILINGSTOPLOSS: order["SLJumpprice"],
             Order.QUANTITY: order['Qty'],
             Order.FILLEDQTY: order['TradedQty'],
-            Order.REMAININGQTY:  order['TotalQtyRemaining'],
+            Order.REMAININGQTY: order['TotalQtyRemaining'],
             Order.CANCELLEDQTY: 0,
             Order.STATUS: cls.resp_status.get(order['OrderStatus'], order['OrderStatus']),
             Order.REJECTREASON: order['ErrorString'],
@@ -396,7 +396,7 @@ class choice(Exchange):
             Profile.EXHCNAGESENABLED: [],
             Profile.ENABLED: True,
             Profile.INFO: profile,
-            }
+        }
 
         return parsed_profile
 
@@ -963,7 +963,7 @@ class choice(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers)
 
-        return cls._create_order_parser(response=response,headers=headers)
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
     def sl_order_nfo(cls,
@@ -1035,7 +1035,7 @@ class choice(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers)
 
-        return cls._create_order_parser(response=response,headers=headers)
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
     def slm_order_nfo(cls,
@@ -1106,7 +1106,7 @@ class choice(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers)
 
-        return cls._create_order_parser(response=response,headers=headers)
+        return cls._create_order_parser(response=response, headers=headers)
 
 
     # Order Details, OrderBook & TradeBook

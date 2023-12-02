@@ -34,7 +34,7 @@ class EncryptionClient:
         self.enc_key = encryption_key
 
     def _pad_and_convert_to_bytes(self, text):
-        return bytes(text+chr(16-len(text) % 16)*(16-len(text) % 16), encoding="utf-8")
+        return bytes(text + chr(16 - len(text) % 16) * (16 - len(text) % 16), encoding="utf-8")
 
     def encrypt(self, text):
         padded_text = self._pad_and_convert_to_bytes(text)
@@ -326,9 +326,9 @@ class fivepaisa(Exchange):
             Order.TOKEN: order['ScripCode'],
             Order.SIDE: cls.resp_side[order['BuySell']],
             Order.TYPE: "SL" if order['WithSL'] == "Y" else cls.resp_order_type[order['AtMarket']],
-            Order.AVGPRICE: order['Rate'], # float(order['Rate'] or 0.0),
-            Order.PRICE: order['Rate'], # float(order['Rate'] or 0.0),
-            Order.TRIGGERPRICE: order['SLTriggerRate'], # float(order['SLTriggerRate'] or 0.0),
+            Order.AVGPRICE: order['Rate'],  # float(order['Rate'] or 0.0),
+            Order.PRICE: order['Rate'],  # float(order['Rate'] or 0.0),
+            Order.TRIGGERPRICE: order['SLTriggerRate'],  # float(order['SLTriggerRate'] or 0.0),
             Order.QUANTITY: order['Qty'],
             Order.FILLEDQTY: order['TradedQty'],
             Order.REMAININGQTY: order['PendingQty'],
@@ -338,11 +338,11 @@ class fivepaisa(Exchange):
             Order.DISCLOSEDQUANTITY: order['DisClosedQty'],
             Order.PRODUCT: cls.resp_product[order['DelvIntra']],
             Order.EXCHANGE: cls.resp_exchange[order['Exch']],
-            Order.SEGMENT: cls.resp_segment[order['Exch']+order['ExchType']],
+            Order.SEGMENT: cls.resp_segment[order['Exch'] + order['ExchType']],
             Order.VALIDITY: cls.resp_validity[order['OrderValidity']],
             Order.VARIETY: "",
             Order.INFO: order,
-            }
+        }
 
         return parsed_order
 
@@ -409,11 +409,11 @@ class fivepaisa(Exchange):
             Order.DISCLOSEDQUANTITY: 0,
             Order.PRODUCT: cls.resp_product[order['DelvIntra']],
             Order.EXCHANGE: cls.resp_exchange[order['Exch']],
-            Order.SEGMENT: cls.resp_segment[order['Exch']+order['ExchType']],
+            Order.SEGMENT: cls.resp_segment[order['Exch'] + order['ExchType']],
             Order.VALIDITY: "",
             Order.VARIETY: "",
             Order.INFO: order,
-            }
+        }
 
         return parsed_order
 
@@ -426,7 +426,7 @@ class fivepaisa(Exchange):
             Position.SYMBOL: position["ScripName"],
             Position.TOKEN: position["ScripCode"],
             Position.NETQTY: position["NetQty"],
-            Position.AVGPRICE: (position["BuyValue"]+position["SellValue"])/(position["BuyQty"]+position["SellQty"]),
+            Position.AVGPRICE: (position["BuyValue"] + position["SellValue"]) / (position["BuyQty"] + position["SellQty"]),
             Position.MTM: position["MTOM"],
             Position.PNL: position["BookedPL"],
             Position.BUYQTY: position["BuyQty"],
@@ -435,7 +435,7 @@ class fivepaisa(Exchange):
             Position.SELLPRICE: position["SellAvgRate"],
             Position.LTP: position["LTP"],
             Position.PRODUCT: cls.resp_product.get(position["OrderFor"], position["OrderFor"]),
-            Position.EXCHANGE: cls.resp_segment[position['Exch']+position['ExchType']],
+            Position.EXCHANGE: cls.resp_segment[position['Exch'] + position['ExchType']],
             Position.INFO: position,
         }
 
@@ -492,7 +492,7 @@ class fivepaisa(Exchange):
         json_data = {
             'head': {
                 'key': headers["user_key"],
-                },
+            },
             'body': {
                 'DisQty': 0,
                 'Exchange': cls.req_exchange[exchange],
@@ -532,7 +532,7 @@ class fivepaisa(Exchange):
         json_data = {
             'head': {
                 'key': headers["user_key"],
-                },
+            },
             'body': {
                 'DisQty': 0,
                 'Exchange': cls.req_exchange[exchange],
@@ -573,7 +573,7 @@ class fivepaisa(Exchange):
         json_data = {
             'head': {
                 'key': headers["user_key"],
-                },
+            },
             'body': {
                 'DisQty': 0,
                 'Exchange': cls.req_exchange[exchange],
@@ -598,24 +598,24 @@ class fivepaisa(Exchange):
 
     @classmethod
     def market_order_bo(cls,
-                     symbol: str,
-                     token: int,
-                     side: str,
-                     unique_id: str,
-                     quantity: int,
-                     exchange: str,
-                     headers: dict,
-                     target: float = 0,
-                     stoploss: float = 0,
-                     trailing_sl: float = 0,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     ) -> dict[Any, Any]:
+                        symbol: str,
+                        token: int,
+                        side: str,
+                        unique_id: str,
+                        quantity: int,
+                        exchange: str,
+                        headers: dict,
+                        target: float = 0,
+                        stoploss: float = 0,
+                        trailing_sl: float = 0,
+                        product: str = Product.MIS,
+                        validity: str = Validity.DAY,
+                        ) -> dict[Any, Any]:
 
         json_data = {
             'head': {
                 'key': headers["user_key"],
-                },
+            },
             'body': {
                 "DisQty": "0",
                 "Exch": cls.req_exchange[exchange],
@@ -633,7 +633,7 @@ class fivepaisa(Exchange):
                 "ClientCode": headers["client_code"],
                 "OrderRequesterCode": headers["client_code"],
                 "RequestType": "P",
-                "LimitPriceForSL":"0.0",
+                "LimitPriceForSL": "0.0",
                 "TriggerPriceForSL": "0.0",
                 "OrderFor": "C",
                 "UniqueOrderIDSL": "0",
@@ -642,8 +642,8 @@ class fivepaisa(Exchange):
                 "LocalOrderIDSL": "0",
                 "LocalOrderIDLimit": "0",
                 "TradedQty": "0",
-                }
             }
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
 
@@ -664,7 +664,7 @@ class fivepaisa(Exchange):
         for order in info['body']['OrderBookDetail']:
             if order[key_to_check] == orderid:
                 detail = cls.orderbook_json_parser(order)
-                detail['avgPrice'] = cls.fetch_tradebook_order(order_id=detail['id'], headers=headers, default=False) #Five Paisa API is Fuddu i.e. commented.
+                detail['avgPrice'] = cls.fetch_tradebook_order(order_id=detail['id'], headers=headers, default=False)  # Five Paisa API is Fuddu i.e. commented.
                 return detail
 
         raise InputError({"This orderid does not exist."})
@@ -789,7 +789,7 @@ class fivepaisa(Exchange):
                 "Stoplossprice": trigger_price or order['SLTriggerRate'],
                 "RemoteOrderID": order['RemoteOrderID'],
             }
-         }
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["modify_order"], json=json_data, headers=headers["headers"])
         response = cls.json_parser(response)
@@ -805,11 +805,11 @@ class fivepaisa(Exchange):
         json_data = {
             'head': {
                 'key': headers['user_key'],
-                },
+            },
             'body': {
                 'ExchOrderID': order_id,
-                }
             }
+        }
 
         response = cls.fetch(method="POST", url=cls.order_cancel_url, headers=headers["headers"], json=json_data)
         info = cls.json_parser(response)
@@ -821,8 +821,8 @@ class fivepaisa(Exchange):
 
     @classmethod
     def fetch_positions(cls,
-                   headers: dict,
-                   ) -> list[dict]:
+                        headers: dict,
+                        ) -> list[dict]:
 
         response = cls.fetch(method="POST", url=cls.urls["positions"], json=headers["json_data"], headers=headers["headers"])
         info = cls.json_parser(response)
@@ -837,8 +837,8 @@ class fivepaisa(Exchange):
 
     @classmethod
     def fetch_holdings(cls,
-                   headers: dict,
-                   ) -> list[dict]:
+                       headers: dict,
+                       ) -> list[dict]:
 
         response = cls.fetch(method="POST", url=cls.urls["holdings"],
                              json=headers["json_data"], headers=headers["headers"])

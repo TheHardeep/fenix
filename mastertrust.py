@@ -47,7 +47,7 @@ class mastertrust(Exchange):
     # Base URLs
 
     base_urls = {
-        "api_documentation_url": "http://139.180.212.2/mastertrust",
+        "api_documentation_url": "htt2p://139.180.212.2/mastertrust",
         "marketdata_docuemtnation_url": " http://139.180.212.2/ray-websocket",
         "market_data_url": "https://masterswift.mastertrust.co.in/api/v2/contracts.json",
         "base_url": "https://masterswift-beta.mastertrust.co.in/api/v1",
@@ -69,6 +69,7 @@ class mastertrust(Exchange):
         "place_order": f"{base_urls['base_url']}/orders",
         "modify_order": f"{base_urls['base_url']}/orders",
         "cancel_order": f"{base_urls['base_url']}/orders",
+        "order_history": f"{base_urls['base_url']}/order",
         "orderbook": f"{base_urls['base_url']}/orders",
         "tradebook": f"{base_urls['base_url']}/trades",
         "positions": f"{base_urls['base_url']}/positions",
@@ -248,7 +249,7 @@ class mastertrust(Exchange):
         request01 = cls.fetch(method="GET", url=authorization_url, headers=headers)
 
         resp01_content = (request01.content).decode('utf-8')
-        csrf_token = re.findall(r"value=\"(.*)\" name=\"_csrf_token\"" ,resp01_content)[0]
+        csrf_token = re.findall(r"value=\"(.*)\" name=\"_csrf_token\"", resp01_content)[0]
 
         data = {
             "login_id": params["user_id"],
@@ -327,7 +328,7 @@ class mastertrust(Exchange):
         parsed_order = {
             Order.ID: order['order_id'],
             Order.USERID: order['client_order_id'],
-            Order.TIMESTAMP: cls.from_timestamp(order['created_at']),
+            Order.TIMESTAMP: cls.datetime_strp(order["exchange_time"], "%d-%b-%Y %H:%M:%S") if order["exchange_time"] != "--" else None,
             Order.SYMBOL: order['symbol'],
             Order.TOKEN: order['token'],
             Order.SIDE: order['order_side'],
@@ -396,6 +397,49 @@ class mastertrust(Exchange):
         return parsed_order
 
     @classmethod
+    def _tradebook_json_parser(cls,
+                               trade: dict,
+                               ) -> dict[Any, Any]:
+        """
+        Parse Orderbook Order Json Response.
+
+        Parameters:
+            rtade (dict): Tradebook Trade Json Response from Broker
+
+        Returns:
+            dict: Unified kronos Order Response
+        """
+        parsed_trade = {
+            Order.ID: trade['oms_order_id'],
+            Order.USERID: "",
+            Order.TIMESTAMP: cls.from_timestamp(trade['order_entry_time']),
+            Order.SYMBOL: trade['trading_symbol'],
+            Order.TOKEN: int(trade['instrument_token']),
+            Order.SIDE: trade['order_side'],
+            Order.TYPE: cls.req_order_type.get(trade['order_type'], trade['order_type']),
+            Order.AVGPRICE: float(trade['trade_price'] or 0.0),
+            Order.PRICE: float(trade['order_price'] or 0.0),
+            Order.TRIGGERPRICE: 0.0,
+            Order.STOPLOSSPRICE: 0.0,
+            Order.TRAILINGSTOPLOSS: 0.0,
+            Order.QUANTITY: trade['trade_quantity'],
+            Order.FILLEDQTY: trade['filled_quantity'],
+            Order.REMAININGQTY: 0 if not trade['remaining_quantity'] else trade['remaining_quantity'],
+            Order.CANCELLEDQTY: 0,
+            Order.STATUS: "",
+            Order.REJECTREASON: "",
+            Order.DISCLOSEDQUANTITY: 0,
+            Order.PRODUCT: trade['product'],
+            Order.EXCHANGE: trade['exchange'],
+            Order.SEGMENT: "",
+            Order.VALIDITY: "",
+            Order.VARIETY: "",
+            Order.INFO: trade,
+        }
+
+        return parsed_trade
+
+    @classmethod
     def _profile_json_parser(cls,
                              profile: dict
                              ) -> dict[Any, Any]:
@@ -437,12 +481,12 @@ class mastertrust(Exchange):
             Position.TOKEN: position['token'],
             Position.PRODUCT: cls.req_product.get(position['product'], position['product']),
             Position.NETQTY: position['net_quantity'],
-            Position.AVGPRICE: position['net_amount'],
-            Position.MTM: position['realized_mtm'],
+            Position.AVGPRICE: position["average_price"],
+            Position.MTM: position.get('realized_mtm'),
             Position.BUYQTY: position['buy_quantity'],
-            Position.BUYPRICE: position['buy_amount'],
+            Position.BUYPRICE: position['average_buy_price'],
             Position.SELLQTY: position['sell_quantity'],
-            Position.SELLPRICE: position['sell_amount'],
+            Position.SELLPRICE: position['average_sell_price'],
             Position.LTP: position['ltp'],
             Position.INFO: position,
         }
@@ -1519,6 +1563,50 @@ class mastertrust(Exchange):
 
 
     @classmethod
+    def _fetch_orders_intermmediate(cls,
+                                    headers: dict
+                                    ) -> list[dict]:
+        """
+        Fetch OrderBook Details which is unified across all brokers.
+        Use This if you want Avg price, etc. values which sometimes unavailable
+        thorugh fetch_orderbook.
+
+        Paramters:
+            order_id (str): id of the order
+
+        Raises:
+            InputError: If order does not exist.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+
+        params_01 = {
+            "type": "completed",
+            "client_id": headers["user_id"],
+        }
+
+        response_01 = cls.fetch(method="GET", url=cls.urls["place_order"],
+                                params=params_01, headers=headers["headers"])
+        info_01 = cls._json_parser(response_01)
+
+        orders = info_01['data']['orders']
+
+
+        params_02 = {
+            "type": "pending",
+            "client_id": headers["user_id"],
+        }
+
+        response_02 = cls.fetch(method="GET", url=cls.urls["place_order"],
+                                params=params_02, headers=headers["headers"])
+        info_02 = cls._json_parser(response_02)
+
+        orders.extend(info_02['data']['orders'])
+
+        return orders
+
+    @classmethod
     def fetch_order(cls,
                     order_id: str,
                     headers: dict
@@ -1535,18 +1623,10 @@ class mastertrust(Exchange):
         Returns:
             dict: kronos Unified Order Response
         """
-
         order_id = str(order_id)
-        params = {
-            "type": "completed",
-            "client_id": headers["user_id"],
-        }
+        orders = cls._fetch_orders_intermmediate(headers=headers)
 
-        response = cls.fetch(method="GET", url=cls.urls["place_order"],
-                             params=params, headers=headers["headers"])
-        info = cls._json_parser(response)
-
-        for order in info['data']['orders']:
+        for order in orders:
             if order['oms_order_id'] == order_id:
                 detail = cls._orderbook_json_parser(order)
                 return detail
@@ -1571,37 +1651,48 @@ class mastertrust(Exchange):
         Returns:
             dict: kronos Unified Order Response
         """
-
-        params = {
-            "type": "completed",
-            "client_id": headers["user_id"],
-        }
-
-        response = cls.fetch(method="GET", url=cls.urls["place_order"],
-                             params=params, headers=headers["headers"])
-        info = cls._json_parser(response)
+        info = cls._fetch_orders_intermmediate(headers=headers)
 
         orders = []
-
-        for order in info['data']['orders']:
-            detail = cls._orderbook_json_parser(order)
-            orders.append(detail)
-
-
-        params = {
-            "type": "pending",
-            "client_id": headers["user_id"],
-        }
-
-        response = cls.fetch(method="GET", url=cls.urls["place_order"],
-                             params=params, headers=headers["headers"])
-        info = cls._json_parser(response)
-
-        for order in info['data']['orders']:
+        for order in info:
             detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
+
+
+    @classmethod
+    def fetch_orderhistory(cls,
+                           order_id: str,
+                           headers: dict
+                           ) -> list[dict]:
+        """
+        Fetch History of an order
+
+        Paramters:
+            order_id (str): id of the order
+            headers (dict): headers to send orderhistory request with.
+
+        Returns:
+            list: A list of dicitonaries containing order history using kronos Unified Order Response
+        """
+
+        params = {"client_id": headers["user_id"]}
+
+        final_url = f"{cls.urls['order_history']}/{order_id}/history"
+        print(final_url)
+        response = cls.fetch(method="GET", url=final_url,
+                             params=params, headers=headers["headers"])
+        info = cls._json_parser(response)
+
+        order_history = []
+        for order in info["data"]:
+            history = cls._orderhistory_json_parser(order)
+
+            order_history.append(history)
+
+        return order_history
+
 
     @classmethod
     def fetch_orderbook(cls,
@@ -1616,37 +1707,15 @@ class mastertrust(Exchange):
         Returns:
             list[dict]: List of dicitonaries of orders using kronos Unified Order Response
         """
-
-        params = {
-            "type": "completed",
-            "client_id": headers["user_id"],
-        }
-
-        response = cls.fetch(method="GET", url=cls.urls["orderbook"],
-                             params=params, headers=headers["headers"])
-        info = cls._json_parser(response)
+        info = cls._fetch_orders_intermmediate(headers=headers)
 
         orders = []
-
-        for order in info['data']['orders']:
-            detail = cls._orderbook_json_parser(order)
-            orders.append(detail)
-
-
-        params = {
-            "type": "pending",
-            "client_id": headers["user_id"],
-        }
-
-        response = cls.fetch(method="GET", url=cls.urls["orderbook"],
-                             params=params, headers=headers["headers"])
-        info = cls._json_parser(response)
-
-        for order in info['data']['orders']:
+        for order in info:
             detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
+
 
     @classmethod
     def fetch_tradebook(cls,
@@ -1671,7 +1740,7 @@ class mastertrust(Exchange):
 
         orders = []
 
-        for order in info['data']['orders']:
+        for order in info['data']['trades']:
             detail = cls._tradebook_json_parser(order)
             orders.append(detail)
 
@@ -1744,7 +1813,7 @@ class mastertrust(Exchange):
 
         final_url = f"{cls.urls['place_order']}/{order_id}"
 
-        response = cls.fetch(method="DELETE", url=final_url, params=params, headers=cls.headers)
+        response = cls.fetch(method="DELETE", url=final_url, params=params, headers=headers["headers"])
         info = cls._json_parser(response)
 
 
@@ -1752,6 +1821,8 @@ class mastertrust(Exchange):
 
 
     # Positions, Account Limits & Profile
+
+
 
 
     @classmethod
@@ -1767,21 +1838,23 @@ class mastertrust(Exchange):
         Returns:
             dict[Any, Any]: kronos Unified Position Response
         """
+        # params = {
+        #     "type": "live",
+        #     "client_id": headers["user_id"],
+        # }
 
-        params = {
-            "type": "live",
-            "client_id": headers["user_id"],
-        }
+        # response = cls.fetch(method="GET", url=cls.urls["positions"],
+        #                      params=params, headers=headers["headers"])
+        # info = cls._json_parser(response)
 
-        response = cls.fetch(method="GET", url=cls.urls["positions"], headers=cls.headers, params=params)
-        info = cls._json_parser(response)
+        # positions = []
+        # for position in info['data']:
+        #     detail = cls._position_json_parser(position)
+        #     positions.append(detail)
 
-        positions = []
-        for position in info['data']:
-            detail = cls._position_json_parser(position)
-            positions.append(detail)
+        # return positions
 
-        return positions
+        return cls.fetch_net_positions(headers=headers)
 
     @classmethod
     def fetch_net_positions(cls,
@@ -1802,7 +1875,8 @@ class mastertrust(Exchange):
             "client_id": headers["user_id"],
         }
 
-        response = cls.fetch(method="GET", url=cls.urls["positions"], headers=cls.headers, params=params)
+        response = cls.fetch(method="GET", url=cls.urls["positions"],
+                             params=params, headers=headers["headers"])
         info = cls._json_parser(response)
 
         positions = []
@@ -1814,8 +1888,8 @@ class mastertrust(Exchange):
 
     @classmethod
     def fetch_positions(cls,
-                       headers: dict
-                       ) -> dict[Any, Any]:
+                        headers: dict,
+                        ) -> list[dict]:
         """
         Fetch the All Account Positions
 
@@ -1825,20 +1899,8 @@ class mastertrust(Exchange):
         Returns:
             dict[Any, Any]: kronos Unified Position Response
         """
-        params = {
-            "type": "historical",
-            "client_id": headers["user_id"],
-        }
+        return cls.fetch_net_positions(headers=headers)
 
-        response = cls.fetch(method="GET", url=cls.urls["positions"], headers=cls.headers, params=params)
-        info = cls._json_parser(response)
-
-        positions = []
-        for position in info['data']:
-            detail = cls._position_json_parser(position)
-            positions.append(detail)
-
-        return positions
 
     @classmethod
     def fetch_holdings(cls,
@@ -1856,7 +1918,7 @@ class mastertrust(Exchange):
 
         params = {"client_id": headers["user_id"]}
 
-        response = cls.fetch(method="GET", url=cls.urls["holdings"], headers=cls.headers, params=params)
+        response = cls.fetch(method="GET", url=cls.urls["holdings"], headers=headers["headers"], params=params)
         info = cls._json_parser(response)
 
         # holdings = []
@@ -1889,5 +1951,5 @@ class mastertrust(Exchange):
         response = cls._json_parser(response)
 
         profile = cls._profile_json_parser(response["data"])
-        return profile
 
+        return profile

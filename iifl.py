@@ -143,39 +143,33 @@ class iifl(Exchange):
 
 
     @classmethod
-    def nfo_indices(cls) -> dict:
+    def create_indices(cls) -> dict:
         """
         Gives NFO Indices Info for F&O Segment.
 
         Returns:
-            dict: Unified kronos nfo_dict format
+            dict: Unified kronos create_nfo_tokens format
         """
 
         params = {"exchangeSegment": 1}
         response = cls.fetch(method="GET", url=cls.base_urls["index_data_url"], params=params)
-
-
         df = cls._json_parser(response)['result']['indexList']
 
         indices = {}
 
         for i in df:
-            if ("NIFTY BANK" in i):
-                symbol, token = i.split("_")
-                indices["BANKNIFTY"] = {"Symbol": symbol, "Token": int(token)}
+            symbol, token = i.split("_")
+            indices[symbol] = {"Symbol": symbol, "Token": int(token)}
 
-            if ("NIFTY 50_" in i):
-                symbol, token = i.split("_")
-                indices["NIFTY"] = {"Symbol": symbol, "Token": int(token)}
-
-            if ("NIFTY FIN SERVICE" in i):
-                symbol, token = i.split("_")
-                indices["FINNIFTY"] = {"Symbol": symbol, "Token": int(token)}
+        indices[Root.BNF] = indices["NIFTY BANK"]
+        indices[Root.NF] = indices["NIFTY 50"]
+        indices[Root.FNF] = indices["NIFTY FIN SERVICE"]
+        indices[Root.MIDCPNF] = indices["NIFTY MIDCAP 50"]
 
         return indices
 
     @classmethod
-    def nfo_dict(cls):
+    def create_nfo_tokens(cls):
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the aliceblue.nfo_tokens Dictionary.
@@ -774,7 +768,7 @@ class iifl(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -851,7 +845,7 @@ class iifl(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -921,7 +915,7 @@ class iifl(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -993,7 +987,7 @@ class iifl(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1064,7 +1058,7 @@ class iifl(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1266,14 +1260,14 @@ class iifl(Exchange):
 
         json_data = {
             "appOrderID": order_id,
-            "modifiedProductType": cls.req_product[Order.PRODUCT],
+            "modifiedProductType": cls.req_product[curr_order[Order.PRODUCT]],
             "modifiedOrderType": cls._key_mapper(cls.req_order_type, order_type, 'order_type') or cls.req_order_type[curr_order[Order.TYPE]],
             "modifiedOrderQuantity": quantity or curr_order[Order.QUANTITY],
             "modifiedDisclosedQuantity": curr_order[Order.DISCLOSEDQUANTITY],
             "modifiedLimitPrice": price or curr_order[Order.PRICE],
             "modifiedStopPrice": trigger or curr_order[Order.TRIGGERPRICE],
             "modifiedTimeInForce": cls._key_mapper(cls.req_validity, validity, 'validity') or cls.req[curr_order[Order.VALIDITY]],
-            "orderUniqueIdentifier": curr_order[Order.Order.USERID]
+            "orderUniqueIdentifier": curr_order[Order.USERID]
         }
 
         params = {"clientID": headers["user_id"]}

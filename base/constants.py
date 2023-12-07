@@ -30,6 +30,7 @@ class Root:
     BNF = "BANKNIFTY"
     NF = "NIFTY"
     FNF = "FINNIFTY"
+    MIDCPNF = "MIDCPNIFTY"
 
 
 class WeeklyExpiry:

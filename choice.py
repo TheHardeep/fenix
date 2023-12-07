@@ -186,7 +186,7 @@ class choice(Exchange):
 
 
     @classmethod
-    def nfo_dict(cls) -> dict:
+    def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the aliceblue.nfo_tokens Dictionary.
@@ -783,7 +783,7 @@ class choice(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -866,7 +866,7 @@ class choice(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -936,7 +936,7 @@ class choice(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1008,7 +1008,7 @@ class choice(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1079,7 +1079,7 @@ class choice(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)

@@ -16,6 +16,7 @@ from kronos.base.constants import Validity
 from kronos.base.constants import Status
 from kronos.base.constants import Order
 from kronos.base.constants import Position
+from kronos.base.constants import Root
 
 
 from kronos.base.errors import InputError
@@ -159,30 +160,33 @@ class fivepaisa(Exchange):
 
 
     @classmethod
-    def nfo_indices(cls) -> dict:
+    def create_indices(cls) -> dict:
         """
         Gives NFO Indices Info for F&O Segment.
 
         Returns:
-            dict: Unified kronos nfo_dict format
+            dict: Unified kronos create_nfo_tokens format
         """
 
         df = cls.data_reader(cls.base_urls["market_data_url"], filetype='csv')
-        df = df[((df['Root'] == 'NIFTY') | (df['Root'] == 'BANKNIFTY') | (df['Root'] == "FINNIFTY")) & (df['CpType'] == "EQ")]
 
-        bnf_details = df[df['Root'] == "BANKNIFTY"].iloc[0]
-        nf_details = df[df['Root'] == "NIFTY"].iloc[0]
-        fnf_details = df[df['Root'] == "FINNIFTY"].iloc[0]
-        indices = {
-            "BANKNIFTY": {"Symbol": bnf_details["Root"], "Token": int(str(bnf_details["Scripcode"])[4:])},
-            "NIFTY": {"Symbol": nf_details["Root"], "Token": int(str(nf_details["Scripcode"])[4:])},
-            "FINIFTY": {"Symbol": fnf_details["Root"], "Token": int(str(fnf_details["Scripcode"])[4:])},
-        }
+        df = df[(df['CpType'] == "EQ")][["Name", "Scripcode"]]
+        df.rename({"Name": "Symbol", "Scripcode": "Token"}, axis=1, inplace=True)
+        df.index = df['Symbol']
+
+        indices = df.to_dict(orient='index')
+
+        indices[Root.BNF] = indices["BANKNIFTY"]
+        indices[Root.NF] = indices["NIFTY"]
+        indices[Root.FNF] = indices["FINNIFTY"]
+        indices[Root.MIDCPNF] = indices["MIDCPNifty"]
+
+        cls.indices = indices
 
         return indices
 
     @classmethod
-    def nfo_dict(cls):
+    def create_nfo_tokens(cls):
 
         try:
 
@@ -260,12 +264,14 @@ class fivepaisa(Exchange):
             }
         }
 
+        print(login_payload)
+
         response = cls.fetch(method="POST", url=cls.base_urls["access_token_url"], json=login_payload)
         response = cls.json_parser(response)
 
         client_code = response['body']["ClientCode"]
         jwt_token = response['body']['JWTToken']
-
+        print(response)
         req_headers = {
             "Content-Type": "application/json",
             "Authorization": f"bearer {jwt_token}"

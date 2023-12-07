@@ -147,29 +147,33 @@ class zerodha(Exchange):
 
 
     @classmethod
-    def nfo_indices(cls) -> dict:
+    def create_indices(cls) -> dict:
         """
         Gives NFO Indices Info for F&O Segment.
 
         Returns:
-            dict: Unified kronos nfo_dict format
+            dict: Unified kronos create_nfo_tokens format
         """
 
         df = cls.data_reader(cls.base_urls["market_data_url"], filetype='csv')
 
-        bnf_details = df[df['tradingsymbol'] == "NIFTY BANK"].iloc[0]
-        nf_details = df[df['tradingsymbol'] == "NIFTY 50"].iloc[0]
-        fnf_details = df[df['tradingsymbol'] == "NIFTY FIN SERVICE"].iloc[0]
-        indices = {
-            "BANKNIFTY": {"Symbol": bnf_details["tradingsymbol"], "Token": bnf_details["instrument_token"]},
-            "NIFTY": {"Symbol": nf_details["tradingsymbol"], "Token": nf_details["instrument_token"]},
-            "FINIFTY": {"Symbol": fnf_details["tradingsymbol"], "Token": fnf_details["instrument_token"]},
-        }
+        df = df[(df["segment"] == "INDICES")][["tradingsymbol", "instrument_token"]]
+        df.rename({"tradingsymbol": "Symbol", "instrument_token": "Token"}, axis=1, inplace=True)
+        df.index = df['Symbol']
+
+        indices = df.to_dict(orient='index')
+
+        indices[Root.BNF] = indices["NIFTY BANK"]
+        indices[Root.NF] = indices["NIFTY 50"]
+        indices[Root.FNF] = indices["NIFTY FIN SERVICE"]
+        indices[Root.MIDCPNF] = indices["NIFTY MIDCAP 50"]
+
+        cls.indices = indices
 
         return indices
 
     @classmethod
-    def nfo_dict(cls):
+    def create_nfo_tokens(cls):
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the zerodha.nfo_tokens Dictionary.
@@ -803,7 +807,7 @@ class zerodha(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -887,7 +891,7 @@ class zerodha(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -962,7 +966,7 @@ class zerodha(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1038,7 +1042,7 @@ class zerodha(Exchange):
             dict: Voluspa Unified Order Response
         """
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1113,7 +1117,7 @@ class zerodha(Exchange):
             dict: Voluspa Unified Order Response
         """
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)

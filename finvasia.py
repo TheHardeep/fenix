@@ -147,29 +147,33 @@ class finvasia(Exchange):
 
 
     @classmethod
-    def nfo_indices(cls) -> dict:
+    def create_indices(cls) -> dict:
         """
         Gives NFO Indices Info for F&O Segment.
 
         Returns:
-            dict: Unified kronos nfo_dict format
+            dict: Unified kronos create_nfo_tokens format
         """
 
         df = cls.data_reader(cls.base_urls["market_data_url"].replace("NFO", "NSE"), filetype='csv')
 
-        bnf_details = df[df['Symbol'] == "Nifty Bank"].iloc[0]
-        nf_details = df[df['Symbol'] == "Nifty 50"].iloc[0]
-        fnf_details = df[df['Symbol'] == "Nifty Fin Services"].iloc[0]
-        indices = {
-            "BANKNIFTY": {"Symbol": bnf_details["Symbol"], "Token": bnf_details["Token"]},
-            "NIFTY": {"Symbol": nf_details["Symbol"], "Token": nf_details["Token"]},
-            "FINIFTY": {"Symbol": fnf_details["Symbol"], "Token": fnf_details["Token"]},
-        }
+        df = df[df["Instrument"] == "INDEX"][["TradingSymbol", "Token"]]
+        df.rename({"TradingSymbol": "Symbol"}, axis=1, inplace=True)
+        df.index = df['Symbol']
+
+        indices = df.to_dict(orient='index')
+
+        indices[Root.BNF] = indices["NIFTY BANK"]
+        indices[Root.NF] = indices["NIFTY INDEX"]
+        indices[Root.FNF] = indices["FINNIFTY"]
+        indices[Root.MIDCPNF] = indices["MIDCPNIFTY"]
+
+        cls.indices = indices
 
         return indices
 
     @classmethod
-    def nfo_dict(cls):
+    def create_nfo_tokens(cls):
         try:
             df = cls.data_reader(cls.base_urls["market_data_url"], filetype='csv')
 
@@ -711,7 +715,7 @@ class finvasia(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -792,7 +796,7 @@ class finvasia(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -866,7 +870,7 @@ class finvasia(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -942,7 +946,7 @@ class finvasia(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1018,7 +1022,7 @@ class finvasia(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)

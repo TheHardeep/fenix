@@ -80,6 +80,7 @@ class fyers(Exchange):
         "tradebook": f"{base_urls['base_url_01']}/tradebook",
         "positions": f"{base_urls['base_url_01']}/positions",
         "holdings": f"{base_urls['base_url_01']}/holdings",
+        "rms_limits": f"{base_urls['base_url_01']}/funds",
         "profile": f"{base_urls['base_url_01']}/profile",
     }
 
@@ -172,12 +173,12 @@ class fyers(Exchange):
 
 
     @classmethod
-    def nfo_indices(cls) -> dict:
+    def create_indices(cls) -> dict:
         """
         Gives NFO Indices Info for F&O Segment.
 
         Returns:
-            dict: Unified kronos nfo_dict format
+            dict: Unified kronos create_nfo_tokens format
         """
 
         col_names = [
@@ -188,21 +189,24 @@ class fyers(Exchange):
         ]
 
         df = cls.data_reader(cls.base_urls["market_data_url"].replace("NSE_FO", "NSE_CM"), filetype='csv', col_names=col_names)
-        df = df[((df['Underlying scrip code'] == 'BANKNIFTY') | (df['Underlying scrip code'] == 'NIFTY') | (df['Underlying scrip code'] == 'FINNIFTY'))]
 
-        bnf_details = df[df['Underlying scrip code'] == "BANKNIFTY"].iloc[0]
-        nf_details = df[df['Underlying scrip code'] == "NIFTY"].iloc[0]
-        fnf_details = df[df['Underlying scrip code'] == "BANKNIFTY"].iloc[0]
-        indices = {
-            "BANKNIFTY": {"Symbol": bnf_details["Underlying scrip code"], "Token": bnf_details["Scrip code"]},
-            "NIFTY": {"Symbol": nf_details["Underlying scrip code"], "Token": nf_details["Scrip code"]},
-            "FINIFTY": {"Symbol": fnf_details["Underlying scrip code"], "Token": fnf_details["Scrip code"]},
-        }
+        df = df[df["Symbol ticker"].str.endswith("INDEX")][["Symbol ticker", "Scrip code"]]
+        df.rename({"Symbol ticker": "Symbol", "Scrip code": "Token"}, axis=1, inplace=True)
+        df.index = df['Symbol']
+
+        indices = df.to_dict(orient='index')
+
+        indices[Root.BNF] = indices["NSE:NIFTYBANK-INDEX"]
+        indices[Root.NF] = indices["NSE:NIFTY50-INDEX"]
+        indices[Root.FNF] = indices["NSE:FINNIFTY-INDEX"]
+        indices[Root.MIDCPNF] = indices["NSE:MIDCPNIFTY-INDEX"]
+
+        cls.indices = indices
 
         return indices
 
     @classmethod
-    def nfo_dict(cls):
+    def create_nfo_tokens(cls):
         try:
             col_names = [
                 "Fytoken", "Symbol Details", "Exchange Instrument type", "Minimum lot size",
@@ -506,7 +510,7 @@ class fyers(Exchange):
                              headers: dict
                              ) -> dict[Any, Any]:
 
-        info = cls.on_json_response(response)
+        info = cls._json_parser(response)
         print(info)
 
         if info['s'] == "ok" or info.get("id"):
@@ -830,7 +834,7 @@ class fyers(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -912,7 +916,7 @@ class fyers(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -984,7 +988,7 @@ class fyers(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_tokens()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1058,7 +1062,7 @@ class fyers(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1133,7 +1137,7 @@ class fyers(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1460,15 +1464,7 @@ class fyers(Exchange):
                         headers: dict
                         ) -> list[dict]:
 
-        response = cls.fetch(method="GET", url=cls.urls['orderbook'], headers=headers["headers"])
-        info = cls._json_parser(response)
-
-        orders = []
-        for order in info['orderBook']:
-            detail = cls._orderbook_json_parser(order)
-            orders.append(detail)
-
-        return orders
+        return cls.fetch_orders(headers=headers)
 
     @classmethod
     def fetch_tradebook(cls,

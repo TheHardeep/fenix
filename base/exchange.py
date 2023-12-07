@@ -254,7 +254,6 @@ class Exchange:
                 return read_csv(link,
                                 dtype=dtype,
                                 sep=sep,
-<<<<<<< HEAD
                                 names=col_names,
                                 )
 
@@ -262,15 +261,6 @@ class Exchange:
                             dtype=dtype,
                             sep=sep
                             )
-=======
-                                names=col_names
-                                )
-            else:
-                return read_csv(link,
-                                dtype=dtype,
-                                sep=sep,
-                                )
->>>>>>> iifl
 
 
         raise InputError(f"Wrong Filetype: {filetype}, the possible values are: 'json', 'csv'")
@@ -386,7 +376,7 @@ class Exchange:
             Global[expiry][root][option][strikeprice]
 
             expiry: 'CURRENT' | 'NEXT' | 'FAR' | 'Expiries'(A List of All Expiries).
-            root: 'BANKNIFTY' | 'NIFTY' | 'FINNIFTY.
+            root: 'BANKNIFTY' | 'NIFTY' | 'FINNIFTY | MIDCPNIFTY.
             option: 'CE' | 'PE'.
             strikeprice: Integer Values for Strike Price.
 
@@ -424,16 +414,16 @@ class Exchange:
         """
 
         expiry_data = {
-            WeeklyExpiry.CURRENT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
-            WeeklyExpiry.NEXT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
-            WeeklyExpiry.FAR: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}},
-            WeeklyExpiry.EXPIRY: {Root.BNF: [], Root.NF: [], Root.FNF: []},
-            WeeklyExpiry.LOTSIZE: {Root.BNF: [], Root.NF: [], Root.FNF: []},
+            WeeklyExpiry.CURRENT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}},
+            WeeklyExpiry.NEXT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}},
+            WeeklyExpiry.FAR: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}},
+            WeeklyExpiry.EXPIRY: {Root.BNF: [], Root.NF: [], Root.FNF: [], Root.MIDCPNF: []},
+            WeeklyExpiry.LOTSIZE: {Root.BNF: [], Root.NF: [], Root.FNF: [], Root.MIDCPNF: []},
         }
 
         data_frame = data_frame.sort_values(by=['Expiry'])
 
-        for root in [Root.BNF, Root.NF, Root.FNF]:
+        for root in [Root.BNF, Root.NF, Root.FNF, Root.MIDCPNF]:
 
 
             expiries = data_frame[data_frame['Root'] == root]['Expiry'].unique()

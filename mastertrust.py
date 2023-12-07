@@ -133,12 +133,12 @@ class mastertrust(Exchange):
 
 
     @classmethod
-    def nfo_indices(cls) -> dict:
+    def create_indices(cls) -> dict:
         """
         Gives NFO Indices Info for F&O Segment.
 
         Returns:
-            dict: Unified kronos nfo_dict format
+            dict: Unified kronos create_nfo_tokens format
         """
         params = {"exchanges": "NSE"}
         response = cls.fetch(method="GET", url=cls.base_urls["market_data_url"], params=params)
@@ -157,7 +157,7 @@ class mastertrust(Exchange):
         return indices
 
     @classmethod
-    def nfo_dict(cls) -> dict:
+    def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the mastertrust.nfo_tokens Dictionary.
@@ -879,7 +879,7 @@ class mastertrust(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -958,7 +958,7 @@ class mastertrust(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1030,7 +1030,7 @@ class mastertrust(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1104,7 +1104,7 @@ class mastertrust(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1177,7 +1177,7 @@ class mastertrust(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1563,6 +1563,7 @@ class mastertrust(Exchange):
 
 
     @classmethod
+<<<<<<< HEAD
     def _fetch_orders_intermmediate(cls,
                                     headers: dict
                                     ) -> list[dict]:
@@ -1582,10 +1583,26 @@ class mastertrust(Exchange):
         """
 
         params_01 = {
+=======
+    def fetch_raw_orderbook(cls,
+                            headers: dict
+                            ) -> list[dict]:
+        """
+        Fetch Raw Orderbook Details, without any Standardaization.
+
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
+
+        Returns:
+            list[dict]:Raw Broker Orderbook Response.
+        """
+        params = {
+>>>>>>> b4d2821 (Added Various modifications across all brokers.)
             "type": "completed",
             "client_id": headers["user_id"],
         }
 
+<<<<<<< HEAD
         response_01 = cls.fetch(method="GET", url=cls.urls["place_order"],
                                 params=params_01, headers=headers["headers"])
         info_01 = cls._json_parser(response_01)
@@ -1594,15 +1611,36 @@ class mastertrust(Exchange):
 
 
         params_02 = {
+=======
+        response01 = cls.fetch(method="GET", url=cls.urls["orderbook"],
+                               params=params, headers=headers["headers"])
+
+        info01 = cls._json_parser(response01)
+
+        orders = info01['data']['orders'] if info01['data']['orders'] else []
+
+
+
+        params = {
+>>>>>>> b4d2821 (Added Various modifications across all brokers.)
             "type": "pending",
             "client_id": headers["user_id"],
         }
 
+<<<<<<< HEAD
         response_02 = cls.fetch(method="GET", url=cls.urls["place_order"],
                                 params=params_02, headers=headers["headers"])
         info_02 = cls._json_parser(response_02)
 
         orders.extend(info_02['data']['orders'])
+=======
+        response02 = cls.fetch(method="GET", url=cls.urls["orderbook"],
+                               params=params, headers=headers["headers"])
+
+        info02 = cls._json_parser(response02)
+
+        orders.extend(info02['data']['orders'] if info02['data']['orders'] else [])
+>>>>>>> b4d2821 (Added Various modifications across all brokers.)
 
         return orders
 
@@ -1847,10 +1885,16 @@ class mastertrust(Exchange):
         #                      params=params, headers=headers["headers"])
         # info = cls._json_parser(response)
 
+<<<<<<< HEAD
         # positions = []
         # for position in info['data']:
         #     detail = cls._position_json_parser(position)
         #     positions.append(detail)
+=======
+        response = cls.fetch(method="GET", url=cls.urls["positions"],
+                             params=params, headers=headers["headers"])
+        info = cls._json_parser(response)
+>>>>>>> b4d2821 (Added Various modifications across all brokers.)
 
         # return positions
 
@@ -1888,8 +1932,13 @@ class mastertrust(Exchange):
 
     @classmethod
     def fetch_positions(cls,
+<<<<<<< HEAD
                         headers: dict,
                         ) -> list[dict]:
+=======
+                        headers: dict
+                        ) -> dict[Any, Any]:
+>>>>>>> b4d2821 (Added Various modifications across all brokers.)
         """
         Fetch the All Account Positions
 
@@ -1901,6 +1950,19 @@ class mastertrust(Exchange):
         """
         return cls.fetch_net_positions(headers=headers)
 
+<<<<<<< HEAD
+=======
+        response = cls.fetch(method="GET", url=cls.urls["positions"],
+                             params=params, headers=headers["headers"])
+        info = cls._json_parser(response)
+
+        positions = []
+        for position in info['data']:
+            detail = cls._position_json_parser(position)
+            positions.append(detail)
+
+        return positions
+>>>>>>> b4d2821 (Added Various modifications across all brokers.)
 
     @classmethod
     def fetch_holdings(cls,
@@ -1918,16 +1980,20 @@ class mastertrust(Exchange):
 
         params = {"client_id": headers["user_id"]}
 
+<<<<<<< HEAD
         response = cls.fetch(method="GET", url=cls.urls["holdings"], headers=headers["headers"], params=params)
+=======
+        response = cls.fetch(method="GET", url=cls.urls["holdings"],
+                             params=params, headers=headers["headers"])
+>>>>>>> b4d2821 (Added Various modifications across all brokers.)
         info = cls._json_parser(response)
 
-        # holdings = []
-        # for holding in info['data']:
-        #     detail = cls._position_json_parser(holding)
-        #     holdings.append(detail)
+        holdings = []
+        for holding in info['data']:
+            detail = cls._position_json_parser(holding)
+            holdings.append(detail)
 
-        # return holdings
-        return info
+        return holdings
 
     @classmethod
     def profile(cls,

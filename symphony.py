@@ -128,7 +128,7 @@ class symphony(Exchange):
 
 
     @classmethod
-    def nfo_dict(cls):
+    def create_nfo_tokens(cls):
         try:
 
             response = cls.fetch(method='POST', url=cls.base_urls["market_data_url"], json={"exchangeSegmentList": ["NSEFO"]})
@@ -136,7 +136,7 @@ class symphony(Exchange):
             data = [row.split('|') for row in data.split('\n')]
 
             df = cls.data_frame(data)
-
+            return df
             df = df[(df[5] == 'OPTIDX') & (df[3].str.startswith(("BANKNIFTY", "NIFTY")))]
             df[4] = df[4].str[-2:]
             df[10] = df[10].astype(int) - 1
@@ -175,7 +175,7 @@ class symphony(Exchange):
                        params: dict,
                        ) -> dict[str, str]:
         """
-        Generate Headers used to access Endpoints in AliceBlue.
+        Generate Headers used to access the Endpoints.
 
         Parameters:
             Params (dict) : A dictionary which should consist the following keys:
@@ -183,7 +183,7 @@ class symphony(Exchange):
                 api_secret (str): API Secret of the Account.
 
         Returns:
-            dict[str, str]: AliceBlue Headers.
+            dict[str, str]: Broker Headers.
         """
         for key in ["user_id", "api_key", "api_secret"]:
             if key not in params:
@@ -715,7 +715,7 @@ class symphony(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -793,7 +793,7 @@ class symphony(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -863,7 +863,7 @@ class symphony(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -936,7 +936,7 @@ class symphony(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1008,7 +1008,7 @@ class symphony(Exchange):
         """
 
         if not cls.nfo_tokens:
-            cls.nfo_dict()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)

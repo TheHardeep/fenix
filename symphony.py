@@ -49,7 +49,7 @@ class symphony(Exchange):
         "market_data_documentation_url": "https://developers.symphonyfintech.in/doc/marketdata",
         "market_data_url": "https://developers.symphonyfintech.in/marketdata/instruments/master",
         "base_url": "https://smartweb.jmfinancialservices.in/interactive",
-        "access_token": "https://smartweb.jmfinancialservices.in/interactiv,/user/session"
+        "access_token": "https://smartweb.jmfinancialservices.in/interactive/user/session"
     }
 
 
@@ -267,7 +267,7 @@ class symphony(Exchange):
             Order.REMAININGQTY: order['LeavesQuantity'],
             Order.CANCELLEDQTY: "",
             Order.STATUS: cls.resp_status.get(order['OrderStatus'], order['OrderStatus']),
-            Order.REJECTREASON: order['CancelRejectReason'],
+            Order.REJECTREASON: order.get('CancelRejectReason', ""),
             Order.DISCLOSEDQUANTITY: order['OrderDisclosedQuantity'],
             Order.PRODUCT: order['ProductType'],
             Order.EXCHANGE: "",
@@ -356,7 +356,7 @@ class symphony(Exchange):
         info = cls._json_parser(response)
         order_id = info['result']['AppOrderID']
 
-        order = cls.fetch_order(orderid=order_id, headers=headers)
+        order = cls.fetch_order(order_id=order_id, headers=headers)
 
         return order
 
@@ -453,7 +453,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=final_url,
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def market_order(cls,
@@ -503,7 +504,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def limit_order(cls,
@@ -554,7 +556,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def sl_order(cls,
@@ -608,7 +611,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def slm_order(cls,
@@ -661,7 +665,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
 
     # NFO Order Functions
@@ -746,7 +751,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def market_order_nfo(cls,
@@ -814,7 +820,7 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
     def limit_order_nfo(cls,
@@ -884,7 +890,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def sl_order_nfo(cls,
@@ -956,7 +963,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def slm_order_nfo(cls,
@@ -1027,7 +1035,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
 
     # BO Order Functions
@@ -1106,7 +1115,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=final_url,
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def market_order_bo(cls,
@@ -1168,7 +1178,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=final_url,
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def limit_order_bo(cls,
@@ -1231,7 +1242,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=final_url,
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def sl_order_bo(cls,
@@ -1297,7 +1309,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=final_url,
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
     @classmethod
     def slm_order_bo(cls,
@@ -1362,7 +1375,8 @@ class symphony(Exchange):
         response = cls.fetch(method="POST", url=final_url,
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
+
 
 
     # Order Details, OrderBook & TradeBook

@@ -169,7 +169,7 @@ class zerodha(Exchange):
         indices[Root.BNF] = indices["NIFTY BANK"]
         indices[Root.NF] = indices["NIFTY 50"]
         indices[Root.FNF] = indices["NIFTY FIN SERVICE"]
-        indices[Root.MIDCPNF] = indices["NIFTY MIDCAP 50"]
+        indices[Root.MIDCPNF] = indices["NIFTY MID SELECT"]
 
         cls.indices = indices
 
@@ -188,7 +188,17 @@ class zerodha(Exchange):
 
             df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
 
-            df = df[((df['name'] == 'BANKNIFTY') | (df['name'] == 'NIFTY') | (df['name'] == 'FINNIFTY')) & (df['segment'] == 'NFO-OPT')]
+            df = df[
+                (
+                    (df["name"] == "BANKNIFTY") |
+                    (df["name"] == "NIFTY") |
+                    (df["name"] == "FINNIFTY") |
+                    (df["name"] == "MIDCPNIFTY")
+
+                ) &
+                (
+                    (df["segment"] == "NFO-OPT")
+                )]
 
             df.rename({"instrument_token": "Token", "name": "Root", "expiry": "Expiry", "tradingsymbol": "Symbol",
                        "instrument_type": "Option", "tick_size": "TickSize", "lot_size": "LotSize",
@@ -196,13 +206,13 @@ class zerodha(Exchange):
                        },
                       axis=1, inplace=True)
 
-            df = df[['Token', 'Symbol', 'Expiry', 'Option',
-                     'StrikePrice', 'LotSize',
-                     'Root', 'LastPrice', 'TickSize'
+            df = df[["Token", "Symbol", "Expiry", "Option",
+                     "StrikePrice", "LotSize",
+                     "Root", "LastPrice", "TickSize"
                      ]]
 
-            df['StrikePrice'] = df['StrikePrice'].astype(int)
-            df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
+            df["StrikePrice"] = df["StrikePrice"].astype(int)
+            df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
             cls.nfo_tokens = expiry_data
@@ -593,19 +603,19 @@ class zerodha(Exchange):
         """
         if not target:
             data = {
-                    "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
-                    "tradingsymbol": symbol,
-                    "price": "0",
-                    "trigger_price": "0",
-                    "quantity": quantity,
-                    "transaction_type": cls._key_mapper(cls.req_side, side, "side"),
-                    "order_type": cls.req_order_type[OrderType.MARKET],
-                    "product": cls._key_mapper(cls.req_product, product, "product"),
-                    "validity": cls._key_mapper(cls.req_validity, validity, "validity"),
-                    "tag": unique_id,
-                    "disclosed_quantity": "0",
+                "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+                "tradingsymbol": symbol,
+                "price": "0",
+                "trigger_price": "0",
+                "quantity": quantity,
+                "transaction_type": cls._key_mapper(cls.req_side, side, "side"),
+                "order_type": cls.req_order_type[OrderType.MARKET],
+                "product": cls._key_mapper(cls.req_product, product, "product"),
+                "validity": cls._key_mapper(cls.req_validity, validity, "validity"),
+                "tag": unique_id,
+                "disclosed_quantity": "0",
 
-                }
+            }
 
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
@@ -1422,6 +1432,7 @@ class zerodha(Exchange):
 
 
     # Positions, Account Limits & Profile
+
 
     @classmethod
     def fetch_raw_positions(cls,

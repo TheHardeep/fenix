@@ -234,7 +234,9 @@ class aliceblue(Exchange):
         resp = cls._json_parser(req)
 
         df = cls.data_frame(resp[ExchangeCode.NSE])
+
         df = df[df["exchange_segment"] == "nse_idx"][["symbol", "token"]]
+
         df.rename({"symbol": "Symbol", "token": "Token"}, axis=1, inplace=True)
         df.index = df['Symbol']
 
@@ -243,7 +245,7 @@ class aliceblue(Exchange):
         indices[Root.BNF] = indices["NIFTY BANK"]
         indices[Root.NF] = indices["NIFTY 50"]
         indices[Root.FNF] = indices["NIFTY FIN SERVICE"]
-        indices[Root.MIDCPNF] = indices["NIFTY MIDCAP 50"]
+        indices[Root.MIDCPNF] = indices["NIFTY MIDCAP SELECT"]
 
         cls.indices = indices
 

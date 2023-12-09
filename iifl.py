@@ -165,7 +165,7 @@ class iifl(Exchange):
         indices[Root.BNF] = indices["NIFTY BANK"]
         indices[Root.NF] = indices["NIFTY 50"]
         indices[Root.FNF] = indices["NIFTY FIN SERVICE"]
-        indices[Root.MIDCPNF] = indices["NIFTY MIDCAP 50"]
+        indices[Root.MIDCPNF] = indices["NIFTY MIDCAP SELECT"]
 
         cls.indices = indices
 
@@ -196,7 +196,16 @@ class iifl(Exchange):
             df = cls.data_reader(link=str_file, filetype="csv",
                                  sep="|", col_names=col_names)
 
-            df = df[((df['Name'] == "BANKNIFTY") | (df['Name'] == "NIFTY") | (df['Name'] == "FINNIFTY")) & ((df['Series'] == "OPTIDX"))]
+            df = df[
+                (
+                    (df['Name'] == "BANKNIFTY") |
+                    (df['Name'] == "NIFTY") |
+                    (df['Name'] == "FINNIFTY") |
+                    (df['Name'] == "MIDCPNIFTY")
+                ) &
+                (
+                    (df['Series'] == "OPTIDX")
+                )]
 
             df.rename({"ExchangeInstrumentID": "Token", "Name": "Root",
                        "ContractExpiration": "Expiry", "OptionType": "Option"},

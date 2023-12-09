@@ -146,6 +146,7 @@ class mastertrust(Exchange):
         data = cls._json_parser(response)['NSE-IND']
 
         df = cls.data_frame(data)
+
         df = df[["trading_symbol", "code"]]
         df.rename({"trading_symbol": "Symbol", "code": "Token"}, axis=1, inplace=True)
         df.index = df['Symbol']
@@ -177,7 +178,7 @@ class mastertrust(Exchange):
             data = cls._json_parser(response)['NSE-OPT']
             df = cls.data_frame(data)
 
-            df = df[df['symbol'].str.startswith(("BANKNIFTY", "NIFTY", "FINNIFTY"))]
+            df = df[df['symbol'].str.startswith(("BANKNIFTY", "NIFTY", "FINNIFTY", "MIDCPNIFTY"))]
 
             df['Root'] = df['symbol'].str.split(" ", expand=True)[0]
             dfx = df['symbol'].str.rsplit(pat=" ", n=3, expand=True)

@@ -196,7 +196,16 @@ class fivepaisa(Exchange):
                      'StrikeRate', 'LotSize', 'QtyLimit', 'Underlyer', 'Root', 'TickSize'
                      ]]
 
-            df = df[((df['Root'] == 'NIFTY') | (df['Root'] == 'BANKNIFTY') | (df['Root'] == "FINNIFTY")) & df['CpType'].str.endswith("E")]
+            df = df[
+                (
+                    (df['Root'] == 'NIFTY') |
+                    (df['Root'] == 'BANKNIFTY') |
+                    (df['Root'] == "FINNIFTY") |
+                    (df['Root'] == "MIDCPNIFTY")
+                ) &
+                (
+                    (df['CpType'].str.endswith("E"))
+                )]
 
 
             df.rename({"StrikeRate": "StrikePrice", "Scripcode": "Token",

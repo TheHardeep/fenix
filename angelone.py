@@ -160,6 +160,7 @@ class angelone(Exchange):
         """
         df = cls.data_reader(cls.base_urls["market_data"], filetype='json')
         df = df[(df['exch_seg'] == 'NSE') & (df['instrumenttype'] == "AMXIDX")][["symbol", "token"]]
+
         df.rename({"symbol": "Symbol", "token": "Token"}, axis=1, inplace=True)
         df.index = df['Symbol']
 
@@ -168,7 +169,7 @@ class angelone(Exchange):
         indices[Root.BNF] = indices["Nifty Bank"]
         indices[Root.NF] = indices["Nifty 50"]
         indices[Root.FNF] = indices["Nifty Fin Service"]
-        indices[Root.MIDCPNF] = indices["Nifty Midcap 50"]
+        indices[Root.MIDCPNF] = indices["NIFTY MID SELECT"]
 
         cls.indices = indices
 
@@ -185,6 +186,7 @@ class angelone(Exchange):
         """
         try:
             df = cls.data_reader(cls.base_urls["market_data"], filetype='json')
+
             df = df[
                 (
                     (df['name'] == 'BANKNIFTY') |

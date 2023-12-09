@@ -224,22 +224,31 @@ class fyers(Exchange):
 
             df = cls.data_reader(cls.base_urls["market_data"], filetype='csv', col_names=col_names)
 
-            df = df[((df['Underlying scrip code'] == 'BANKNIFTY') | (df['Underlying scrip code'] == 'NIFTY') | (df['Underlying scrip code'] == 'FINNIFTY')) & (df["Underlying FyToken"] != "XX")]
+            df = df[
+                (
+                    (df["Underlying scrip code"] == "BANKNIFTY") |
+                    (df["Underlying scrip code"] == "NIFTY") |
+                    (df["Underlying scrip code"] == "FINNIFTY") |
+                    (df["Underlying scrip code"] == "MIDCPNIFTY")
+                ) &
+                (
+                    (df["Underlying FyToken"] != "XX")
+                )]
 
             df.rename({"Scrip code": "Token", "Underlying scrip code": "Root",
                        "Expiry date": "Expiry", "Symbol ticker": "Symbol", "Underlying FyToken": "Option",
                        "Tick size": "TickSize", "Minimum lot size": "LotSize", "Strike price": "StrikePrice"},
                       axis=1, inplace=True)
 
-            df['Expiry'] = cls.pd_datetime(df['Expiry'], unit='s').dt.date
+            df["Expiry"] = cls.pd_datetime(df["Expiry"], unit="s").dt.date
 
-            df = df[['Token', 'Symbol', 'Expiry', 'Option',
-                     'StrikePrice', 'LotSize',
-                     'Root', 'TickSize'
+            df = df[["Token", "Symbol", "Expiry", "Option",
+                     "StrikePrice", "LotSize",
+                     "Root", "TickSize"
                      ]
                     ]
 
-            df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
+            df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
 

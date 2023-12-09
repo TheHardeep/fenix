@@ -62,7 +62,8 @@ class choice(Exchange):
 
     base_urls = {
         "api_documentation_link": "https://uat.jiffy.in/api/OpenAPI/Info",
-        "market_data_url": "https://scripmaster-ftp.s3.ap-south-1.amazonaws.com/scripmaster",
+        "market_data_url": "https://scripmaster.choiceindia.com/scripmaster",
+
         "base_url": "https://finx.choiceindia.com/api/OpenAPI",
     }
 
@@ -186,6 +187,42 @@ class choice(Exchange):
 
 
     @classmethod
+    def create_indices(cls) -> dict:
+        """
+        Gives Indices Info for F&O Segment.
+        Stores them in the aliceblue.indices Dictionary.
+
+        Returns:
+            dict: Unified kronos indices format.
+        """
+        try:
+            todaysdate = cls.current_datetime().date().strftime("%d%b%Y")
+            link = f"{cls.base_urls['market_data_url']}/SCRIP_MASTER_{todaysdate}.csv"
+            df = cls.data_reader(link, filetype='csv', dtype={"ISIN": str, "SecName": str, 'Instrument': str, "PriceUnit": str, "QtyUnit": str, "DeliveryUnit": str})
+
+            df = df[
+                (
+                    (df["Segment"] == 1) &
+                    (df["PriceTick"] == 0)
+                )][["Symbol", "Token"]]
+            df.index = df['Symbol']
+
+            indices = df.to_dict(orient='index')
+
+            indices[Root.BNF] = indices["BANKNIFTY"]
+            indices[Root.NF] = indices["NIFTY"]
+            indices[Root.FNF] = indices["FINNIFTY"]
+            indices[Root.MIDCPNF] = indices["MIDCPNIFTY"]
+
+
+            cls.indices = indices
+
+            return indices
+
+        except Exception as exc:
+            raise TokenDownloadError({"Error": exc.args}) from exc
+
+    @classmethod
     def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
@@ -196,23 +233,23 @@ class choice(Exchange):
         """
 
         try:
-            todaysdate = cls.current_datetime()
-            weekday = todaysdate.weekday()
-            days = 0
-
-            if weekday == 5:
-                days = 1
-            elif todaysdate.weekday() == 6:
-                days = 2
-
-            date_obj = cls.time_delta(todaysdate, days, dtformat="%d%b%Y")
-            link = f"{cls.base_urls['market_data_url']}/SCRIP_MASTER_{date_obj}.csv"
+            todaysdate = cls.current_datetime().date().strftime("%d%b%Y")
+            link = f"{cls.base_urls['market_data_url']}/SCRIP_MASTER_{todaysdate}.csv"
             df = cls.data_reader(link, filetype='csv', dtype={"ISIN": str, "SecName": str, 'Instrument': str, "PriceUnit": str, "QtyUnit": str, "DeliveryUnit": str})
 
-            df = df[((df['Symbol'] == 'BANKNIFTY') | (df['Symbol'] == 'NIFTY')) & (df['Instrument'] == 'OPTIDX')]
+            df = df[
+                (
+                    (df["Symbol"] == "BANKNIFTY") |
+                    (df["Symbol"] == "NIFTY") |
+                    (df["Symbol"] == "FINNIFTY") |
+                    (df["Symbol"] == "MIDCPNIFTY")
+                ) &
+                (
+                    (df["Instrument"] == "OPTIDX")
+                )]
 
-            df = df[['Token', 'SecDesc', 'Expiry', 'OptionType', 'StrikePrice', 'MarketLot',
-                     'MaxOrderLots', 'PriceDivisor', 'Symbol', 'PriceTick'
+            df = df[["Token", "SecDesc", "Expiry", "OptionType", "StrikePrice", "MarketLot",
+                     "MaxOrderLots", "PriceDivisor", "Symbol", "PriceTick"
                      ]]
 
             df.rename({"Symbol": "Root", "SecDesc": "Symbol", "OptionType": "Option",
@@ -220,9 +257,9 @@ class choice(Exchange):
                        "lastPrice": "LastPrice", "MaxOrderLots": "QtyLimit"},
                       axis=1, inplace=True)
 
-            df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
-            df['StrikePrice'] = (df['StrikePrice'] / df['PriceDivisor']).astype(int)
-            df['TickSize'] = df['TickSize'] / df['PriceDivisor']
+            df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
+            df["StrikePrice"] = (df["StrikePrice"] / df["PriceDivisor"]).astype(int)
+            df["TickSize"] = df["TickSize"] / df["PriceDivisor"]
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
 

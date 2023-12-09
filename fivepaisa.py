@@ -224,6 +224,8 @@ class fivepaisa(Exchange):
         except Exception as exc:
             raise TokenDownloadError({"Error": exc.args}) from exc
 
+
+
     @classmethod
     def create_headers(cls,
                        params: dict,
@@ -491,6 +493,9 @@ class fivepaisa(Exchange):
         #         }
         # }
 
+
+
+
     @classmethod
     def market_order(cls,
                      symbol: str,
@@ -611,6 +616,8 @@ class fivepaisa(Exchange):
 
         return cls.create_order_parser(response=response, headers=headers)
 
+
+
     @classmethod
     def market_order_bo(cls,
                         symbol: str,
@@ -663,6 +670,9 @@ class fivepaisa(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
 
         return cls.create_order_parser(response=response, headers=headers)
+
+
+
 
     @classmethod
     def fetch_order(cls,
@@ -768,6 +778,8 @@ class fivepaisa(Exchange):
 
         return 0.0
 
+
+
     @classmethod
     def modify_order(cls,
                      order_id: str,
@@ -833,6 +845,8 @@ class fivepaisa(Exchange):
         order = cls.fetch_order(order_id=order_id, headers=headers)
 
         return order
+
+
 
     @classmethod
     def fetch_positions(cls,

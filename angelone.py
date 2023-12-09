@@ -29,10 +29,10 @@ if TYPE_CHECKING:
 
 class angelone(Exchange):
     """
-    AngelOne kronos Broker Class
+    AngelOne kronos Broker Class.
 
     Returns:
-        kronos.angeloner: kronos AngelOne Broker Object
+        kronos.angeloner: kronos AngelOne Broker Object.
     """
 
 
@@ -64,8 +64,8 @@ class angelone(Exchange):
         "tradebook": f"{base_urls['base']}/order/v1/getTradeBook",
         "positions": f"{base_urls['base']}/order/v1/getPosition",
         "holdings": f"{base_urls['base']}/portfolio/v1/getAllHolding",
-        "profile": f"{base_urls['base']}/user/v1/getProfile",
         "rms_limits": f"{base_urls['base']}/user/v1/getRMS",
+        "profile": f"{base_urls['base']}/user/v1/getProfile",
     }
 
 
@@ -156,7 +156,7 @@ class angelone(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format
+            dict: Unified kronos indices format.
         """
         df = cls.data_reader(cls.base_urls["market_data"], filetype='json')
         df = df[(df['exch_seg'] == 'NSE') & (df['instrumenttype'] == "AMXIDX")][["symbol", "token"]]
@@ -175,7 +175,7 @@ class angelone(Exchange):
         return indices
 
     @classmethod
-    def create_nfo_tokens(cls):
+    def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the aliceblue.nfo_tokens Dictionary.
@@ -237,7 +237,7 @@ class angelone(Exchange):
             params (dict) : A dictionary which should consist the following keys:
                 user_id (str): User ID of the Account.
                 pin (str): pin of the Account Holder.
-                totpbase (str): String of characters used to generate TOTP.
+                totpstr (str): String of characters used to generate TOTP.
                 api_key (str): API Key of the Account.
 
         Returns:
@@ -365,10 +365,10 @@ class angelone(Exchange):
                                order: dict,
                                ) -> dict[Any, Any]:
         """
-        Parse Orderbook Order Json Response to a Kronos Unified Order Response.
+        Parse Tradebook Order Json Response.
 
         Parameters:
-            order (dict): Orderbook Order Json Response from Broker.
+            order (dict): Tradebook Order Json Response from Broker.
 
         Returns:
             dict: Unified Kronos Order Response.
@@ -406,10 +406,10 @@ class angelone(Exchange):
 
     @classmethod
     def _position_json_parser(cls,
-                                position: dict,
-                                ) -> dict[Any, Any]:
+                              position: dict,
+                              ) -> dict[Any, Any]:
         """
-        Parse Acoount Position Json Response to a Kronos Unified Poisition Response.
+        Parse Acoount Position Json Response.
 
         Parameters:
             order (dict): Acoount Position Json Response from Broker.
@@ -441,7 +441,7 @@ class angelone(Exchange):
                              profile: dict
                              ) -> dict[Any, Any]:
         """
-        Parse User Profile Json Response to a kronos Unified Profile Response.
+        Parse User Profile Json Response.
 
         Parameters:
             profile (dict): User Profile Json Response from Broker.
@@ -472,12 +472,13 @@ class angelone(Exchange):
                              headers: dict
                              ) -> dict[Any, Any]:
         """
-        Parse Json Response Obtained from Broker After Placing Order to get Orderid
+        Parse Json Response Obtained from Broker After Placing Order to get order_id
         and fetching the json repsone for the said order_id.
 
         Parameters:
             response (Response): Json Repsonse Obtained from broker after Placing an Order.
             headers (dict): headers to send order request with.
+
         Returns:
             dict: Unified kronos Order Response.
         """
@@ -512,7 +513,7 @@ class angelone(Exchange):
                      ) -> dict[Any, Any]:
 
         """
-        Place an Order
+        Place an Order.
 
         Parameters:
             token (int): Exchange token.
@@ -542,7 +543,6 @@ class angelone(Exchange):
             order_type = OrderType.LIMIT
         else:
             order_type = OrderType.SL
-
 
         if not target:
             json_data = {
@@ -603,7 +603,7 @@ class angelone(Exchange):
                      variety: str = Variety.REGULAR,
                      ) -> dict[Any, Any]:
         """
-        Place Market Order
+        Place Market Order.
 
         Parameters:
             token (int): Exchange token.
@@ -621,7 +621,7 @@ class angelone(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         if not target:
             json_data = {
@@ -681,7 +681,7 @@ class angelone(Exchange):
                     variety: str = Variety.REGULAR,
                     ) -> dict[Any, Any]:
         """
-        Place Limit Order
+        Place Limit Order.
 
         Parameters:
             token (int): Exchange token.
@@ -700,7 +700,7 @@ class angelone(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         if not target:
             json_data = {
@@ -763,7 +763,7 @@ class angelone(Exchange):
                  variety: str = Variety.STOPLOSS,
                  ) -> dict[Any, Any]:
         """
-        Place Stoploss Order
+        Place Stoploss Order.
 
         Parameters:
             token (int): Exchange token.
@@ -783,7 +783,7 @@ class angelone(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         if not target:
             json_data = {
@@ -845,7 +845,7 @@ class angelone(Exchange):
                   variety: str = Variety.STOPLOSS,
                   ) -> dict[Any, Any]:
         """
-        Place Stoploss-Market Order
+        Place Stoploss-Market Order.
 
         Parameters:
             token (int): Exchange token.
@@ -864,7 +864,7 @@ class angelone(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         if not target:
             json_data = {
@@ -930,7 +930,7 @@ class angelone(Exchange):
                          trigger: float = 0.0,
                          ) -> dict[Any, Any]:
         """
-        Place Stoploss Order in F&O Segment.
+        Place an Order in F&O Segment.
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
@@ -949,10 +949,10 @@ class angelone(Exchange):
             variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
-            KeyError: If Strike Price Does not Exist
+            KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: Kronos Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1029,10 +1029,10 @@ class angelone(Exchange):
             variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
-            KeyError: If Strike Price Does not Exist
+            KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: Kronos Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1102,10 +1102,10 @@ class angelone(Exchange):
             variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
-            KeyError: If Strike Price Does not Exist
+            KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: Kronos Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.nfo_tokens()
@@ -1252,10 +1252,10 @@ class angelone(Exchange):
             variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
-            KeyError: If Strike Price Does not Exist
+            KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: Kronos Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1314,7 +1314,7 @@ class angelone(Exchange):
                         variety: str = Variety.BO,
                         ) -> dict[Any, Any]:
         """
-        Place BO Order.
+        Place a BO Order.
 
         Parameters:
             token (int): Exchange token.
@@ -1650,7 +1650,7 @@ class angelone(Exchange):
                         headers: dict
                         ) -> list[dict]:
         """
-        Fetch Orderbook Details
+        Fetch Orderbook Details.
 
         Parameters:
             headers (dict): headers to send fetch_orders request with.
@@ -1748,7 +1748,7 @@ class angelone(Exchange):
                      order_id: str,
                      headers: dict,
                      price: float | None = None,
-                     trigger_price: float | None = None,
+                     trigger: float | None = None,
                      quantity: int | None = None,
                      order_type: str | None = None,
                      validity: str | None = None,
@@ -1759,12 +1759,14 @@ class angelone(Exchange):
         Parameters:
             order_id (str): id of the order to modify.
             headers (dict): headers to send modify_order request with.
-            price (float | None, optional): price of the order. Defaults to None.
-            triggerprice (float | None, optional): trigger price of the order. Defaults to None.
+            price (float | None, optional): price of t.he order. Defaults to None.
+            trigger (float | None, optional): trigger price of the order. Defaults to None.
             quantity (int | None, optional): order quantity. Defaults to None.
+            order_type (str | None, optional): Type of Order. defaults to None
+            validity (str | None, optional): Order validity Defaults to None.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: kronos Unified Order Response.
         """
         order_info = cls.fetch_order(order_id=order_id, headers=headers)
 
@@ -1775,9 +1777,9 @@ class angelone(Exchange):
             "tradingsymbol": order_info[Order.SYMBOL],
             "price": price or order_info[Order.PRICE],
             "quantity": quantity or order_info[Order.QUANTITY],
-            "ordertype": cls._key_mapper(cls.req_order_type, order_type, 'order_type') or cls.req_order_type[order_info[Order.TYPE]],
+            "ordertype": cls._key_mapper(cls.req_order_type, order_type, 'order_type') if order_type else cls.req_order_type[order_info[Order.TYPE]],
             "producttype": cls.req_product.get(order_info[Order.PRODUCT], order_info[Order.PRODUCT]),
-            "duration": cls._key_mapper(cls.req_validity, validity, 'validity') or cls.req[order_info[Order.VALIDITY]],
+            "duration": cls._key_mapper(cls.req_validity, validity, 'validity') if validity else cls.req[order_info[Order.VALIDITY]],
             "variety": cls.req_variety.get(order_info[Order.VARIETY], order_info[Order.VARIETY]),
         }
 
@@ -1859,6 +1861,21 @@ class angelone(Exchange):
         return cls.fetch_day_positions(headers=headers)
 
     @classmethod
+    def fetch_positions(cls,
+                        headers: dict,
+                        ) -> dict[Any, Any]:
+        """
+        Fetch Day & Net Account Positions.
+
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Position Response.
+        """
+        return cls.fetch_day_positions(headers=headers)
+
+    @classmethod
     def fetch_holdings(cls,
                        headers: dict,
                        ) -> dict[Any, Any]:
@@ -1887,7 +1904,6 @@ class angelone(Exchange):
         Returns:
             dict: Kronos Unified RMS Limits Response.
         """
-
         response = cls.fetch(method="GET", url=cls.urls["rms_limits"], headers=headers["headers"])
         return cls._json_parser(response)["data"]
 

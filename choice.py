@@ -1113,60 +1113,42 @@ class choice(Exchange):
 
 
     @classmethod
-    def fetch_order(cls,
-                    order_id: str,
-                    headers: dict
-                    ) -> dict[Any, Any]:
+    def fetch_raw_orderbook(cls,
+                            headers: dict
+                            ) -> list[dict]:
         """
-        Fetch Order Details.
+        Fetch Raw Orderbook Details, without any Standardaization.
 
-        Paramters:
-            order_id (str): id of the order
-
-        Raises:
-            InputError: If order does not exist.
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
 
         Returns:
-            dict: kronos Unified Order Response
+            list[dict]: Raw Broker Orderbook Response.
         """
+        response = cls.fetch(method="GET", url=cls.urls["orderbook"], headers=headers)
+        return cls._json_parser(response)
 
-        final_url = f'{cls.urls["order_history"]}/{order_id}'
-        response = cls.fetch(method="GET", url=final_url, headers=headers)
-        info = cls._json_parser(response)
-
-        detail = info[0]
-        order = cls._orderbook_json_parser(detail)
-
-        return order
 
     @classmethod
-    def fetch_orders(cls,
-                     headers: dict
-                     ) -> list[dict]:
+    def fetch_raw_orderhistory(cls,
+                               order_id: str,
+                               headers: dict
+                               ) -> list[dict]:
         """
-        Fetch OrderBook Details which is unified across all brokers.
-        Use This if you want Avg price, etc. values which sometimes unavailable
-        thorugh fetch_orderbook.
+        Fetch Raw History of an order.
 
         Paramters:
-            order_id (str): id of the order
-
-        Raises:
-            InputError: If order does not exist.
+            order_id (str): id of the order.
+            headers (dict): headers to send orderhistory request with.
 
         Returns:
-            dict: kronos Unified Order Response
+            list[dict]: Raw Broker Order History Response.
         """
+        final_url = f'{cls.urls["order_history"]}/{order_id}'
+        response = cls.fetch(method="GET", url=final_url, headers=headers)
 
-        response = cls.fetch(method="GET", url=cls.urls["orderbook"], headers=headers)
-        info = cls._json_parser(response)
+        return cls._json_parser(response)
 
-        orders = []
-        for order in info['Orders']:
-            detail = cls._orderbook_json_parser(order)
-            orders.append(detail)
-
-        return orders
 
     @classmethod
     def fetch_orderbook(cls,
@@ -1181,9 +1163,7 @@ class choice(Exchange):
         Returns:
             list[dict]: List of dicitonaries of orders using kronos Unified Order Response
         """
-
-        response = cls.fetch(method="GET", url=cls.urls["orderbook"], headers=headers)
-        info = cls._json_parser(response)
+        info = cls.fetch_raw_orderbook(headers=headers)
 
         orders = []
         for order in info['Orders']:
@@ -1216,6 +1196,74 @@ class choice(Exchange):
 
         return orders
 
+    @classmethod
+    def fetch_orders(cls,
+                     headers: dict
+                     ) -> list[dict]:
+        """
+        Fetch OrderBook Details which is unified across all brokers.
+        Use This if you want Avg price, etc. values which sometimes unavailable
+        thorugh fetch_orderbook.
+
+        Paramters:
+            order_id (str): id of the order
+
+        Raises:
+            InputError: If order does not exist.
+
+        Returns:
+            dict: kronos Unified Order Response
+        """
+        return cls.fetch_orderbook(headers=headers)
+
+    @classmethod
+    def fetch_order(cls,
+                    order_id: str,
+                    headers: dict
+                    ) -> dict[Any, Any]:
+        """
+        Fetch Order Details.
+
+        Paramters:
+            order_id (str): id of the order.
+
+        Raises:
+            InputError: If order does not exist.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
+
+        detail = info[0]
+        order = cls._orderbook_json_parser(detail)
+
+        return order
+
+    @classmethod
+    def fetch_orderhistory(cls,
+                           order_id: str,
+                           headers: dict
+                           ) -> list[dict]:
+        """
+        Fetch History of an order.
+
+        Paramters:
+            order_id (str): id of the order.
+            headers (dict): headers to send orderhistory request with.
+
+        Returns:
+            list: A list of dicitonaries containing order history using kronos Unified Order Response.
+        """
+        info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
+
+        order_history = []
+        for order in info:
+            history = cls._orderhistory_json_parser(order)
+            order_history.append(history)
+
+        return order_history
+
 
     # Order Modification & Sq Off
 
@@ -1243,10 +1291,7 @@ class choice(Exchange):
         Returns:
             dict: kronos Unified Order Response
         """
-
-        final_url = f"{cls.urls['order_history']}/{order_id}"
-        response = cls.fetch(method="GET", url=final_url, headers=headers)
-        info = cls._json_parser(response)
+        info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
         order = info[0]
 
         json_data = {

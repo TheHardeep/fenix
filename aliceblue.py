@@ -80,10 +80,10 @@ class CryptoJsAES:
 
 class aliceblue(Exchange):
     """
-    AliceBlue kronos Broker Class
+    AliceBlue kronos Broker Class.
 
     Returns:
-        kronos.aliceblue: kronos AliceBlue Broker Object
+        kronos.aliceblue: kronos AliceBlue Broker Object.
     """
 
 
@@ -97,7 +97,6 @@ class aliceblue(Exchange):
 
     # Base URLs
 
-
     base_urls = {
         "api_doc": "https://v2api.aliceblueonline.com/introduction",
         "token_01": "https://ant.aliceblueonline.com/rest/AliceBlueAPIService",
@@ -108,7 +107,6 @@ class aliceblue(Exchange):
 
 
     # Access Token Generation URLs
-
 
     token_urls = {
         "get_enc_key": f"{base_urls['base']}/customer/getAPIEncpkey",
@@ -122,15 +120,14 @@ class aliceblue(Exchange):
 
     # Order Placing URLs
 
-
     urls = {
         "place_order": f"{base_urls['base']}/placeOrder/executePlaceOrder",
         "modify_order": f"{base_urls['base']}/placeOrder/modifyOrder",
         "cancel_order": f"{base_urls['base']}/placeOrder/cancelOrder",
         "exit_bracket_order": f"{base_urls['base']}/placeOrder/exitBracketOrder",
-        "order_history": f"{base_urls['base']}/placeOrder/orderHistory",
         "orderbook": f"{base_urls['base']}/placeOrder/fetchOrderBook",
         "tradebook": f"{base_urls['base']}/placeOrder/fetchTradeBook",
+        "order_history": f"{base_urls['base']}/placeOrder/orderHistory",
         "positions": f"{base_urls['base']}/positionAndHoldings/positionBook",
         "holdings": f"{base_urls['base']}/positionAndHoldings/holdings",
         "sqoff_position": f"{base_urls['base']}/positionAndHoldings/sqrOofPosition",
@@ -140,7 +137,6 @@ class aliceblue(Exchange):
 
 
     # Request Parameters Dictionaries
-
 
     req_exchange = {
         ExchangeCode.NSE: "NSE",
@@ -187,7 +183,6 @@ class aliceblue(Exchange):
 
     # Response Parameters Dictionaries
 
-
     resp_order_type = {
         "MKT": OrderType.MARKET,
         "L": OrderType.LIMIT,
@@ -233,7 +228,7 @@ class aliceblue(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format
+            dict: Unified kronos indices format.
         """
         req = cls.fetch(method="GET", url=cls.base_urls["market_data"], params={'exch': ExchangeCode.NSE})
         resp = cls._json_parser(req)
@@ -258,7 +253,7 @@ class aliceblue(Exchange):
     def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the aliceblue.nfo_tokens Dictionary.
+        Stores them in the zerodha.nfo_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.
@@ -543,7 +538,7 @@ class aliceblue(Exchange):
                              profile: dict
                              ) -> dict[Any, Any]:
         """
-        Parse User Profile Json Response to a kronos Unified Profile Response.
+        Parse User Profile Json Response.
 
         Parameters:
             profile (dict): User Profile Json Response from Broker.
@@ -577,7 +572,7 @@ class aliceblue(Exchange):
                              headers: dict
                              ) -> dict[Any, Any]:
         """
-        Parse Json Response Obtained from Broker After Placing Order to get Orderid
+        Parse Json Response Obtained from Broker After Placing Order to get order_id
         and fetching the json repsone for the said order_id.
 
         Parameters:
@@ -589,8 +584,8 @@ class aliceblue(Exchange):
             dict: Unified kronos Order Response.
         """
         info = cls._json_parser(response)
-        order_id = info[0].get(key_to_check)
 
+        order_id = info[0].get(key_to_check)
         order = cls.fetch_order(order_id=order_id, headers=headers)
 
         return order
@@ -619,7 +614,7 @@ class aliceblue(Exchange):
                      ) -> dict[Any, Any]:
 
         """
-        Place an Order
+        Place an Order.
 
         Parameters:
             token (int): Exchange token.
@@ -639,7 +634,7 @@ class aliceblue(Exchange):
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         if not price and trigger:
             order_type = OrderType.SLM
@@ -695,8 +690,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def market_order(cls,
@@ -715,7 +709,7 @@ class aliceblue(Exchange):
                      variety: str = Variety.REGULAR,
                      ) -> dict[Any, Any]:
         """
-        Place Market Order
+        Place Market Order.
 
         Parameters:
             token (int): Exchange token.
@@ -733,7 +727,7 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         if not target:
             json_data = [
@@ -779,8 +773,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def limit_order(cls,
@@ -800,7 +793,7 @@ class aliceblue(Exchange):
                     variety: str = Variety.REGULAR,
                     ) -> dict[Any, Any]:
         """
-        Place Limit Order
+        Place Limit Order.
 
         Parameters:
             token (int): Exchange token.
@@ -819,7 +812,7 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         if not target:
             json_data = [
@@ -866,8 +859,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def sl_order(cls,
@@ -888,7 +880,7 @@ class aliceblue(Exchange):
                  variety: str = Variety.STOPLOSS,
                  ) -> dict[Any, Any]:
         """
-        Place Stoploss Order
+        Place Stoploss Order.
 
         Parameters:
             token (int): Exchange token.
@@ -908,7 +900,7 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         if not target:
             json_data = [
@@ -953,8 +945,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def slm_order(cls,
@@ -974,7 +965,7 @@ class aliceblue(Exchange):
                   variety: str = Variety.STOPLOSS,
                   ) -> dict[Any, Any]:
         """
-        Place Stoploss-Market Order
+        Place Stoploss-Market Order.
 
         Parameters:
             token (int): Exchange token.
@@ -993,7 +984,7 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         if not target:
             json_data = [
@@ -1038,8 +1029,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
 
     # NFO Order Functions
@@ -1063,7 +1053,7 @@ class aliceblue(Exchange):
                          trigger: float = 0.0,
                          ) -> dict[Any, Any]:
         """
-        Place Stoploss Order in F&O Segment.
+        Place an Order in F&O Segment.
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
@@ -1082,10 +1072,10 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
-            KeyError: If Strike Price Does not Exist
+            KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: Kronos Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1129,8 +1119,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def market_order_nfo(cls,
@@ -1165,13 +1154,13 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
-            KeyError: If Strike Price Does not Exist
+            KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: Kronos Unified Order Response.
         """
         if not cls.nfo_tokens:
-            cls.expiry_markets()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1203,8 +1192,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def limit_order_nfo(cls,
@@ -1241,13 +1229,13 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
-            KeyError: If Strike Price Does not Exist
+            KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: Kronos Unified Order Response.
         """
         if not cls.nfo_tokens:
-            cls.expiry_markets()
+            cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
@@ -1279,8 +1267,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def sl_order_nfo(cls,
@@ -1319,10 +1306,10 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
-            KeyError: If Strike Price Does not Exist
+            KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: Kronos Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1357,8 +1344,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def slm_order_nfo(cls,
@@ -1395,10 +1381,10 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
-            KeyError: If Strike Price Does not Exist
+            KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response
+            dict: Kronos Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1433,8 +1419,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
 
     # BO Order Functions
@@ -1459,7 +1444,7 @@ class aliceblue(Exchange):
                         variety: str = Variety.BO,
                         ) -> dict[Any, Any]:
         """
-        Place BO Order.
+        Place a BO Order.
 
         Parameters:
             token (int): Exchange token.
@@ -1515,8 +1500,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def market_order_bo(cls,
@@ -1579,8 +1563,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def limit_order_bo(cls,
@@ -1644,8 +1627,7 @@ class aliceblue(Exchange):
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def sl_order_bo(cls,
@@ -1713,8 +1695,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
     @classmethod
     def slm_order_bo(cls,
@@ -1735,7 +1716,7 @@ class aliceblue(Exchange):
                      ) -> dict[Any, Any]:
 
         """
-        Place BO Stoploss-Market Order
+        Place BO Stoploss-Market Order.
 
         Parameters:
             token (int): Exchange token.
@@ -1754,7 +1735,7 @@ class aliceblue(Exchange):
             variety (str, optional): Order variety Defaults to Variety.BO.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: kronos Unified Order Response.
         """
         json_data = [
             {
@@ -1780,8 +1761,7 @@ class aliceblue(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
 
 
     # Order Details, OrderBook & TradeBook
@@ -1816,7 +1796,7 @@ class aliceblue(Exchange):
         Fetch Raw History of an order.
 
         Paramters:
-            order_id (str): id of the order
+            order_id (str): id of the order.
             headers (dict): headers to send orderhistory request with.
 
         Returns:
@@ -1833,7 +1813,7 @@ class aliceblue(Exchange):
                         headers: dict
                         ) -> list[dict]:
         """
-        Fetch Orderbook Details
+        Fetch Orderbook Details.
 
         Parameters:
             headers (dict): headers to send fetch_orders request with.
@@ -1887,7 +1867,7 @@ class aliceblue(Exchange):
         thorugh fetch_orderbook.
 
         Paramters:
-            order_id (str): id of the order
+            order_id (str): id of the order.
 
         Raises:
             InputError: If order does not exist.
@@ -1932,7 +1912,7 @@ class aliceblue(Exchange):
         Fetch History of an order.
 
         Paramters:
-            order_id (str): id of the order
+            order_id (str): id of the order.
             headers (dict): headers to send orderhistory request with.
 
         Returns:
@@ -1943,7 +1923,6 @@ class aliceblue(Exchange):
         order_history = []
         for order in info:
             history = cls._orderhistory_json_parser(order)
-
             order_history.append(history)
 
         return order_history
@@ -1971,30 +1950,34 @@ class aliceblue(Exchange):
             price (float | None, optional): price of t.he order. Defaults to None.
             trigger (float | None, optional): trigger price of the order. Defaults to None.
             quantity (int | None, optional): order quantity. Defaults to None.
+            order_type (str | None, optional): Type of Order. defaults to None.
+            validity (str | None, optional): Order validity Defaults to None.
 
         Returns:
             dict: kronos Unified Order Response.
         """
         order_history = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
-        order = order_history[0]
+        order_info = order_history[0]
 
         json_data = {
-            "transtype": order["Action"],
+            "nestOrderNumber": order_info["nestordernumber"],
+            "exch": order_info["exchange"],
+            "trading_symbol": order_info["Trsym"],
+            "price": price or order_info["Prc"],
+            "qty": quantity or order_info["Qty"],
+            "trigPrice": trigger or order_info["trigger"],
+            "transtype": order_info["Action"],
+            "prctyp": order_type or order_info["Ordtype"],
+            "pCode": order_info["productcode"],
+            "filledQuantity": order_info["filledShares"],
             "discqty": "0",
-            "exch": order["exchange"],
-            "trading_symbol": order["Trsym"],
-            "nestOrderNumber": order["nestordernumber"],
-            "prctyp": order["Ordtype"],
-            "price": price or order["Prc"],
-            "qty": quantity or order["Qty"],
-            "trigPrice": trigger or order["trigger"],
-            "filledQuantity": order["filledShares"],
-            "pCode": order["productcode"],
         }
 
-        response = cls.fetch(method="POST", url=cls.urls["modify_order"], json=json_data, headers=headers["headers"])
+        response = cls.fetch(method="POST", url=cls.urls["modify_order"],
+                             json=json_data, headers=headers["headers"])
+        _ = cls._json_parser(response)
 
-        return cls._json_parser(response)
+        return cls.fetch_order(order_id=order_id, headers=headers)
 
     @classmethod
     def cancel_order(cls,
@@ -2019,10 +2002,10 @@ class aliceblue(Exchange):
             "trading_symbol": order['symbol']
         }
 
-        response = cls.fetch(method="POST", url=cls.urls["cancel_order"], json=json_data, headers=headers["headers"])
-        info = cls._json_parser(response)
+        response = cls.fetch(method="POST", url=cls.urls["cancel_order"],
+                             json=json_data, headers=headers["headers"])
 
-        return cls.fetch_order(order_id=info['nestOrderNumber'], headers=headers["headers"])
+        return cls._create_order_parser(response=response, key_to_check="nestOrderNumber", headers=headers)
 
     @classmethod
     def sq_off_position(cls,
@@ -2110,8 +2093,8 @@ class aliceblue(Exchange):
             dict[Any, Any]: kronos Unified Position Response.
         """
         json_data = {'ret': Validity.DAY}
-
         response = cls.fetch(method="POST", url=cls.urls['positions'], json=json_data, headers=headers["headers"])
+
         try:
             return cls._json_parser(response)
         except ResponseError as e:
@@ -2132,13 +2115,31 @@ class aliceblue(Exchange):
             dict[Any, Any]: kronos Unified Position Response.
         """
         json_data = {'ret': 'NET'}
-
         response = cls.fetch(method="POST", url=cls.urls['positions'], json=json_data, headers=headers["headers"])
+
         try:
             return cls._json_parser(response)
         except ResponseError as e:
             if "no data" in str(e):
                 return []
+
+    @classmethod
+    def fetch_positions(cls,
+                        headers: dict,
+                        ) -> dict[Any, Any]:
+        """
+        Fetch Day & Net Account Positions.
+
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Position Response.
+        """
+        day_positions = cls.fetch_day_positions(headers=headers)
+        net_positions = cls.fetch_net_positions(headers=headers)
+
+        return day_positions + net_positions
 
     @classmethod
     def fetch_holdings(cls,
@@ -2171,7 +2172,7 @@ class aliceblue(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict: kronos Unified RMS Limits Response
+            dict: kronos Unified RMS Limits Response.
         """
         response = cls.fetch(method="GET", url=cls.urls["rms_limits"], headers=headers["headers"])
         return cls._json_parser(response)

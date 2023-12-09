@@ -58,15 +58,15 @@ class ExchangeCode:
     """
     Exchange Code Constants.
     """
-    NSE = "NSE"
-    NFO = "NFO"
-    BSE = "BSE"
-    BFO = "BFO"
-    NCO = "NCO"
-    BCO = "BCO"
-    BCD = "BCD"
-    MCX = "MCX"
-    CDS = "CDS"
+    NSE = "NSE"  # NSE Equity
+    NFO = "NFO"  # NSE F&O
+    BSE = "BSE"  # BSE Equity
+    BFO = "BFO"  # BSE F&O
+    NCO = "NCO"  # NSE Commodities
+    BCO = "BCO"  # BSE Commodities
+    BCD = "BCD"  #
+    MCX = "MCX"  # Multi Commodity Exchange F&O
+    CDS = "CDS"  #
 
 
 class Product:

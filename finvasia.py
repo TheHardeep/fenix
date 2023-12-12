@@ -185,8 +185,17 @@ class finvasia(Exchange):
         """
         try:
             df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
-
-            df = df[((df['Symbol'] == 'BANKNIFTY') | (df['Symbol'] == 'NIFTY') | (df['Symbol'] == 'FINNIFTY')) & (df['Instrument'] == "OPTIDX")]
+            # return df
+            df = df[
+                (
+                    (df['Symbol'] == 'BANKNIFTY') |
+                    (df['Symbol'] == 'NIFTY') |
+                    (df['Symbol'] == 'FINNIFTY') |
+                    (df['Symbol'] == 'MIDCPNIFTY')
+                ) &
+                (
+                    (df['Instrument'] == "OPTIDX")
+                )]
 
             df = df[['Token', 'TradingSymbol', 'Expiry', 'OptionType',
                      'StrikePrice', 'LotSize', 'Symbol', 'TickSize', 'Exchange',

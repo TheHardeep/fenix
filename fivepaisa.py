@@ -53,6 +53,7 @@ class fivepaisa(Exchange):
     """ Class for 5Paisa """
 
     nfo_tokens = {}
+    id = "fivepaisa"
     _session = Exchange._create_session()
 
     base_urls = {

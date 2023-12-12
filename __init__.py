@@ -41,9 +41,11 @@ from kronos.finvasia import finvasia                    # noqa :F401
 from kronos.fivepaisa import fivepaisa                  # noqa :F401
 from kronos.fyers import fyers                          # noqa :F401
 from kronos.iifl import iifl                            # noqa :F401
+from kronos.kunjee import kunjee                        # noqa :F401
 from kronos.mastertrust import mastertrust              # noqa :F401
 from kronos.motilaloswal import motilaloswal            # noqa :F401
 from kronos.symphony import symphony                    # noqa :F401
+from kronos.vpc import vpc                              # noqa :F401
 from kronos.zerodha import zerodha                      # noqa :F401
 
 

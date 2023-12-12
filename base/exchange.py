@@ -446,7 +446,7 @@ class Exchange:
                     global_dict[j[0]][j[1]] = i.to_dict('records')[0]
                     expiry_data[expiry_name][root] = global_dict
 
-                expiry_data['Expiry'][root] = expiries
+                expiry_data['Expiry'][root] = list(expiries)
                 expiry_data['LotSize'][root] = lotsize
 
         return expiry_data

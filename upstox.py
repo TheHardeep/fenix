@@ -1765,7 +1765,7 @@ class upstox(Exchange):
         Returns:
             dict[Any, Any]: kronos Unified Position Response.
         """
-        response = cls.fetch(method="POST", url=cls.urls['positions'], headers=headers["headers"])
+        response = cls.fetch(method="GET", url=cls.urls['positions'], headers=headers["headers"])
         return cls._json_parser(response)
 
     @classmethod

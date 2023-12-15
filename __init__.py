@@ -45,6 +45,7 @@ from kronos.kunjee import kunjee                        # noqa :F401
 from kronos.mastertrust import mastertrust              # noqa :F401
 from kronos.motilaloswal import motilaloswal            # noqa :F401
 from kronos.symphony import symphony                    # noqa :F401
+from kronos.upstox import upstox                        # noqa :F401
 from kronos.vpc import vpc                              # noqa :F401
 from kronos.zerodha import zerodha                      # noqa :F401
 
@@ -57,9 +58,12 @@ exchanges = [
     "fivepaisa",
     "fyers",
     "iifl",
+    "kunjee",
     "mastertrust",
     "motilaloswal",
     "symphony",
+    "upstox",
+    "vpc",
     "zerodha",
 ]
 

@@ -116,11 +116,23 @@ class angelone(Exchange):
 
 
     resp_status = {
+        "open pending": Status.PENDING,
+        "not modified": Status.PENDING,
+        "not cancelled": Status.PENDING,
+        "modify pending": Status.PENDING,
+        "trigger pending": Status.PENDING,
+        "cancel pending": Status.PENDING,
         "validation pending": Status.PENDING,
-        "rejected": Status.REJECTED,
-        "complete": Status.FILLED,
+        "put order req received": Status.PENDING,
+        "modify validation pending": Status.PENDING,
+        "after market order req received": Status.PENDING,
+        "modify after market order req received": Status.PENDING,
         "cancelled": Status.CANCELLED,
-        "open": Status.OPEN
+        "cancelled after market order": Status.CANCELLED,
+        "open": Status.OPEN,
+        "complete": Status.FILLED,
+        "rejected": Status.REJECTED,
+        "modified": Status.MODIFIED,
     }
 
     resp_order_type = {

@@ -118,14 +118,23 @@ class mastertrust(Exchange):
     # Response Parameters Dictionaries
 
     resp_status = {
+        "open pending": Status.PENDING,
+        "not modified": Status.PENDING,
+        "not cancelled": Status.PENDING,
+        "modify pending": Status.PENDING,
+        "trigger pending": Status.PENDING,
+        "cancel pending": Status.PENDING,
         "validation pending": Status.PENDING,
         "put order req received": Status.PENDING,
-        "trigger pending": Status.PENDING,
-        "open pending": Status.OPEN,
+        "modify validation pending": Status.PENDING,
+        "after market order req received": Status.PENDING,
+        "modify after market order req received": Status.PENDING,
+        "cancelled": Status.CANCELLED,
+        "cancelled after market order": Status.CANCELLED,
         "open": Status.OPEN,
         "complete": Status.FILLED,
         "rejected": Status.REJECTED,
-        "cancelled": Status.CANCELLED
+        "modified": Status.MODIFIED,
     }
 
 

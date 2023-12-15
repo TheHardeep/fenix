@@ -142,6 +142,8 @@ class finvasia(Exchange):
         "COMPLETE": Status.FILLED,
         "CANCELED": Status.CANCELLED,
         "REJECT": Status.REJECTED,
+        "Replaced": Status.MODIFIED,
+        "New": Status.OPEN,
     }
 
 

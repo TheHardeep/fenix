@@ -13,13 +13,19 @@ from kronos.base.constants import OrderType
 from kronos.base.constants import ExchangeCode
 from kronos.base.constants import Product
 from kronos.base.constants import Validity
+from kronos.base.constants import Variety
 from kronos.base.constants import Status
 from kronos.base.constants import Order
 from kronos.base.constants import Position
+from kronos.base.constants import Profile
 from kronos.base.constants import Root
+from kronos.base.constants import WeeklyExpiry
+from kronos.base.constants import UniqueID
 
 
 from kronos.base.errors import InputError
+from kronos.base.errors import BrokerError
+from kronos.base.errors import ResponseError
 from kronos.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
@@ -49,32 +55,47 @@ class EncryptionClient:
 
 
 class fivepaisa(Exchange):
+    """
+    FivePaisa kronos Broker Class.
 
-    """ Class for 5Paisa """
+    Returns:
+        kronos.fivepaisa: kronos FivePaisa Broker Object.
+    """
 
+
+    # Market Data Dictonaries
+
+    indices = {}
     nfo_tokens = {}
     id = "fivepaisa"
     _session = Exchange._create_session()
 
+
+    # Base URLs
+
     base_urls = {
-        "api_documentation_link": "https://www.5paisa.com/developerapi/overview",
-        "market_data_url": "https://images.5paisa.com/website/scripmaster-csv-format.csv",
-        "base_url": "https://Openapi.5paisa.com/VendorsAPI/Service1.svc",
-        "access_token_url": "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V4/LoginRequestMobileNewbyEmail",
+        "api_doc": "https://www.5paisa.com/developerapi/overview",
+        "access_token": "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V4/LoginRequestMobileNewbyEmail",
+        "base": "https://Openapi.5paisa.com/VendorsAPI/Service1.svc",
+        "market_data": "https://images.5paisa.com/website/scripmaster-csv-format.csv",
     }
+
+
+    # Order Placing URLs
 
     urls = {
-        "place_order": f"{base_urls['base_url']}/V1/PlaceOrderRequest",
-        "bo_order": f"{base_urls['base_url']}/SMOOrderRequest",
-        "modify_order": f"{base_urls['base_url']}/V1/ModifyOrderRequest",
-        "cancel_order": f"{base_urls['base_url']}/V1/CancelOrderRequest",
-        "orderbook": f"{base_urls['base_url']}/V2/OrderBook",
-        "tradebook": f"{base_urls['base_url']}/V1/TradeBook",
-        "positions": f"{base_urls['base_url']}/V4/NetPosition",
-        "holdings": f"{base_urls['base_url']}/V3/Holding",
+        "place_order": f"{base_urls['base']}/V1/PlaceOrderRequest",
+        "bo_order": f"{base_urls['base']}/BracketOrderRequest",
+        "modify_order": f"{base_urls['base']}/V1/ModifyOrderRequest",
+        "cancel_order": f"{base_urls['base']}/V1/CancelOrderRequest",
+        "orderbook": f"{base_urls['base']}/V2/OrderBook",
+        "tradebook": f"{base_urls['base']}/V1/TradeBook",
+        "positions": f"{base_urls['base']}/V4/NetPosition",
+        "holdings": f"{base_urls['base']}/V3/Holding",
     }
 
 
+    # Request Parameters Dictionaries
 
     req_exchange = {
         ExchangeCode.NSE: "N",
@@ -92,7 +113,8 @@ class fivepaisa(Exchange):
 
     req_product = {
         Product.MIS: True,
-        Product.NRML: False
+        Product.NRML: False,
+        Variety.BO: True
     }
 
     req_side = {
@@ -106,6 +128,7 @@ class fivepaisa(Exchange):
     }
 
 
+    # Response Parameters Dictionaries
 
     resp_exchange = {
         "N": ExchangeCode.NSE,
@@ -159,17 +182,19 @@ class fivepaisa(Exchange):
     }
 
 
+    # NFO Script Fetch
+
 
     @classmethod
     def create_indices(cls) -> dict:
         """
-        Gives NFO Indices Info for F&O Segment.
+        Gives Indices Info for F&O Segment.
+        Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos create_nfo_tokens format
+            dict: Unified kronos indices format.
         """
-
-        df = cls.data_reader(cls.base_urls["market_data_url"], filetype='csv')
+        df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
 
         df = df[(df['CpType'] == "EQ")][["Name", "Scripcode"]]
         df.rename({"Name": "Symbol", "Scripcode": "Token"}, axis=1, inplace=True)
@@ -188,10 +213,15 @@ class fivepaisa(Exchange):
 
     @classmethod
     def create_nfo_tokens(cls):
+        """
+        Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
+        Stores them in the zerodha.nfo_tokens Dictionary.
 
+        Raises:
+            TokenDownloadError: Any Error Occured is raised through this Error Type.
+        """
         try:
-
-            df = cls.data_reader(cls.base_urls["market_data_url"], filetype='csv')
+            df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
 
             df = df[['Exch', 'ExchType', 'Scripcode', 'Name', 'CpType',
                      'StrikeRate', 'LotSize', 'QtyLimit', 'Underlyer', 'Root', 'TickSize'
@@ -226,28 +256,34 @@ class fivepaisa(Exchange):
             raise TokenDownloadError({"Error": exc.args}) from exc
 
 
+    # Headers & Json Parsers
+
 
     @classmethod
     def create_headers(cls,
                        params: dict,
                        ) -> dict[str, str]:
+        """"
+        Generate Headers used to access Endpoints in FivePaisa.
 
-        """_summary_
-
-        Raises:
-            KeyError: _description_
+        Parameters:
+            Params (dict) : A dictionary which should consist the following keys:
+                user_id (str): User ID of the Account.
+                password (str): Password of the Account.
+                email (str): Email-ID of the Account.
+                web_login_password (str): Password used to login to Trading Account.
+                dob (str): date of Brth of the Account Holder in the format: "YYYYMMDD".
+                app_name (str): App Name of the Account.
+                user_key (str): User Key of the Account.
+                encryption_key (str): Encryption Key of the Account Holder.
 
         Returns:
-            _type_: _description_
+            dict[str, str]: FivePaisa Headers.
         """
-
-
         for key in ["user_id", "password", "email", "web_login_password",
                     "dob", "app_name", "user_key", "encryption_key"]:
-
             if key not in params:
                 raise KeyError(f"Please provide {key}")
-
 
         encryption_client = EncryptionClient(params["encryption_key"])
 
@@ -276,19 +312,15 @@ class fivepaisa(Exchange):
             }
         }
 
-        print(login_payload)
-
-        response = cls.fetch(method="POST", url=cls.base_urls["access_token_url"], json=login_payload)
-        response = cls.json_parser(response)
+        response = cls.fetch(method="POST", url=cls.base_urls["access_token"], json=login_payload)
+        response = cls._json_parser(response)
 
         client_code = response['body']["ClientCode"]
         jwt_token = response['body']['JWTToken']
-        print(response)
         req_headers = {
             "Content-Type": "application/json",
             "Authorization": f"bearer {jwt_token}"
         }
-
         json_data = {
             "head": {
                 "key": params["user_key"],
@@ -306,44 +338,66 @@ class fivepaisa(Exchange):
         }
 
         cls._session = cls._create_session()
-
         return headers
 
     @classmethod
-    def datetime_converter(cls,
-                           dt_str: str
-                           ):
-
+    def _json_parser(cls,
+                     response: Response
+                     ) -> dict[Any, Any] | list[dict[Any, Any]]:
         """
-        dt: str '/Date(1674102081443+0530)/'
+        Parses the Json Repsonse Obtained from Broker.
+
+        Parameters:
+            response (Response): Json Response Obtained from Broker.
+
+        Raises:
+            ResponseError: Raised if any error received from broker.
+
+        Returns:
+            dict: json response obtained from exchange.
         """
-
-        dt_str = int(ReSplit(r'\(|\+', dt_str)[1])
-        return cls.from_timestamp(dt_str / 1000)
-
-    @classmethod
-    def json_parser(cls,
-                    response: Response
-                    ) -> dict[Any, Any] | list[dict[Any, Any]]:
-
         json_response = cls.on_json_response(response)
         print(json_response)
 
         return json_response
 
     @classmethod
-    def orderbook_json_parser(cls,
-                              order: dict
-                              ) -> dict[Any, Any]:
+    def _datetime_converter(cls,
+                            dt_str: str
+                            ):
+        """
+        Convert FivePaisa's datetime string to datetime object.
 
+        Parameters:
+            dt_str (str): Datetime string.
+
+        Returns:
+            datetime: String converted to a datetime object.
+        """
+        dt_str = int(ReSplit(r'\(|\+', dt_str)[1])
+        return cls.from_timestamp(dt_str / 1000)
+
+    @classmethod
+    def _orderbook_json_parser(cls,
+                               order: dict
+                               ) -> dict[Any, Any]:
+        """
+        Parse Orderbook Order Json Response.
+
+        Parameters:
+            order (dict): Orderbook Order Json Response from Broker.
+
+        Returns:
+            dict: Unified kronos Order Response.
+        """
         parsed_order = {
             Order.ID: order['ExchOrderID'],
             Order.USERID: order['RemoteOrderID'],
-            Order.TIMESTAMP: cls.datetime_converter(order['ExchOrderTime']),
+            Order.TIMESTAMP: cls._datetime_converter(order['BrokerOrderTime']),
             Order.SYMBOL: order['ScripName'],
             Order.TOKEN: order['ScripCode'],
             Order.SIDE: cls.resp_side[order['BuySell']],
-            Order.TYPE: "SL" if order['WithSL'] == "Y" else cls.resp_order_type[order['AtMarket']],
+            Order.TYPE: cls.resp_order_type[order['AtMarket']] if order['WithSL'] == "N" else OrderType.SL if order["Rate"] else OrderType.SLM,
             Order.AVGPRICE: order['Rate'],  # float(order['Rate'] or 0.0),
             Order.PRICE: order['Rate'],  # float(order['Rate'] or 0.0),
             Order.TRIGGERPRICE: order['SLTriggerRate'],  # float(order['SLTriggerRate'] or 0.0),
@@ -364,53 +418,23 @@ class fivepaisa(Exchange):
 
         return parsed_order
 
-        # {
-        #     'AHProcess': 'N',
-        #     'AfterHours': 'N',
-        #     'AtMarket': 'N',
-        #     'BrokerOrderId': 48429332,
-        #     'BrokerOrderTime': '/Date(1679479428997+0530)/',
-        #     'BuySell': 'B',
-        #     'DelvIntra': 'D',
-        #     'DisClosedQty': 0,
-        #     'Exch': 'N',
-        #     'ExchOrderID': '1800000091470711',
-        #     'ExchOrderTime': '/Date(1679471618000+0530)/',
-        #     'ExchType': 'D',
-        #     'MarketLot': 2,
-        #     'OldorderQty': 0,
-        #     'OrderRequesterCode': '58921440       ',
-        #     'OrderStatus': 'Cancelled',
-        #     'OrderValidUpto': '22 Mar 2023',
-        #     'OrderValidity': 0,
-        #     'PendingQty': 50,
-        #     'Qty': 50,
-        #     'Rate': 8.25,
-        #     'Reason': '',
-        #     'RemoteOrderID': '',
-        #     'RequestType': 'C',
-        #     'SLTriggerRate': 7.5,
-        #     'SLTriggered': 'N',
-        #     'SMOProfitRate': 0,
-        #     'SMOSLLimitRate': 0,
-        #     'SMOSLTriggerRate': 0,
-        #     'SMOTrailingSL': 0,
-        #     'ScripCode': 41542,
-        #     'ScripName': 'BANKNIFTY 23 Mar 2023 PE 37500.00',
-        #     'TerminalId': 46189,
-        #     'TradedQty': 0,
-        #     'WithSL': 'Y'
-        # }
-
     @classmethod
-    def tradebook_json_parser(cls,
-                              order: dict
-                              ) -> dict[Any, Any]:
+    def _tradebook_json_parser(cls,
+                               order: dict
+                               ) -> dict[Any, Any]:
+        """
+        Parse Tradebook Order Json Response.
 
+        Parameters:
+            order (dict): Tradebook Order Json Response from Broker.
+
+        Returns:
+            dict: Unified Kronos Order Response.
+        """
         parsed_order = {
             Order.ID: order['ExchOrderID'],
             Order.USERID: "",
-            Order.TIMESTAMP: cls.datetime_converter(order['ExchangeTradeTime']),
+            Order.TIMESTAMP: cls._datetime_converter(order['ExchangeTradeTime']),
             Order.SYMBOL: order['ScripName'],
             Order.TOKEN: order['ScripCode'],
             Order.SIDE: cls.resp_side[order['BuySell']],
@@ -436,10 +460,18 @@ class fivepaisa(Exchange):
         return parsed_order
 
     @classmethod
-    def position_json_parser(cls,
-                             position: dict,
-                             ) -> dict[Any, Any]:
+    def _position_json_parser(cls,
+                              position: dict,
+                              ) -> dict[Any, Any]:
+        """
+        Parse Acoount Position Json Response.
 
+        Parameters:
+            order (dict): Acoount Position Json Response from Broker.
+
+        Returns:
+            dict: Unified Kronos Position Response.
+        """
         parsed_position = {
             Position.SYMBOL: position["ScripName"],
             Position.TOKEN: position["ScripCode"],
@@ -460,41 +492,33 @@ class fivepaisa(Exchange):
         return parsed_position
 
     @classmethod
-    def create_order_parser(cls,
-                            response: Response,
-                            headers: dict
-                            ) -> dict[Any, Any]:
+    def _create_order_parser(cls,
+                             response: Response,
+                             headers: dict
+                             ) -> dict[Any, Any]:
+        """
+        Parse Json Response Obtained from Broker After Placing Order to get order_id
+        and fetching the json repsone for the said order_id.
 
-        info = cls.json_parser(response)
+        Parameters:
+            response (Response): Json Repsonse Obtained from broker after Placing an Order.
+            headers (dict): headers to send order request with.
 
-        broker_id = info['body']['BrokerOrderID']
+        Returns:
+            dict: Unified kronos Order Response.
+        """
+        info = cls._json_parser(response)
+
+        broker_id = info["body"]["BrokerOrderID"]
+
+        if broker_id == 0:
+            raise ResponseError(cls.id + " " + info["body"]["Message"])
         order = cls.fetch_order(order_id=broker_id, headers=headers, key_to_check="BrokerOrderId")
 
         return order
 
-        # {
-        #     'body': {
-        #         'BrokerOrderID': 0,
-        #         'ClientCode': '58921440',
-        #         'Exch': 'N',
-        #         'ExchOrderID': '0',
-        #         'ExchType': 'D',
-        #         'LocalOrderID': 0,
-        #         'Message': 'Kindly place limit order, please place again.',
-        #         'RMSResponseCode': -1,
-        #         'RemoteOrderID': 'MarketOrder',
-        #         'ScripCode': 141633,
-        #         'Status': 1,
-        #         'Time': '/Date(1679423400000+0530)/'
-        #         },
-        #     'head': {
-        #         'responseCode': '5PPlaceOrdReqV1',
-        #         'status': '0',
-        #         'statusDescription': 'Success'
-        #         }
-        # }
 
-
+    # Order Functions
 
 
     @classmethod
@@ -515,26 +539,26 @@ class fivepaisa(Exchange):
                 'key': headers["user_key"],
             },
             'body': {
-                'DisQty': 0,
+                'ScripCode': token,
                 'Exchange': cls.req_exchange[exchange],
                 'ExchangeType': cls.req_exchange_type[exchange],
-                'IsIntraday': cls.req_product[product],
                 'Price': 0,
                 'StopLossPrice': 0,
                 'Qty': quantity,
-                'IsIOCOrder': cls.req_validity[validity],
-                'ScripCode': token,
-                'OrderType': cls.req_side[side],
-                'RemoteOrderID': unique_id,
+                'OrderType':  cls._key_mapper(cls.req_side, side, 'side'),
+                'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+                'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+                'ClientCode': headers["client_code"],
                 'IsStopLossOrder': False,
                 'IsAHOrder': 'N',
-                'ClientCode': headers["client_code"],
+                'RemoteOrderID': unique_id,
+                'DisQty': 0,
             }
         }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response=response, headers=headers)
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
     def limit_order(cls,
@@ -574,7 +598,7 @@ class fivepaisa(Exchange):
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response=response, headers=headers)
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
     def sl_order(cls,
@@ -615,8 +639,404 @@ class fivepaisa(Exchange):
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response=response, headers=headers)
+        return cls._create_order_parser(response=response, headers=headers)
 
+
+    # NFO Order Functions
+
+
+    @classmethod
+    def create_order_nfo(cls,
+                         exchange: str,
+                         root: str,
+                         expiry: str,
+                         option: str,
+                         strike_price: int,
+                         quantity: int,
+                         side: str,
+                         product: str,
+                         validity: str,
+                         variety: str,
+                         unique_id: str,
+                         headers: dict,
+                         price: float = 0.0,
+                         trigger: float = 0.0,
+                         ) -> dict[Any, Any]:
+        """
+        Place an Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (int): Strike Price of the Option.
+            price (float): price of the order.
+            trigger (float): trigger price of the order.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: Kronos Unified Order Response.
+        """
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
+
+        detail = cls.nfo_tokens[expiry][root][option]
+        detail = detail.get(strike_price, None)
+
+        if not detail:
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+
+        token = detail['Token']
+        symbol = detail['Symbol']
+
+        if not price and trigger:
+            order_type = OrderType.SLM
+        elif not price:
+            order_type = OrderType.MARKET
+        elif not trigger:
+            order_type = OrderType.LIMIT
+        else:
+            order_type = OrderType.SL
+
+        json_data = [
+            {
+                "symbol_id": token,
+                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "trading_symbol": symbol,
+                "price": price,
+                "trigPrice": trigger,
+                "qty": quantity,
+                "transtype": cls._key_mapper(cls.req_side, side, 'side'),
+                "prctyp": cls.req_order_type[order_type],
+                "pCode": cls._key_mapper(cls.req_product, product, 'product'),
+                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "complexty": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "orderTag": unique_id,
+                "discqty": 0,
+            }
+        ]
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             json=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
+
+    @classmethod
+    def market_order_nfo(cls,
+                         option: str,
+                         strike_price: int,
+                         quantity: int,
+                         side: str,
+                         headers: dict,
+                         root: str = Root.BNF,
+                         expiry: str = WeeklyExpiry.CURRENT,
+                         exchange: str = ExchangeCode.NFO,
+                         product: str = Product.MIS,
+                         validity: str = Validity.DAY,
+                         variety: str = Variety.REGULAR,
+                         unique_id: str = UniqueID.MARKETORDER,
+                         ) -> dict[Any, Any]:
+        """
+        Place Market Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (int): Strike Price of the Option.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: Kronos Unified Order Response.
+        """
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
+
+        detail = cls.nfo_tokens[expiry][root][option]
+        detail = detail.get(strike_price, None)
+
+        if not detail:
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+
+        token = detail['Token']
+
+        json_data = {
+            'head': {
+                'key': headers["user_key"],
+            },
+            'body': {
+                'ScripCode': token,
+                'Exchange': cls.req_exchange[exchange],
+                'ExchangeType': cls.req_exchange_type[exchange],
+                'Price': 0,
+                'StopLossPrice': 0,
+                'Qty': quantity,
+                'IsStopLossOrder': False,
+                'IsAHOrder': 'N',
+                'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
+                'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+                'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+                'ClientCode': headers["client_code"],
+                'RemoteOrderID': unique_id,
+                'DisQty': 0,
+            }
+        }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def limit_order_nfo(cls,
+                        option: str,
+                        strike_price: int,
+                        price: float,
+                        quantity: int,
+                        side: str,
+                        headers: dict,
+                        root: str = Root.BNF,
+                        expiry: str = WeeklyExpiry.CURRENT,
+                        exchange: str = ExchangeCode.NFO,
+                        product: str = Product.MIS,
+                        validity: str = Validity.DAY,
+                        variety: str = Variety.REGULAR,
+                        unique_id: str = UniqueID.LIMITORDER,
+                        ) -> dict[Any, Any]:
+        """
+        Place Limit Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (int): Strike Price of the Option.
+            price (float): price of the order.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: Kronos Unified Order Response.
+        """
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
+
+        detail = cls.nfo_tokens[expiry][root][option]
+        detail = detail.get(strike_price, None)
+
+        if not detail:
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+
+        token = detail['Token']
+
+        json_data = {
+            'head': {
+                'key': headers["user_key"],
+            },
+            'body': {
+                'ScripCode': token,
+                'Exchange': cls.req_exchange[exchange],
+                'ExchangeType': cls.req_exchange_type[exchange],
+                'Price': price,
+                'StopLossPrice': 0,
+                'Qty': quantity,
+                'IsStopLossOrder': False,
+                'IsAHOrder': 'N',
+                'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
+                'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+                'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+                'ClientCode': headers["client_code"],
+                'RemoteOrderID': unique_id,
+                'DisQty': 0,
+            }
+        }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def sl_order_nfo(cls,
+                     option: str,
+                     strike_price: int,
+                     price: float,
+                     trigger: float,
+                     quantity: int,
+                     side: str,
+                     headers: dict,
+                     root: str = Root.BNF,
+                     expiry: str = WeeklyExpiry.CURRENT,
+                     exchange: str = ExchangeCode.NFO,
+                     product: str = Product.MIS,
+                     validity: str = Validity.DAY,
+                     variety: str = Variety.STOPLOSS,
+                     unique_id: str = UniqueID.SLORDER,
+                     ) -> dict[Any, Any]:
+        """
+        Place Stoploss Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (int): Strike Price of the Option.
+            price (float): price of the order.
+            trigger (float): trigger price of the order.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: Kronos Unified Order Response.
+        """
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
+
+        detail = cls.nfo_tokens[expiry][root][option]
+        detail = detail.get(strike_price, None)
+
+        if not detail:
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+
+        token = detail['Token']
+
+        json_data = {
+            'head': {
+                'key': headers["user_key"],
+            },
+            'body': {
+                'ScripCode': token,
+                'Exchange': cls.req_exchange[exchange],
+                'ExchangeType': cls.req_exchange_type[exchange],
+                'Price': price,
+                'StopLossPrice': trigger,
+                'Qty': quantity,
+                'IsStopLossOrder': True,
+                'IsAHOrder': 'N',
+                'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
+                'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+                'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+                'ClientCode': headers["client_code"],
+                'RemoteOrderID': unique_id,
+                'DisQty': 0,
+            }
+        }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def slm_order_nfo(cls,
+                      option: str,
+                      strike_price: int,
+                      trigger: float,
+                      quantity: int,
+                      side: str,
+                      headers: dict,
+                      root: str = Root.BNF,
+                      expiry: str = WeeklyExpiry.CURRENT,
+                      exchange: str = ExchangeCode.NFO,
+                      product: str = Product.MIS,
+                      validity: str = Validity.DAY,
+                      variety: str = Variety.STOPLOSS,
+                      unique_id: str = UniqueID.SLORDER,
+                      ) -> dict[Any, Any]:
+        """
+        Place Stoploss-Market Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (int): Strike Price of the Option.
+            trigger (float): trigger price of the order.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: Kronos Unified Order Response.
+        """
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
+
+        detail = cls.nfo_tokens[expiry][root][option]
+        detail = detail.get(strike_price, None)
+
+        if not detail:
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+
+        token = detail['Token']
+
+        json_data = {
+            'head': {
+                'key': headers["user_key"],
+            },
+            'body': {
+                'ScripCode': token,
+                'Exchange': cls.req_exchange[exchange],
+                'ExchangeType': cls.req_exchange_type[exchange],
+                'Price': 0,
+                'StopLossPrice': trigger,
+                'Qty': quantity,
+                'IsStopLossOrder': True,
+                'IsAHOrder': 'N',
+                'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
+                'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+                'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+                'ClientCode': headers["client_code"],
+                'RemoteOrderID': unique_id,
+                'DisQty': 0,
+            }
+        }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
+        return cls._create_order_parser(response=response, headers=headers)
+
+
+    # BO Order Functions
 
 
     @classmethod
@@ -634,95 +1054,343 @@ class fivepaisa(Exchange):
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
                         ) -> dict[Any, Any]:
+        json_data = {
+            'head': {
+                'key': headers["user_key"],
+            },
+            'body': {
+                'ScripCode': token,
+                'Exchange': cls.req_exchange[exchange],
+                'ExchangeType': cls.req_exchange_type[exchange],
+                'Price': 0,
+                'StopLossPrice': 0,  # trigger
+                'TargetPrice': target,
+                "LimitPriceForSL": stoploss,
+                'TrailingSL': trailing_sl,
+                'Qty': quantity,
+                'IsStopLossOrder': False,
+                'IsAHOrder': 'N',
+                'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
+                'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+                'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+                'ClientCode': headers["client_code"],
+                'RemoteOrderID': unique_id,
+                'DisQty': 0,
+            }
+        }
+
+
+
+        response = cls.fetch(method="POST", url=cls.urls["bo_order"], json=json_data, headers=headers["headers"])
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def limit_order_bo(cls,
+                       token: int,
+                       exchange: str,
+                       symbol: str,
+                       price: float,
+                       quantity: int,
+                       side: str,
+                       unique_id: str,
+                       headers: dict,
+                       target: float = 0.0,
+                       stoploss: float = 0.0,
+                       trailing_sl: float = 0.0,
+                       product: str = Product.BO,
+                       validity: str = Validity.DAY,
+                       variety: str = Variety.BO,
+                       ) -> dict[Any, Any]:
+        """
+        Place BO Limit Order.
+
+        Parameters:
+            token (int): Exchange token.
+            exchange (str): Exchange to place the order in.
+            symbol (str): Trading symbol.
+            price (float): Order price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaulsts to 0.
+            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            product (str, optional): Order product. Defaults to Product.BO.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.BO.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        # json_data = {
+        #     'head': {
+        #         'key': headers["user_key"],
+        #     },
+        #     'body': {
+        #         'ScripCode': token,
+        #         'Exchange': cls.req_exchange[exchange],
+        #         'ExchangeType': cls.req_exchange_type[exchange],
+        #         'Price': price,
+        #         'StopLossPrice': 0,  # trigger
+        #         'TargetPrice': target,
+        #         "LimitPriceForSL": stoploss,
+        #         'TrailingSL': trailing_sl,
+        #         'Qty': quantity,
+        #         'IsStopLossOrder': False,
+        #         'IsAHOrder': 'N',
+        #         'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
+        #         'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+        #         'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+        #         'ClientCode': headers["client_code"],
+        #         'RemoteOrderID': unique_id,
+        #         'DisQty': 0,
+        #     }
+        # }
 
         json_data = {
             'head': {
                 'key': headers["user_key"],
             },
             'body': {
-                "DisQty": "0",
-                "Exch": cls.req_exchange[exchange],
-                "ExchType": cls.req_exchange_type[exchange],
-                "AtMarket": True,
-                "LimitPriceInitialOrder": "0.0",
-                "TriggerPriceInitialOrder": "0.0",
-                "LimitPriceProfitOrder": target,
-                "StopLoss": stoploss,
-                "TrailingSL": trailing_sl,
-                "Qty": quantity,
-                "ScripCode": token,
-                "BuySell": cls.req_side[side],
-                "UniqueOrderIDNormal": unique_id,
-                "ClientCode": headers["client_code"],
-                "OrderRequesterCode": headers["client_code"],
-                "RequestType": "P",
-                "LimitPriceForSL": "0.0",
-                "TriggerPriceForSL": "0.0",
-                "OrderFor": "C",
-                "UniqueOrderIDSL": "0",
-                "UniqueOrderIDLimit": "0",
-                "LocalOrderIDNormal": "0",
-                "LocalOrderIDSL": "0",
-                "LocalOrderIDLimit": "0",
-                "TradedQty": "0",
+                'ScripCode': token,
+                'Exch': cls.req_exchange[exchange],
+                'ExchType': cls.req_exchange_type[exchange],
+                'LimitPriceInitialOrder': price,
+                'TriggerPriceInitialOrder': 0,  # trigger
+                'TargetPrice': target,
+                "LimitPriceForSL": stoploss,
+                'TrailingSL': trailing_sl,
+                'Qty': quantity,
+                'IsStopLossOrder': False,
+                'IsAHOrder': 'N',
+                'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
+                'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+                'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+                'ClientCode': headers["client_code"],
+                'RemoteOrderID': unique_id,
+                'DisQty': 0,
             }
         }
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response=response, headers=headers)
-
-
-
+        response = cls.fetch(method="POST", url=cls.urls["bo_order"], json=json_data, headers=headers["headers"])
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def fetch_order(cls,
-                    order_id: str,
+    def sl_order_bo(cls,
+                    token: int,
+                    exchange: str,
+                    symbol: str,
+                    price: float,
+                    trigger: float,
+                    quantity: int,
+                    side: str,
+                    unique_id: str,
                     headers: dict,
-                    key_to_check: str = "ExchOrderID",
+                    target: float = 0.0,
+                    stoploss: float = 0.0,
+                    trailing_sl: float = 0.0,
+                    product: str = Product.BO,
+                    validity: str = Validity.DAY,
+                    variety: str = Variety.BO,
                     ) -> dict[Any, Any]:
 
-        orderid = str(order_id) if key_to_check == "ExchOrderID" else int(order_id)
+        """
+        Place BO Stoploss Order.
 
-        response = cls.fetch(method="POST", url=cls.urls["orderbook"], json=headers["json_data"], headers=headers["headers"])
-        info = cls.json_parser(response)
+        Parameters:
+            token (int): Exchange token.
+            exchange (str): Exchange to place the order in.
+            symbol (str): Trading symbol.
+            price (float): Order price.
+            trigger (float): order trigger price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaulsts to 0.
+            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            product (str, optional): Order product. Defaults to Product.BO.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.BO.
 
-        for order in info['body']['OrderBookDetail']:
-            if order[key_to_check] == orderid:
-                detail = cls.orderbook_json_parser(order)
-                detail['avgPrice'] = cls.fetch_tradebook_order(order_id=detail['id'], headers=headers, default=False)  # Five Paisa API is Fuddu i.e. commented.
-                return detail
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        # json_data = {
+        #     'head': {
+        #         'key': headers["user_key"],
+        #     },
+        #     'body': {
+        #         'ScripCode': token,
+        #         'Exchange': cls.req_exchange[exchange],
+        #         'ExchangeType': cls.req_exchange_type[exchange],
+        #         'Price': price,
+        #         'StopLossPrice': trigger,  # trigger
+        #         'TargetPrice': target,
+        #         "LimitPriceForSL": stoploss,
+        #         'TrailingSL': trailing_sl,
+        #         'Qty': quantity,
+        #         'IsStopLossOrder': True,
+        #         'IsAHOrder': 'N',
+        #         'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
+        #         'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+        #         'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+        #         'ClientCode': headers["client_code"],
+        #         'RemoteOrderID': unique_id,
+        #         'DisQty': 0,
+        #     }
+        # }
+        json_data = {
+            'head': {
+                'key': headers["user_key"],
+            },
+            'body': {
+                'ScripCode': token,
+                'Exch': cls.req_exchange[exchange],
+                'ExchType': cls.req_exchange_type[exchange],
+                'LimitPriceInitialOrder': price,
+                'TriggerPriceInitialOrder': trigger,  # trigger
+                'LimitPriceProfitOrder': target,
+                "LimitPriceForSL": stoploss,
+                'TrailingSL': trailing_sl,
+                'Qty': quantity,
+                'IsStopLossOrder': False,
+                "AtMarket": False,
+                'IsAHOrder': 'N',
+                'BuySell': cls._key_mapper(cls.req_side, side, 'side'),
+                'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+                'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+                'ClientCode': headers["client_code"],
+                'UniqueOrderIDNormal': unique_id,
+                'DisQty': 0,
+            }
+        }
 
-        raise InputError({"This orderid does not exist."})
+
+        response = cls.fetch(method="POST", url=cls.urls["bo_order"], json=json_data, headers=headers["headers"])
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def fetch_orders(cls,
-                     headers: dict
-                     ) -> list[dict]:
+    def slm_order_bo(cls,
+                     token: int,
+                     exchange: str,
+                     symbol: str,
+                     trigger: float,
+                     quantity: int,
+                     side: str,
+                     unique_id: str,
+                     headers: dict,
+                     target: float = 0.0,
+                     stoploss: float = 0.0,
+                     trailing_sl: float = 0.0,
+                     product: str = Product.BO,
+                     validity: str = Validity.DAY,
+                     variety: str = Variety.BO,
+                     ) -> dict[Any, Any]:
 
+        """
+        Place BO Stoploss-Market Order.
+
+        Parameters:
+            token (int): Exchange token.
+            exchange (str): Exchange to place the order in.
+            symbol (str): Trading symbol.
+            trigger (float): order trigger price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaulsts to 0.
+            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            product (str, optional): Order product. Defaults to Product.BO.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.BO.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        json_data = {
+            'head': {
+                'key': headers["user_key"],
+            },
+            'body': {
+                'ScripCode': token,
+                'Exchange': cls.req_exchange[exchange],
+                'ExchangeType': cls.req_exchange_type[exchange],
+                'Price': 0,
+                'StopLossPrice': trigger,  # trigger
+                'TargetPrice': target,
+                "LimitPriceForSL": stoploss,
+                'TrailingSL': trailing_sl,
+                'Qty': quantity,
+                'IsStopLossOrder': True,
+                'IsAHOrder': 'N',
+                'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
+                'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
+                'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
+                'ClientCode': headers["client_code"],
+                'RemoteOrderID': unique_id,
+                'DisQty': 0,
+            }
+        }
+
+        response = cls.fetch(method="POST", url=cls.urls["bo_order"], json=json_data, headers=headers["headers"])
+        return cls._create_order_parser(response=response, headers=headers)
+
+
+    # Order Details, OrderBook & TradeBook
+
+
+    @classmethod
+    def fetch_raw_orderbook(cls,
+                            headers: dict
+                            ) -> list[dict]:
+        """
+        Fetch Raw Orderbook Details, without any Standardaization.
+
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
+
+        Returns:
+            list[dict]: Raw Broker Orderbook Response.
+        """
         response = cls.fetch(method="POST", url=cls.urls["orderbook"], json=headers["json_data"], headers=headers['headers'])
-        info = cls.json_parser(response)
+        return cls._json_parser(response)
 
-        tradebook_orders = cls.fetch_tradebook(headers=headers, default=False)
+    @classmethod
+    def fetch_raw_tradebook(cls,
+                            headers: dict
+                            ) -> list[dict]:
+        """
+        Fetch Raw Tradebook Details, without any Standardaization.
 
-        orders = []
-        for order in info['body']['OrderBookDetail']:
-            detail = cls.orderbook_json_parser(order)
+        Parameters:
+            headers (dict): headers to send fetch_raw_tradebook request with.
 
-            avgprice = tradebook_orders[detail['id']]['avgPrice'] if tradebook_orders.get(detail['id']) else 0.0
-            detail['avgPrice'] = avgprice
-
-            orders.append(detail)
-
-        return orders
+        Returns:
+            list[dict]: Raw Broker Tradebook Response.
+        """
+        response = cls.fetch(method="POST", url=cls.urls["tradebook"], json=headers["json_data"], headers=headers["headers"])
+        return cls._json_parser(response)
 
     @classmethod
     def fetch_orderbook(cls,
                         headers: dict,
                         ) -> list[dict]:
+        """
+        Fetch Orderbook Details.
 
-        response = cls.fetch(method="POST", url=cls.urls["orderbook"], json=headers["json_data"], headers=headers['headers'])
-        info = cls.json_parser(response)
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
+
+        Returns:
+            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
+        """
+        info = cls.fetch_raw_orderbook(headers=headers)
 
         orders = []
         for order in info['body']['OrderBookDetail']:
@@ -736,23 +1404,91 @@ class fivepaisa(Exchange):
                         headers: dict,
                         default: bool = True,
                         ) -> list[dict] | dict[Any, Any]:
+        """
+        Fetch Tradebook Details.
 
-        response = cls.fetch(method="POST", url=cls.urls["tradebook"], json=headers["json_data"], headers=headers["headers"])
-        info = cls.json_parser(response)
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
+
+        Returns:
+            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
+        """
+        info = cls.fetch_raw_tradebook(headers=headers)
 
         if default:
             orders = []
             for order in info['body']['TradeBookDetail']:
-                detail = cls.tradebook_json_parser(order)
+                detail = cls._tradebook_json_parser(order)
                 orders.append(detail)
             return orders
 
         orders = {}
         for order in info['body']['TradeBookDetail']:
-            detail = cls.tradebook_json_parser(order)
+            detail = cls._tradebook_json_parser(order)
             orders[detail['id']] = detail
 
         return orders
+
+    @classmethod
+    def fetch_orders(cls,
+                     headers: dict
+                     ) -> list[dict]:
+        """
+        Fetch OrderBook Details which is unified across all brokers.
+        Use This if you want Avg price, etc. values which sometimes unavailable
+        thorugh fetch_orderbook.
+
+        Paramters:
+            order_id (str): id of the order.
+
+        Raises:
+            InputError: If order does not exist.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        info = cls.fetch_raw_orderbook(headers=headers)
+        tradebook_orders = cls.fetch_tradebook(headers=headers, default=False)
+
+        orders = []
+        for order in info['body']['OrderBookDetail']:
+            detail = cls._orderbook_json_parser(order)
+
+            avgprice = tradebook_orders[detail['id']]['avgPrice'] if tradebook_orders.get(detail['id']) else 0.0
+            detail['avgPrice'] = avgprice
+
+            orders.append(detail)
+
+        return orders
+
+    @classmethod
+    def fetch_order(cls,
+                    order_id: str,
+                    headers: dict,
+                    key_to_check: str = "ExchOrderID",
+                    ) -> dict[Any, Any]:
+        """
+        Fetch Order Details.
+
+        Paramters:
+            order_id (str): id of the order.
+
+        Raises:
+            InputError: If order does not exist.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        orderid = str(order_id) if key_to_check == "ExchOrderID" else int(order_id)
+        info = cls.fetch_raw_orderbook(headers=headers)
+
+        for order in info['body']['OrderBookDetail']:
+            if order[key_to_check] == orderid:
+                detail = cls._orderbook_json_parser(order)
+                detail['avgPrice'] = cls.fetch_tradebook_order(order_id=detail['id'], headers=headers, default=False)  # Five Paisa API is Fuddu i.e. commented.
+                return detail
+
+        raise InputError({"This orderid does not exist."})
 
     @classmethod
     def fetch_tradebook_order(cls,
@@ -760,16 +1496,13 @@ class fivepaisa(Exchange):
                               headers: dict,
                               default: bool = True,
                               ):
-
-
-        response = cls.fetch(method="POST", url=cls.urls["tradebook"], json=headers["json_data"], headers=headers["headers"])
-        info = cls.json_parser(response)
+        info = cls.fetch_raw_tradebook(headers=headers)
 
         orders = []
         for order in info['body']['TradeBookDetail']:
             if order["ExchOrderID"] == order_id:
                 if default:
-                    detail = cls.tradebook_json_parser(order)
+                    detail = cls._tradebook_json_parser(order)
                     return detail
 
                 return order['Rate']
@@ -780,21 +1513,35 @@ class fivepaisa(Exchange):
         return 0.0
 
 
+    # Order Modification & Sq Off
+
 
     @classmethod
     def modify_order(cls,
                      order_id: str,
                      headers: dict,
                      price: float | None = None,
-                     trigger_price: float | None = None,
+                     trigger: float | None = None,
                      quantity: int | None = None,
                      order_type: str | None = None,
                      validity: str | None = None,
                      ) -> dict[Any, Any]:
+        """
+        Modify an open order.
 
+        Parameters:
+            order_id (str): id of the order to modify.
+            headers (dict): headers to send modify_order request with.
+            price (float | None, optional): price of t.he order. Defaults to None.
+            trigger (float | None, optional): trigger price of the order. Defaults to None.
+            quantity (int | None, optional): order quantity. Defaults to None.
+            order_type (str | None, optional): Type of Order. defaults to None.
+            validity (str | None, optional): Order validity Defaults to None.
 
-        response = cls.fetch(method="POST", url=cls.urls["orderbook"], json=headers["json_data"], headers=headers["headers"])
-        info = cls.json_parser(response)
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        info = cls.fetch_raw_orderbook(headers=headers)
 
         order = {}
         for order_det in info['body']['OrderBookDetail']:
@@ -814,13 +1561,13 @@ class fivepaisa(Exchange):
                 "Qty": quantity or order['Qty'],
                 "ExchOrderID": order['ExchOrderID'],
                 "DisQty": order['DisClosedQty'],
-                "Stoplossprice": trigger_price or order['SLTriggerRate'],
+                "Stoplossprice": trigger or order['SLTriggerRate'],
                 "RemoteOrderID": order['RemoteOrderID'],
             }
         }
 
         response = cls.fetch(method="POST", url=cls.urls["modify_order"], json=json_data, headers=headers["headers"])
-        response = cls.json_parser(response)
+        response = cls._json_parser(response)
 
         return cls.fetch_order(order_id=order_id, headers=headers)
 
@@ -829,7 +1576,16 @@ class fivepaisa(Exchange):
                      order_id: str,
                      headers: dict
                      ) -> dict[Any, Any]:
+        """
+        Cancel an open order.
 
+        Parameters:
+            order_id (str): id of the order.
+            headers (dict): headers to send cancel_order request with.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
         json_data = {
             'head': {
                 'key': headers['user_key'],
@@ -840,39 +1596,52 @@ class fivepaisa(Exchange):
         }
 
         response = cls.fetch(method="POST", url=cls.order_cancel_url, headers=headers["headers"], json=json_data)
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
 
         order_id = info['body']['ExchOrderID']
         order = cls.fetch_order(order_id=order_id, headers=headers)
 
         return order
 
-
-
     @classmethod
     def fetch_positions(cls,
                         headers: dict,
                         ) -> list[dict]:
+        """
+        Fetch Day & Net Account Positions.
 
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Position Response.
+        """
         response = cls.fetch(method="POST", url=cls.urls["positions"], json=headers["json_data"], headers=headers["headers"])
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
 
         positions = []
         for position in info['head']['NetPositionDetail']:
-            detail = cls.position_json_parser(position)
+            detail = cls._position_json_parser(position)
             positions.append(detail)
 
         return positions
-
 
     @classmethod
     def fetch_holdings(cls,
                        headers: dict,
                        ) -> list[dict]:
+        """
+        Fetch Account Holdings.
 
+        Args:
+            headers (dict): headers to send rms_limits request with.
+
+        Returns:
+            dict[Any, Any]: kronos Unified Positions Response.
+        """
         response = cls.fetch(method="POST", url=cls.urls["holdings"],
                              json=headers["json_data"], headers=headers["headers"])
-        info = cls.json_parser(response)
+        info = cls._json_parser(response)
 
         return info
 

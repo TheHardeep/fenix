@@ -209,12 +209,23 @@ class aliceblue(Exchange):
     }
 
     resp_status = {
+        "open pending": Status.PENDING,
+        "not modified": Status.PENDING,
+        "not cancelled": Status.PENDING,
+        "modify pending": Status.PENDING,
+        "trigger pending": Status.PENDING,
+        "cancel pending": Status.PENDING,
         "validation pending": Status.PENDING,
-        "rejected": Status.REJECTED,
-        "complete": Status.FILLED,
-        "cancelled": Status.CANCELLED,
-        "open": Status.OPEN,
         "put order req received": Status.PENDING,
+        "modify validation pending": Status.PENDING,
+        "after market order req received": Status.PENDING,
+        "modify after market order req received": Status.PENDING,
+        "cancelled": Status.CANCELLED,
+        "cancelled after market order": Status.CANCELLED,
+        "open": Status.OPEN,
+        "complete": Status.FILLED,
+        "rejected": Status.REJECTED,
+        "modified": Status.MODIFIED,
     }
 
 
@@ -1969,7 +1980,7 @@ class aliceblue(Exchange):
             "qty": quantity or order_info["Qty"],
             "trigPrice": trigger or order_info["trigger"],
             "transtype": order_info["Action"],
-            "prctyp": order_type or order_info["Ordtype"],
+            "prctyp": cls._key_mapper(cls.req_order_type, order_type, 'order_type') if order_type else order_info["Ordtype"],
             "pCode": order_info["productcode"],
             "filledQuantity": order_info["filledShares"],
             "discqty": "0",

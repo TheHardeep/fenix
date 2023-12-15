@@ -128,12 +128,18 @@ class zerodha(Exchange):
     # Response Parameters Dictionaries
 
     resp_status = {
-        "OPEN": Status.OPEN,
-        "COMPLETE": Status.COMPLETE,
-        "CANCELLED": Status.CANCELLED,
-        "REJECTED": Status.REJECTED,
+        "OPEN PENDING": Status.PENDING,
+        "MODIFY PENDING": Status.PENDING,
+        "CANCEL PENDING": Status.PENDING,
+        "TRIGGER PENDING": Status.PENDING,
         "AMO REQ RECEIVED": Status.PENDING,
-        "PUT ORDER REQ RECEIVED": Status.PENDING
+        "VALIDATION PENDING": Status.PENDING,
+        "PUT ORDER REQ RECEIVED": Status.PENDING,
+        "MODIFY VALIDATION PENDING": Status.PENDING,
+        "OPEN": Status.OPEN,
+        "COMPLETE": Status.FILLED,
+        "REJECTED": Status.REJECTED,
+        "CANCELLED": Status.CANCELLED,
     }
 
     resp_variety = {

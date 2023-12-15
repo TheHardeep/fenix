@@ -111,13 +111,12 @@ class Status:
     """
     Order Status Constants.
     """
-    OPEN = "OPEN"
     PENDING = "PENDING"
-    COMPLETE = "COMPLETE"
+    OPEN = "OPEN"
+    PARTIALLYFILLED = "PARTIALLYFILLED"
     FILLED = "FILLED"
     REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
-    PARTIALLYFILLED = "PARTIALLYFILLED"
     MODIFIED = "MODIFIED"
 
 

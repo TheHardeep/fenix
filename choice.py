@@ -1187,7 +1187,7 @@ class choice(Exchange):
 
     # BO Order Functions
 
-    # NO BO Orders For IIFL
+    # NO BO Orders For Choice
 
 
     # Order Details, OrderBook & TradeBook

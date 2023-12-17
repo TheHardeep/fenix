@@ -9,6 +9,7 @@ from pandas import DataFrame
 from pandas import read_csv
 from pandas import read_json
 from pandas import to_datetime
+from pandas.tseries.offsets import DateOffset
 from pandas import options
 from pyotp import TOTP
 
@@ -179,6 +180,7 @@ class Exchange:
         Returns:
             dict: Json Object received from Response.
         """
+        print(response.text)
         return loads(response.text.strip())
 
 
@@ -365,6 +367,17 @@ class Exchange:
             return (datetime_object + timedelta(days=delta)).strftime(dtformat)
 
         raise InputError(f"Wrong default: {default}, the possible values are 'sub', 'add'")
+
+    def pd_dateoffset(*args, **kwargs) -> DateOffset:
+        """
+        Datetime Increment from Pandas.
+
+        Returns:
+            DateOffset: Pandas DateOffset.
+        """
+        return DateOffset(*args, **kwargs)
+
+
 
 
     @staticmethod

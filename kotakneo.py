@@ -15,10 +15,8 @@ from kronos.base.constants import Validity
 from kronos.base.constants import Variety
 from kronos.base.constants import Status
 from kronos.base.constants import Order
-from kronos.base.constants import Profile
 from kronos.base.constants import Root
 from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
 
 
 from kronos.base.errors import BrokerError
@@ -226,8 +224,8 @@ class kotakneo(Exchange):
                      'LotSize', 'Root', 'TickSize'
                      ]]
 
-            df["TickSize"] = df["TickSize"]/100
-            df["StrikePrice"] = (df["StrikePrice"]/100).astype(int)
+            df["TickSize"] = df["TickSize"] / 100
+            df["StrikePrice"] = (df["StrikePrice"] / 100).astype(int)
             df["Expiry"] = (cls.pd_datetime(df["Expiry"], unit="s") + cls.pd_dateoffset(years=10)).dt.date.astype(str)
 
 

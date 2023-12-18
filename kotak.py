@@ -5,14 +5,11 @@ from typing import Any
 from kronos.base.exchange import Exchange
 
 from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
 from kronos.base.constants import Product
 from kronos.base.constants import Validity
 from kronos.base.constants import Variety
 from kronos.base.constants import Status
 from kronos.base.constants import Order
-from kronos.base.constants import Profile
 from kronos.base.constants import Root
 from kronos.base.constants import WeeklyExpiry
 from kronos.base.constants import UniqueID
@@ -30,7 +27,7 @@ class kotak(Exchange):
     AliceBlue kronos Broker Class.
 
     Returns:
-        kronos.aliceblue: kronos AliceBlue Broker Object.
+        kronos.kotak: kronos AliceBlue Broker Object.
     """
 
 
@@ -84,10 +81,10 @@ class kotak(Exchange):
         "SOR": f"{base_urls['base']}/orders/1.0/order/sor",
         "MTF": f"{base_urls['base']}/orders/1.0/order/mtf",
         Product.MIS: f"{base_urls['base']}/orders/1.0/order/mis"
-        }
+    }
 
 
-
+    # Request Parameters Dictionaries
 
     req_side = {
         Side.BUY: "BUY",
@@ -114,25 +111,34 @@ class kotak(Exchange):
     }
 
 
+    # Response Parameters Dictionaries
 
     resp_validity = {
         "Good For Day": "DAY"
-        }
+    }
 
     resp_product = {
         "NORMAL": Product.NRML
-        }
+    }
 
     resp_status = {
         "OPN": Status.OPEN,
-        "Traded": Status.FILLED
+        "Traded": Status.FILLED,
+        "NEWF": Status.PENDING,
     }
 
+
+    # NFO Script Fetch
 
 
     @classmethod
     def data_datetime(cls):
+        """
+        Datetime object converted to a string format to be used in creating a market data URL.
 
+        Returns:
+            datetime string (str): Datetime string.
+        """
         todaysdate = cls.current_datetime()
         weekday = todaysdate.weekday()
         days = 0
@@ -142,6 +148,35 @@ class kotak(Exchange):
         date_obj = cls.time_delta(todaysdate, days, dtformat="%d_%m_%Y")
 
         return date_obj
+
+    @classmethod
+    def create_indices(cls) -> dict:
+        """
+        Gives Indices Info for F&O Segment.
+        Stores them in the kotak.indices Dictionary.
+
+        Returns:
+            dict: Unified kronos indices format.
+        """
+        date_obj = cls.data_datetime()
+        link = f"{cls.base_urls['market_data']}/TradeApiInstruments_Cash_{date_obj}.txt"
+
+        df = cls.data_reader(link, filetype='csv', sep="|")
+        df = df[df['instrumentType'] == "IN"][["instrumentName", "instrumentToken"]]
+
+        df.rename({"instrumentName": "Symbol", "instrumentToken": "Token"}, axis=1, inplace=True)
+        df.index = df['Symbol']
+
+        indices = df.to_dict(orient='index')
+
+        indices[Root.BNF] = indices["NIFTY BANK"]
+        indices[Root.NF] = indices["NIFTY 50"]
+        indices[Root.FNF] = indices["FINNIFTY"]
+        indices[Root.MIDCPNF] = indices["NIFTY MIDCAP 50"]  # could not find NIFTY MIDCAP SELECT
+
+        cls.indices = indices
+
+        return indices
 
     @classmethod
     def create_nfo_tokens(cls) -> dict:
@@ -193,6 +228,8 @@ class kotak(Exchange):
             raise TokenDownloadError({"Error": exc.args}) from exc
 
 
+    # Headers & Json Parsers
+
 
     @classmethod
     def create_headers(cls,
@@ -232,7 +269,7 @@ class kotak(Exchange):
         response01 = cls.fetch(method="POST", url=cls.token_urls["login"],
                                json=json_data01, headers=headers01)
 
-        info01 = cls.json_parser(response01)
+        info01 = cls._json_parser(response01)
         one_time_token = info01['Success']['oneTimeToken']
 
         headers02 = {
@@ -249,9 +286,9 @@ class kotak(Exchange):
         json_data02 = {"userid": params["user_id"]}
 
         response02 = cls.fetch(method="POST", url=cls.token_urls["session_token"],
-                             json=json_data02, headers=headers02)
+                               json=json_data02, headers=headers02)
 
-        info02 = cls.json_parser(response02)
+        info02 = cls._json_parser(response02)
 
         headers = {
             "headers": {
@@ -264,21 +301,43 @@ class kotak(Exchange):
             }
         }
 
+        cls._session = cls._create_session()
+
         return headers
 
     @classmethod
-    def json_parser(cls,
-                    response: Response
-                    ) -> dict[Any, Any] | list[dict[Any, Any]]:
+    def _json_parser(cls,
+                     response: Response
+                     ) -> dict[Any, Any] | list[dict[Any, Any]]:
+        """
+        Parses the Json Repsonse Obtained from Broker.
 
+        Parameters:
+            response (Response): Json Response Obtained from Broker.
+
+        Raises:
+            ResponseError: Raised if any error received from broker.
+
+        Returns:
+            dict: json response obtained from exchange.
+        """
         json_response = cls.on_json_response(response)
+        print(json_response)
         return json_response
 
     @classmethod
-    def orderbook_json_parser(cls,
-                              order: dict,
-                              ) -> dict[Any, Any]:
+    def _orderbook_json_parser(cls,
+                               order: dict,
+                               ) -> dict[Any, Any]:
+        """
+        Parse Orderbook Order Json Response.
 
+        Parameters:
+            order (dict): Orderbook Order Json Response from Broker.
+
+        Returns:
+            dict: Unified kronos Order Response.
+        """
         parsed_order = {
             Order.ID: order["orderId"],
             Order.USERID: order["tag"],
@@ -294,7 +353,7 @@ class kotak(Exchange):
             Order.FILLEDQTY: order["filledQuantity"],
             Order.REMAININGQTY: order["pendingQuantity"],
             Order.CANCELLEDQTY: 0,
-            Order.STATUS: cls.resp_status.get(order["statusInfo"],  order["statusInfo"]),
+            Order.STATUS: cls.resp_status.get(order["statusInfo"], order["statusInfo"]),
             Order.REJECTREASON: "",
             Order.DISCLOSEDQUANTITY: order["disclosedQuantity"],
             Order.PRODUCT: cls.resp_product.get(order["product"], order["product"]),
@@ -308,10 +367,18 @@ class kotak(Exchange):
         return parsed_order
 
     @classmethod
-    def tradebook_orderhistory_json_parser(cls,
-                                           order: dict
-                                           ) -> dict[Any, Any]:
+    def _tradebookhistory_json_parser(cls,
+                                      order: dict
+                                      ) -> dict[Any, Any]:
+        """
+        Parse Orderbook Order Json Response.
 
+        Parameters:
+            order (dict): Orderbook Order Json Response from Broker.
+
+        Returns:
+            dict: Unified kronos Order Response.
+        """
         parsed_order = {
             Order.ID: order['exchOrderId'],
             Order.USERID: order['message'],
@@ -325,7 +392,7 @@ class kotak(Exchange):
             Order.TRIGGERPRICE: order['triggerPrice'],
             Order.QUANTITY: order['orderQuantity'],
             Order.FILLEDQTY: order['filledQuantity'],
-            Order.REMAININGQTY:  order['orderQuantity'] - order['filledQuantity'],
+            Order.REMAININGQTY: order['orderQuantity'] - order['filledQuantity'],
             Order.CANCELLEDQTY: 0,
             Order.STATUS: cls.resp_status.get(order['status'], order['status']),
             Order.REJECTREASON: "",
@@ -339,12 +406,23 @@ class kotak(Exchange):
         return parsed_order
 
     @classmethod
-    def create_order_parser(cls,
-                            response: Response,
-                            headers: dict
-                            ) -> dict[Any, Any]:
+    def _create_order_parser(cls,
+                             response: Response,
+                             key_to_check: str,
+                             headers: dict
+                             ) -> dict[Any, Any]:
+        """
+        Parse Json Response Obtained from Broker After Placing Order to get order_id
+        and fetching the json repsone for the said order_id.
 
-        info = cls.json_parser(response)
+        Parameters:
+            response (Response): Json Repsonse Obtained from broker after Placing an Order.
+            headers (dict): headers to send order request with.
+
+        Returns:
+            dict: Unified kronos Order Response.
+        """
+        info = cls._json_parser(response)
 
         if 'fault' in info:
             detail = info['fault']
@@ -436,10 +514,11 @@ class kotak(Exchange):
         #
 
 
+    # Order Functions
 
 
     def create_order(cls, token: int, side: str, price: float, triggerprice: float, uniqueid: int, quantity: int,
-                     variety: str, product: str, validity: str, orderType: str = "",  exchange: str = ""):
+                     variety: str, product: str, validity: str, headers: dict, orderType: str = "", exchange: str = ""):
 
         """
         create a trade order
@@ -454,7 +533,7 @@ class kotak(Exchange):
         :param str exchange: Not Needed for this Exchange
         :param str product: 'NRML', 'SM', 'SOR', 'MTF', 'MIS'
         :param str validity: 'DAY' or 'IOC'
-        :param str variety:  "REGULAR" or "AMO"
+        :param str variety: "REGULAR" or "AMO"
         :returns json: a json response of order
         """
 
@@ -468,15 +547,15 @@ class kotak(Exchange):
             'disclosedQuantity': 0,
             'triggerPrice': triggerprice,
             'tag': uniqueid
-            }
+        }
 
         url = cls.key_mapper(cls.place_order_urls, product, "product")
 
-        response = cls.fetch(method="POST", url=url, data=json_data, headers=cls.headers["headers"])
+        response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
 
-    def market_order(cls, token: int, side: str, uniqueid: int, quantity: int,
+    def market_order(cls, token: int, side: str, uniqueid: int, quantity: int, headers: dict,
                      product: str = Product.MIS, validity: str = Validity.DAY, variety: str = Variety.REGULAR, exchange: str = ""):
 
         """
@@ -488,7 +567,7 @@ class kotak(Exchange):
         :param str exchange: Not Needed for this Exchange
         :param str product: 'NRML', 'SM', 'SOR', 'MTF', 'MIS'
         :param str validity: 'DAY' or 'IOC'
-        :param str variety:  "REGULAR" or "AMO"
+        :param str variety: "REGULAR" or "AMO"
         :returns json: a json response of order
         """
 
@@ -506,12 +585,12 @@ class kotak(Exchange):
 
         final_url = cls.key_mapper(cls.order_place_urls, product, "product")
 
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=cls.headers["headers"])
+        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
 
     def limit_order(cls, price: float, quantity: int,
-                    token: int, side: str, uniqueid: int,
+                    token: int, side: str, uniqueid: int, headers: dict,
                     product: str = Product.MIS, validity: str = Validity.DAY, variety: str = Variety.REGULAR, exchange: str = ""):
 
         """
@@ -523,7 +602,7 @@ class kotak(Exchange):
         :param str exchange: Not Needed for this Exchange
         :param str product: 'NRML', 'SM', 'SOR', 'MTF', 'MIS'
         :param str validity: 'DAY' or 'IOC'
-        :param str variety:  "REGULAR" or "AMO"
+        :param str variety: "REGULAR" or "AMO"
         :returns json: a json response of order
         """
 
@@ -537,16 +616,16 @@ class kotak(Exchange):
             'disclosedQuantity': 0,
             'triggerPrice': 0,
             'tag': uniqueid
-            }
+        }
 
         final_url = cls.key_mapper(cls.order_place_urls, product, "product")
 
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=cls.headers["headers"])
+        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
 
     def sl_order(cls, price: float, triggerprice: float, quantity: int,
-                 token: int, side: str, uniqueid: int,
+                 token: int, side: str, uniqueid: int, headers: dict,
                  product: str = Product.MIS, validity: str = Validity.DAY, variety: str = Variety.REGULAR, exchange: str = ""):
 
         """
@@ -558,7 +637,7 @@ class kotak(Exchange):
         :param str exchange: Not Needed for this Exchange
         :param str product: 'NRML', 'SM', 'SOR', 'MTF', 'MIS'
         :param str validity: 'DAY' or 'IOC'
-        :param str variety:  "REGULAR" or "AMO"
+        :param str variety: "REGULAR" or "AMO"
         :returns json: a json response of order
         """
 
@@ -572,22 +651,32 @@ class kotak(Exchange):
             'disclosedQuantity': 0,
             'triggerPrice': triggerprice,
             'tag': uniqueid
-            }
+        }
 
         final_url = cls.key_mapper(cls.order_place_urls, product, "product")
 
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=cls.headers["headers"])
+        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
 
-    def market_order_nfo(cls, option: str, root: str, strikeprice: int, side: str, quantity: int,
-                         expiry: str = WeeklyExpiry.CURRENT, uniqueid: str = UniqueID.MARKETORDER,
-                         product: str = Product.MIS, variety: str = "REGULAR", validity: str = Validity.DAY):
+
+    # NFO Order Functions
+
+
+    @classmethod
+    def market_order_nfo(cls, option: str, strikeprice: int,
+                         side: str, quantity: int,
+                         headers: dict,
+                         root: str = Root.BNF,
+                         expiry: str = WeeklyExpiry.CURRENT,
+                         uniqueid: str = UniqueID.MARKETORDER,
+                         product: str = Product.MIS, variety: str = "REGULAR",
+                         validity: str = Validity.DAY):
 
         """
         create a market order
-        :param str option:  'CE' or 'PE'
-        :param str root:  'BANKNIFTY' or 'NIFTY'
+        :param str option: 'CE' or 'PE'
+        :param str root: 'BANKNIFTY' or 'NIFTY'
         :param int strikeprice: Strike Price of the Option
         :param str side: 'BUY' or 'SELL'
         :param str expiry: 'CURRENT', 'NEXT', 'FAR'
@@ -595,14 +684,14 @@ class kotak(Exchange):
         :param int quantity: quantity of shares
         :param str product: 'NRML', 'MIS', 'SM' (Super Multiple Order), 'SOR' (Smart Order Routing), 'MTF' (Margin Tading Facility)
         :param str validity: 'DAY' or 'IOC'
-        :param str variety:  "REGULAR" or "AMO"
+        :param str variety: "REGULAR" or "AMO"
         :returns json: a json response of order
         """
 
-        if not cls.Global:
-            cls.expiry_markets()
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
 
-        detail = cls.Global[expiry][root][option]
+        detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strikeprice, None)
 
         if not detail:
@@ -614,29 +703,29 @@ class kotak(Exchange):
             'instrumentToken': token,
             'transactionType': side,
             'quantity': quantity,
-            'price': 0.0,
-            'validity': cls.key_mapper(cls.req_validity, validity, "validity"),
-            'variety': cls.key_mapper(cls.req_variety, variety, "variety"),
+            'price': 10,
+            'validity': cls._key_mapper(cls.req_validity, validity, "validity"),
+            'variety': cls._key_mapper(cls.req_variety, variety, "variety"),
             'disclosedQuantity': 0,
             'triggerPrice': 0,
             'tag': uniqueid
-            }
+        }
 
-        final_url = cls.key_mapper(cls.place_order_urls, product, "product")
+        final_url = cls._key_mapper(cls.place_order_urls, product, "product")
 
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=cls.headers["headers"])
+        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response, headers)
 
     def limit_order_nfo(cls, price: float, quantity: int,
-                        option: str, root: str, strikeprice: int, side: str,
+                        option: str, root: str, strikeprice: int, side: str, headers: dict,
                         expiry: str = WeeklyExpiry.CURRENT, uniqueid: str = UniqueID.LIMITORDER,
                         product: str = Product.MIS, variety: str = "REGULAR", validity: str = Validity.DAY):
 
         """
         create a market order
-        :param str option:  'CE' or 'PE'
-        :param str root:  'BANKNIFTY' or 'NIFTY'
+        :param str option: 'CE' or 'PE'
+        :param str root: 'BANKNIFTY' or 'NIFTY'
         :param int strikeprice: Strike Price of the Option
         :param str side: 'BUY' or 'SELL'
         :param str expiry: 'CURRENT', 'NEXT', 'FAR'
@@ -644,7 +733,7 @@ class kotak(Exchange):
         :param int quantity: quantity of shares
         :param str product: 'NRML', 'MIS', 'SM' (Super Multiple Order), 'SOR' (Smart Order Routing), 'MTF' (Margin Tading Facility)
         :param str validity: 'DAY' or 'IOC'
-        :param str variety:  "REGULAR" or "AMO"
+        :param str variety: "REGULAR" or "AMO"
         :returns json: a json response of order
         """
 
@@ -669,23 +758,23 @@ class kotak(Exchange):
             'disclosedQuantity': 0,
             'triggerPrice': 0.0,
             'tag': uniqueid
-            }
+        }
 
         final_url = cls.key_mapper(cls.place_order_urls, product, "product")
 
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=cls.headers["headers"])
+        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
 
     def sl_order_nfo(cls, price: float, triggerprice: float,
-                     option: str, root: str, strikeprice: int, side: str, quantity: int,
+                     option: str, root: str, strikeprice: int, side: str, quantity: int, headers: dict,
                      expiry: str = WeeklyExpiry.CURRENT, uniqueid: str = UniqueID.SLORDER,
                      product: str = Product.MIS, variety: str = "REGULAR", validity: str = Validity.DAY):
 
         """
         create a market order
-        :param str option:  'CE' or 'PE'
-        :param str root:  'BANKNIFTY' or 'NIFTY'
+        :param str option: 'CE' or 'PE'
+        :param str root: 'BANKNIFTY' or 'NIFTY'
         :param int strikeprice: Strike Price of the Option
         :param str side: 'BUY' or 'SELL'
         :param str expiry: 'CURRENT', 'NEXT', 'FAR'
@@ -693,7 +782,7 @@ class kotak(Exchange):
         :param int quantity: quantity of shares
         :param str product: 'NRML', 'MIS', 'SM' (Super Multiple Order), 'SOR' (Smart Order Routing), 'MTF' (Margin Tading Facility)
         :param str validity: 'DAY' or 'IOC'
-        :param str variety:  "REGULAR" or "AMO"
+        :param str variety: "REGULAR" or "AMO"
         :returns json: a json response of order
         """
 
@@ -718,72 +807,175 @@ class kotak(Exchange):
             'disclosedQuantity': 0,
             'triggerPrice': triggerprice,
             'tag': uniqueid
-            }
+        }
 
         final_url = cls.key_mapper(cls.place_order_urls, product, "product")
 
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=cls.headers["headers"])
+        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
 
-        return cls.create_order_parser(response)
-
-
-
-    def cancel_order(cls, orderid):
-
-        final_url = f"{cls.order_cancel_url}/{orderid}"
-
-        response = cls.fetch(method="DELETE", url=final_url, headers=cls.headers["headers"])
-
-        return cls.create_order_parser(response)
+        return cls._create_order_parser(response=response, headers=headers)
 
 
+    # Order Details, OrderBook & TradeBook
 
 
-    def fetch_order(cls, orderid: int):
+    @classmethod
+    def fetch_raw_orderbook(cls,
+                            headers: dict
+                            ) -> list[dict]:
+        """
+        Fetch Raw Orderbook Details, without any Standardaization.
 
-        response = cls.fetch(method="GET", url=cls.fetch_order_url, headers=cls.headers["headers"])
-        info = cls.json_parser(response)
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
+
+        Returns:
+            list[dict]: Raw Broker Orderbook Response.
+        """
+        response = cls.fetch(method="GET", url=cls.fetch_order_url, headers=headers["headers"])
+        return cls._json_parser(response)
+
+    @classmethod
+    def fetch_orderbook(cls,
+                        headers: dict
+                        ) -> list[dict]:
+        """
+        Fetch Orderbook Details.
+
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
+
+        Returns:
+            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
+        """
+        info = cls.fetch_raw_orderbook(headers=headers)
+
+        orders = []
+        for order in info['success']:
+            detail = cls._orderbook_json_parser(order)
+            orders.append(detail)
+
+        return orders
+
+    @classmethod
+    def fetch_tradebook(cls,
+                        headers: dict
+                        ) -> list[dict]:
+        """
+        Fetch Tradebook Details.
+
+        Parameters:
+            headers (dict): headers to send fetch_orders request with.
+
+        Returns:
+            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
+        """
+        response = cls.fetch(method="GET", url=cls.fetch_trade_book_url, headers=headers["headers"])
+        info = cls._json_parser(response)
+
+        orders = []
+        for order in info['success']:
+            detail = cls._orderbook_json_parser(order)
+
+            orders.append(detail)
+
+        return orders
+
+    @classmethod
+    def fetch_orders(cls,
+                     headers: dict
+                     ) -> list[dict]:
+        """
+        Fetch OrderBook Details which is unified across all brokers.
+        Use This if you want Avg price, etc. values which sometimes unavailable
+        thorugh fetch_orderbook.
+
+        Paramters:
+            order_id (str): id of the order.
+
+        Raises:
+            InputError: If order does not exist.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        return cls.fetch_orderbook(headers=headers)
+
+    @classmethod
+    def fetch_order(cls,
+                    order_id: str,
+                    headers: dict
+                    ) -> dict[Any, Any]:
+        """
+        Fetch Order Details.
+
+        Paramters:
+            order_id (str): id of the order.
+
+        Raises:
+            InputError: If order does not exist.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        order_id = str(order_id)
+        info = cls.fetch_raw_orderbook(headers=headers)
 
         for order in info['success']:
-            if order["orderId"] == orderid:
-                detail = cls.orderbook_json_parser(order)
+            if order["orderId"] == order_id:
+                detail = cls._orderbook_json_parser(order)
                 return detail
 
         raise InputError({"This orderid does not exist."})
 
-    def fetch_orders(cls):
+    @classmethod
+    def fetch_tradebook_order(cls,
+                              order_id: str,
+                              headers: dict
+                              ) -> dict[Any, Any]:
+        """
+        Fetch  TradeBook Order Details.
 
-        response = cls.fetch(method="GET", url=cls.fetch_order_url, headers=cls.headers["headers"])
-        info = cls.json_parser(response)
+        Paramters:
+            order_id (str): id of the order.
 
-        orders = []
-        for order in info['success']:
-            detail = cls.orderbook_json_parser(order)
-            orders.append(detail)
+        Raises:
+            InputError: If order does not exist.
 
-        return orders
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        final_url = f"{cls.fetch_trade_book_url}/{order_id}"
 
-    def fetch_tradebook_order(cls, orderid: str):
-
-        final_url = f"{cls.fetch_trade_book_url}/{orderid}"
-
-        response = cls.fetch(method="GET", url=final_url, headers=cls.headers["headers"])
-        info = cls.json_parser(response)
+        response = cls.fetch(method="GET", url=final_url, headers=headers["headers"])
+        info = cls._json_parser(response)
 
         detail = info['success'][-1]
-        order = cls.tradebook_orderhistory_json_parser(detail)
+        order = cls._tradebookhistory_json_parser(detail)
 
         return order
 
-    def fetch_tradebook_orders(cls):
 
-        response = cls.fetch(method="GET", url=cls.fetch_trade_book_url, headers=cls.headers["headers"])
-        info = cls.json_parser(response)
+    # Order Modification & Sq Off
 
-        orders = []
-        for order in info['success']:
-            detail = cls.orderbook_json_parser(order)
 
-            orders.append(detail)
+    @classmethod
+    def cancel_order(cls,
+                     order_id: str,
+                     headers: dict
+                     ) -> dict[Any, Any]:
+        """
+        Cancel an open order.
 
-        return orders
+        Parameters:
+            order_id (str): id of the order.
+            headers (dict): headers to send cancel_order request with.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        final_url = f"{cls.order_cancel_url}/{order_id}"
+
+        response = cls.fetch(method="DELETE", url=final_url, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)

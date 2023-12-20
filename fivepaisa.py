@@ -66,6 +66,7 @@ class fivepaisa(Exchange):
     # Market Data Dictonaries
 
     indices = {}
+    eq_tokens = {}
     nfo_tokens = {}
     id = "fivepaisa"
     _session = Exchange._create_session()
@@ -183,6 +184,45 @@ class fivepaisa(Exchange):
 
 
     # NFO Script Fetch
+
+
+    @classmethod
+    def create_eq_tokens(cls) -> dict:
+        """
+        Gives Indices Info for F&O Segment.
+        Stores them in the aliceblue.indices Dictionary.
+
+        Returns:
+            dict: Unified kronos indices format.
+        """
+        df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
+        df.rename({"Scripcode": "Token", "Name": "Symbol"}, axis=1, inplace=True)
+
+        df_bse = df[(df['CpType'] == "XX") &
+                    (df['Exch'] == "B") &
+                    (df['ExchType'] == "C") &
+                    (df['Series'] == "EQ")
+                    ]
+
+        df_bse = df_bse[["Symbol", "Token", "TickSize" , "LotSize"]]
+        df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
+        df_bse.set_index(df_bse['Symbol'], inplace=True)
+
+
+
+        df_nse = df[(df['CpType'] == "XX") &
+                    (df['Exch'] == "N") &
+                    (df['ExchType'] == "C") &
+                    (df['Series'] == "EQ")
+                    ]
+
+        df_nse = df_nse[["Symbol", "Token", "TickSize" , "LotSize"]]
+        df_nse.set_index(df_nse['Symbol'], inplace=True)
+
+        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
+        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
+
+        return cls.eq_tokens
 
 
     @classmethod

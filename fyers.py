@@ -42,6 +42,7 @@ class fyers(Exchange):
     """
 
     indices = {}
+    eq_tokens = {}
     nfo_tokens = {}
     id = 'fyers'
     _session = Exchange._create_session()
@@ -171,6 +172,59 @@ class fyers(Exchange):
 
     # NFO Script Fetch
 
+
+    @classmethod
+    def create_eq_tokens(cls) -> dict:
+        """
+        Gives Indices Info for F&O Segment.
+        Stores them in the aliceblue.indices Dictionary.
+
+        Returns:
+            dict: Unified kronos indices format.
+        """
+        col_names = [
+            "Fytoken", "Symbol Details", "Exchange Instrument type", "Minimum lot size",
+            "Tick size", "ISIN", "Trading Session", "Last update date", "Expiry date",
+            "Symbol ticker", "Exchange", "Segment", "Scrip code", "Underlying scrip code",
+            "Option type", "Strike price", "Underlying FyToken", "NA", "NAA"
+        ]
+
+        df_bse = cls.data_reader(cls.base_urls["market_data"].replace("NSE_FO", "BSE_CM"), filetype='csv', col_names=col_names)
+
+        df_bse = df_bse[(df_bse['Exchange'] == 12) &
+                        (df_bse['Segment'] == 10) &
+                        (df_bse['Exchange Instrument type'].isin([0, 50]))
+                        ]
+        df_bse = df_bse[["Underlying scrip code", "Scrip code", "Symbol ticker", "Minimum lot size", "Tick size"]]
+
+        df_bse.rename({"Scrip code": "Token", "Underlying scrip code": "Index",
+                       "Symbol ticker": "Symbol", "Tick size": "TickSize",
+                       "Minimum lot size": "LotSize"}, axis=1, inplace=True)
+
+        df_bse.set_index(df_bse['Index'], inplace=True)
+        df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
+        df_bse.drop(columns="Index", inplace=True)
+
+
+        df_nse = cls.data_reader(cls.base_urls["market_data"].replace("NSE_FO", "NSE_CM"), filetype='csv', col_names=col_names)
+
+        df_nse = df_nse[(df_nse['Exchange'] == 10) &
+                        (df_nse['Segment'] == 10) &
+                        (df_nse['Symbol ticker'].str.endswith("-EQ"))
+                        ]
+        df_nse = df_nse[["Underlying scrip code", "Scrip code", "Symbol ticker", "Minimum lot size", "Tick size"]]
+
+        df_nse.rename({"Scrip code": "Token", "Underlying scrip code": "Index",
+                       "Symbol ticker": "Symbol", "Tick size": "TickSize",
+                       "Minimum lot size": "LotSize"}, axis=1, inplace=True)
+
+        df_nse.set_index(df_nse['Index'], inplace=True)
+        df_nse.drop(columns="Index", inplace=True)
+
+        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
+        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
+
+        return cls.eq_tokens
 
     @classmethod
     def create_indices(cls) -> dict:
@@ -594,9 +648,9 @@ class fyers(Exchange):
             headers (dict): headers to send order request with.
             price (float): Order price
             trigger (float): order trigger price
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
             dict: kronos Unified Order Response.
@@ -681,9 +735,9 @@ class fyers(Exchange):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -762,9 +816,9 @@ class fyers(Exchange):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -845,9 +899,9 @@ class fyers(Exchange):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -926,9 +980,9 @@ class fyers(Exchange):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -957,6 +1011,459 @@ class fyers(Exchange):
             json_data = {
                 "symboltoken": token,
                 "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "tradingsymbol": symbol,
+                "price": "0",
+                "triggerprice": trigger,
+                "squareoff": target,
+                "stoploss": stoploss,
+                "trailingStopLoss": trailing_sl,
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[OrderType.SLM],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             json=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+
+    # Equity Order Functions
+
+
+    @classmethod
+    def create_order_eq(cls,
+                        exchange: str,
+                        symbol: str,
+                        quantity: int,
+                        side: str,
+                        product: str,
+                        validity: str,
+                        variety: str,
+                        unique_id: str,
+                        headers: dict,
+                        price: float = 0.0,
+                        trigger: float = 0.0,
+                        target: float = 0.0,
+                        stoploss: float = 0.0,
+                        trailing_sl: float = 0.0,
+                        ) -> dict[Any, Any]:
+
+        """
+        Place an Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            product (str, optional): Order product.
+            validity (str, optional): Order validity.
+            variety (str, optional): Order variety.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            price (float): Order price
+            trigger (float): order trigger price
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
+
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        token = detail["Token"]
+        symbol = detail["Symbol"]
+
+        if not price and trigger:
+            order_type = OrderType.SLM
+        elif not price:
+            order_type = OrderType.MARKET
+        elif not trigger:
+            order_type = OrderType.LIMIT
+        else:
+            order_type = OrderType.SL
+
+
+        if not target:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
+                "tradingsymbol": symbol,
+                "price": price,
+                "triggerprice": trigger,
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[order_type],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+        else:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
+                "tradingsymbol": symbol,
+                "price": price,
+                "triggerprice": trigger,
+                "squareoff": target,
+                "stoploss": stoploss,
+                "trailingStopLoss": trailing_sl,
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[order_type],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             json=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def market_order_eq(cls,
+                        exchange: str,
+                        symbol: str,
+                        quantity: int,
+                        side: str,
+                        unique_id: str,
+                        headers: dict,
+                        target: float = 0.0,
+                        stoploss: float = 0.0,
+                        trailing_sl: float = 0.0,
+                        product: str = Product.MIS,
+                        validity: str = Validity.DAY,
+                        variety: str = Variety.REGULAR,
+                        ) -> dict[Any, Any]:
+        """
+        Place Market Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
+
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        token = detail["Token"]
+        symbol = detail["Symbol"]
+
+        if not target:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
+                "tradingsymbol": symbol,
+                "price": "0",
+                "triggerprice": "0",
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[OrderType.MARKET],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+        else:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
+                "tradingsymbol": symbol,
+                "price": "0",
+                "triggerprice": "0",
+                "squareoff": target,
+                "stoploss": stoploss,
+                "trailingStopLoss": trailing_sl,
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[OrderType.MARKET],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             json=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def limit_order_eq(cls,
+                       exchange: str,
+                       symbol: str,
+                       price: float,
+                       quantity: int,
+                       side: str,
+                       unique_id: str,
+                       headers: dict,
+                       target: float = 0.0,
+                       stoploss: float = 0.0,
+                       trailing_sl: float = 0.0,
+                       product: str = Product.MIS,
+                       validity: str = Validity.DAY,
+                       variety: str = Variety.REGULAR,
+                       ) -> dict[Any, Any]:
+        """
+        Place Limit Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            price (float): Order price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
+
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        token = detail["Token"]
+        symbol = detail["Symbol"]
+
+        if not target:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
+                "tradingsymbol": symbol,
+                "price": price,
+                "triggerprice": "0",
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[OrderType.LIMIT],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+        else:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
+                "tradingsymbol": symbol,
+                "price": price,
+                "triggerprice": "0",
+                "squareoff": target,
+                "stoploss": stoploss,
+                "trailingStopLoss": trailing_sl,
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[OrderType.LIMIT],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             json=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def sl_order_eq(cls,
+                    exchange: str,
+                    symbol: str,
+                    price: float,
+                    trigger: float,
+                    quantity: int,
+                    side: str,
+                    unique_id: str,
+                    headers: dict,
+                    target: float = 0.0,
+                    stoploss: float = 0.0,
+                    trailing_sl: float = 0.0,
+                    product: str = Product.MIS,
+                    validity: str = Validity.DAY,
+                    variety: str = Variety.STOPLOSS,
+                    ) -> dict[Any, Any]:
+        """
+        Place Stoploss Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            price (float): Order price.
+            trigger (float): order trigger price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
+
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        token = detail["Token"]
+        symbol = detail["Symbol"]
+
+        if not target:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
+                "tradingsymbol": symbol,
+                "price": price,
+                "triggerprice": trigger,
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[OrderType.SL],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+        else:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
+                "tradingsymbol": symbol,
+                "price": price,
+                "triggerprice": trigger,
+                "squareoff": target,
+                "stoploss": stoploss,
+                "trailingStopLoss": trailing_sl,
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[OrderType.SL],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             json=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def slm_order_eq(cls,
+                     exchange: str,
+                     symbol: str,
+                     trigger: float,
+                     quantity: int,
+                     side: str,
+                     unique_id: str,
+                     headers: dict,
+                     target: float = 0.0,
+                     stoploss: float = 0.0,
+                     trailing_sl: float = 0.0,
+                     product: str = Product.MIS,
+                     validity: str = Validity.DAY,
+                     variety: str = Variety.STOPLOSS,
+                     ) -> dict[Any, Any]:
+        """
+        Place Stoploss-Market Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            trigger (float): order trigger price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: kronos Unified Order Response.
+        """
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
+
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        token = detail["Token"]
+        symbol = detail["Symbol"]
+
+        if not target:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
+                "tradingsymbol": symbol,
+                "price": "0",
+                "triggerprice": trigger,
+                "quantity": quantity,
+                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "ordertype": cls.req_order_type[OrderType.SLM],
+                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "ordertag": unique_id,
+                "disclosedquantity": "0",
+            }
+
+        else:
+            json_data = {
+                "symboltoken": token,
+                "exchange": exchange,
                 "tradingsymbol": symbol,
                 "price": "0",
                 "triggerprice": trigger,
@@ -1393,9 +1900,9 @@ class fyers(Exchange):
             headers (dict): headers to send order request with.
             price (float): Order price
             trigger (float): order trigger price
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
             dict: kronos Unified Order Response.
@@ -1460,9 +1967,9 @@ class fyers(Exchange):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.BO.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.BO.
@@ -1523,9 +2030,9 @@ class fyers(Exchange):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.BO.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.BO.
@@ -1588,9 +2095,9 @@ class fyers(Exchange):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.BO.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.BO.
@@ -1652,9 +2159,9 @@ class fyers(Exchange):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaulsts to 0.
-            stoploss (float, optional): Order Stoploss price. Defaulsts to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaulsts to 0.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.BO.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.BO.

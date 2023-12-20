@@ -5,6 +5,7 @@ from typing import Any
 from kronos.base.exchange import Exchange
 
 from kronos.base.constants import Side
+from kronos.base.constants import ExchangeCode
 from kronos.base.constants import Product
 from kronos.base.constants import Validity
 from kronos.base.constants import Variety
@@ -34,6 +35,7 @@ class kotak(Exchange):
     # Market Data Dictonaries
 
     indices = {}
+    eq_tokens = {}
     nfo_tokens = {}
     id = 'kotak'
     _session = Exchange._create_session()
@@ -148,6 +150,42 @@ class kotak(Exchange):
         date_obj = cls.time_delta(todaysdate, days, dtformat="%d_%m_%Y")
 
         return date_obj
+
+    @classmethod
+    def create_eq_tokens(cls) -> dict:
+        """
+        Gives Indices Info for F&O Segment.
+        Stores them in the aliceblue.indices Dictionary.
+
+        Returns:
+            dict: Unified kronos indices format.
+        """
+        date_obj = cls.data_datetime()
+        link = f"{cls.base_urls['market_data']}/TradeApiInstruments_Cash_{date_obj}.txt"
+
+        df = cls.data_reader(link, filetype='csv', sep="|")
+
+        df = df[df['instrumentType'] == "EQ"]
+        df = df[["exchange", "instrumentName", "instrumentToken", "tickSize", "lotSize"]]
+
+
+        df.rename({"instrumentToken": "Token", "instrumentName": "Symbol",
+                   'tickSize': 'TickSize', "lotSize": "LotSize"
+                   }, axis=1, inplace=True)
+
+        df_bse = df[df['exchange'] == "BSE"]
+        df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
+        df_bse.drop(columns="exchange", inplace=True)
+
+
+        df_nse = df[df['exchange'] == "BSE"]
+        df_nse.drop(columns="exchange", inplace=True)
+
+        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
+        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
+
+        return cls.eq_tokens
+
 
     @classmethod
     def create_indices(cls) -> dict:

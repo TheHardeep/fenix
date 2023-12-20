@@ -13,6 +13,8 @@ from pandas.tseries.offsets import DateOffset
 from pandas import options
 from pyotp import TOTP
 
+from re import compile
+
 
 from requests.sessions import session as req_session
 from requests.models import Response
@@ -44,6 +46,9 @@ class Exchange:
     """ Base Class Common to All Brokers """
 
     id = ''
+    indices = {}
+    eq_tokens = {}
+    nfo_tokens = {}
     _session = None
 
     def __repr__(self):
@@ -182,6 +187,32 @@ class Exchange:
         """
         print(response.text)
         return loads(response.text.strip())
+
+
+    @staticmethod
+    def _eq_mapper(dictionary: dict, key: str) -> str:
+        """
+        A Simple Function to help the User if they input a wrong Symbol in the eq_tokens dictionary,
+        also tells the User the possible Symbols for the Segment.
+
+        Parameters:
+            dictionary (dict): Dicitonary
+            key (str): Dictionary Key to Check Against, should be capital Letters.
+
+        Raises:
+            KeyError: If Key Does not exist in the Dicitonary.
+
+        Returns:
+            str: The Value of the Key in the Dicitonary.
+        """
+        key = key.upper()
+        if key in dictionary:
+            return dictionary[key]
+
+        r = compile(r"[A-Z]*<str>[A-Z]*$".replace("<str>", key))
+        possible_values = list(filter(r.findall, dictionary))
+
+        raise KeyError(f"Invalid Symbol!: {key}, Possible Values: {possible_values}")
 
 
     @staticmethod

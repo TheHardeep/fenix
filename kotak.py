@@ -37,6 +37,7 @@ class kotak(Exchange):
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
+    token_params = ["user_id", "password", "consumer_key", "access_token"]
     id = 'kotak'
     _session = Exchange._create_session()
 
@@ -286,7 +287,7 @@ class kotak(Exchange):
         Returns:
             dict[str, str]: Kotak Headers.
         """
-        for key in ["user_id", "password", "consumer_key", "access_token"]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 

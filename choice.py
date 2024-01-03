@@ -56,6 +56,7 @@ class choice(Exchange):
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
+    token_params = ["user_name", "password", "vendor_id", "vendor_key", "encryption_key", "encryption_iv"]
     id = 'choice'
     _session = Exchange._create_session()
 
@@ -329,7 +330,7 @@ class choice(Exchange):
         Returns:
             dict[str, str]: Choice Headers.
         """
-        for key in ["user_name", "password", "vendor_id", "vendor_key", "encryption_key", "encryption_iv"]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 

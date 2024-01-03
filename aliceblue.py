@@ -92,6 +92,7 @@ class aliceblue(Exchange):
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
+    token_params = ["user_id", "password", "birth_year", "totpstr", "api_key"]
     id = 'aliceblue'
     _session = Exchange._create_session()
 
@@ -384,7 +385,7 @@ class aliceblue(Exchange):
         Returns:
             dict[str, str]: AliceBlue Headers.
         """
-        for key in ["user_id", "password", "birth_year", "totpstr", "api_key"]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 

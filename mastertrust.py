@@ -42,6 +42,7 @@ class mastertrust(Exchange):
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
+    token_params = ["user_id", "password", "totpstr", "api_id", "api_secret"]
     id = 'mastertrust'
     _session = Exchange._create_session()
 
@@ -284,7 +285,7 @@ class mastertrust(Exchange):
         Returns:
             dict[str, str]: mastertrust Headers.
         """
-        for key in ["user_id", "password", "totpstr", "api_id", "api_secret"]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 

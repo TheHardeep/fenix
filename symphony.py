@@ -39,6 +39,7 @@ class symphony(Exchange):
 
     indices = {}
     nfo_tokens = {}
+    token_params = ["user_id", "api_key", "api_secret"]
     id = 'symphony'
     _session = Exchange._create_session()
 
@@ -194,7 +195,7 @@ class symphony(Exchange):
         Returns:
             dict[str, str]: Broker Headers.
         """
-        for key in ["user_id", "api_key", "api_secret"]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 

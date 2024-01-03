@@ -49,6 +49,7 @@ class upstox(Exchange):
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
+    token_params = ["api_key", "api_secret", "redirect_uri", "totpstr", "mobile_no", "pin"]
     id = 'upstox'
     _session = Exchange._create_session()
 
@@ -292,7 +293,7 @@ class upstox(Exchange):
         Returns:
             dict[str, str]: UpStox Headers.
         """
-        for key in ["api_key", "api_secret", "redirect_uri", "totpstr", "mobile_no", "pin"]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 

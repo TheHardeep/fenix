@@ -41,6 +41,7 @@ class iifl(Exchange):
     indices = {}
     nfo_tokens = {}
     eq_tokens = {}
+    token_params = ["api_key", "api_secret"]
     id = 'iifl'
     _session = Exchange._create_session()
 
@@ -298,7 +299,7 @@ class iifl(Exchange):
             dict[str, str]: IIFL Headers.
         """
 
-        for key in ["api_key", "api_secret"]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 

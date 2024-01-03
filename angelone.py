@@ -39,6 +39,7 @@ class angelone(Exchange):
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
+    token_params = ["user_id", "pin", "totpstr", "api_key"]
     id = 'angelone'
     _session = Exchange._create_session()
 
@@ -292,7 +293,7 @@ class angelone(Exchange):
         Returns:
             dict[str, str]: AngelOne Headers.
         """
-        for key in ["user_id", "pin", "totpstr", "api_key"]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 

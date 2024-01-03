@@ -17,14 +17,12 @@ from kronos.base.constants import Variety
 from kronos.base.constants import Status
 from kronos.base.constants import Order
 from kronos.base.constants import Position
-from kronos.base.constants import Profile
 from kronos.base.constants import Root
 from kronos.base.constants import WeeklyExpiry
 from kronos.base.constants import UniqueID
 
 
 from kronos.base.errors import InputError
-from kronos.base.errors import BrokerError
 from kronos.base.errors import ResponseError
 from kronos.base.errors import TokenDownloadError
 
@@ -68,6 +66,9 @@ class fivepaisa(Exchange):
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
+    token_params = ["user_id", "password", "email", "web_login_password",
+                    "dob", "app_name", "user_key", "encryption_key"
+                    ]
     id = "fivepaisa"
     _session = Exchange._create_session()
 
@@ -204,7 +205,7 @@ class fivepaisa(Exchange):
                     (df['Series'] == "EQ")
                     ]
 
-        df_bse = df_bse[["Symbol", "Token", "TickSize" , "LotSize"]]
+        df_bse = df_bse[["Symbol", "Token", "TickSize", "LotSize"]]
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
         df_bse.set_index(df_bse['Symbol'], inplace=True)
 
@@ -216,7 +217,7 @@ class fivepaisa(Exchange):
                     (df['Series'] == "EQ")
                     ]
 
-        df_nse = df_nse[["Symbol", "Token", "TickSize" , "LotSize"]]
+        df_nse = df_nse[["Symbol", "Token", "TickSize", "LotSize"]]
         df_nse.set_index(df_nse['Symbol'], inplace=True)
 
         cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
@@ -320,8 +321,7 @@ class fivepaisa(Exchange):
         Returns:
             dict[str, str]: FivePaisa Headers.
         """
-        for key in ["user_id", "password", "email", "web_login_password",
-                    "dob", "app_name", "user_key", "encryption_key"]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 
@@ -585,7 +585,7 @@ class fivepaisa(Exchange):
                 'Price': 0,
                 'StopLossPrice': 0,
                 'Qty': quantity,
-                'OrderType':  cls._key_mapper(cls.req_side, side, 'side'),
+                'OrderType': cls._key_mapper(cls.req_side, side, 'side'),
                 'IsIntraday': cls._key_mapper(cls.req_product, product, 'product'),
                 'IsIOCOrder': cls._key_mapper(cls.req_validity, validity, 'validity'),
                 'ClientCode': headers["client_code"],

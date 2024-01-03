@@ -43,6 +43,9 @@ class kotakneo(Exchange):
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
+    token_params = ["user_id", "client_id", "password", "mobile_no",
+                    "pin", "consumer_key", "consumer_secret", "trade_password"
+                    ]
     id = 'kotakneo'
     _session = Exchange._create_session()
 
@@ -308,8 +311,7 @@ class kotakneo(Exchange):
         Returns:
             dict[str, str]: Kotak Neo Headers.
         """
-        for key in ["user_id", "client_id", "password", "mobile_no",
-                    "pin", "consumer_key", "consumer_secret", "trade_password",]:
+        for key in cls.token_params:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 

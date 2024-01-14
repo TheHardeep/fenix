@@ -249,14 +249,14 @@ class aliceblue(Exchange):
         df_bse = cls.data_frame(resp_bse[ExchangeCode.BSE])
 
         df_bse = df_bse[(df_bse['instrument_type'] == "E")]
-        df_bse = df_bse[["trading_symbol", 'token', "tick_size", "lot_size"]]
+        df_bse = df_bse[["trading_symbol", 'token', "tick_size", "lot_size", "exch"]]
         df_bse['token'] = df_bse['token'].astype(int)
         df_bse.rename({"token": "Token", "trading_symbol": "Symbol",
-                       "tick_size": 'TickSize', "lot_size": "LotSize"}, axis=1, inplace=True)
+                       "tick_size": 'TickSize', "lot_size": "LotSize", "exch": "Exchange"}, axis=1, inplace=True)
 
         df_bse.set_index(df_bse['Symbol'], inplace=True)
 
-        df_bse['Token'] = df_bse['Token'].astype(int)
+        df_bse['Token'] = df_bse['Token']  # .astype(int)
         df_bse['TickSize'] = df_bse['TickSize'].astype(float)
         df_bse['LotSize'] = df_bse['LotSize'].astype(int)
 
@@ -267,9 +267,9 @@ class aliceblue(Exchange):
         df_nse = cls.data_frame(resp_nse[ExchangeCode.NSE])
 
         df_nse = df_nse[(df_nse['group_name'] == "EQ")]
-        df_nse = df_nse[["symbol", "trading_symbol", 'token', "lot_size", "tick_size"]]
+        df_nse = df_nse[["symbol", "trading_symbol", 'token', "lot_size", "tick_size", "exch"]]
         df_nse.rename({"symbol": "Index", "token": "Token", "trading_symbol": "Symbol",
-                       "tick_size": 'TickSize', "lot_size": "LotSize"}, axis=1, inplace=True)
+                       "tick_size": 'TickSize', "lot_size": "LotSize", "exch": "Exchange"}, axis=1, inplace=True)
 
         df_nse.set_index(df_nse['Index'], inplace=True)
         df_nse.drop(columns="Index", inplace=True)
@@ -343,13 +343,12 @@ class aliceblue(Exchange):
                 )
             ]
 
-            df.rename({"option_type": "Option", "token": "Token", "symbol": "Root",
+            df.rename({"option_type": "Option", "token": "Token", "symbol": "Root", "exch": "Exchange",
                        "expiry_date": "Expiry", "trading_symbol": "Symbol",
                        "tick_size": 'TickSize', "lot_size": "LotSize", "strike_price": "StrikePrice"
                        }, axis=1, inplace=True)
-
             df = df[['Token', 'Symbol', 'Expiry', 'Option', 'StrikePrice',
-                     'LotSize', 'Root', 'TickSize'
+                     'LotSize', 'Root', 'TickSize', "Exchange"
                      ]]
 
             df['StrikePrice'] = df['StrikePrice'].astype(int)
@@ -362,7 +361,6 @@ class aliceblue(Exchange):
 
         except Exception as exc:
             raise TokenDownloadError({"Error": exc.args}) from exc
-
 
     # Headers & Json Parsers
 

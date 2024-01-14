@@ -202,6 +202,7 @@ class fyers(Exchange):
                        "Symbol ticker": "Symbol", "Tick size": "TickSize",
                        "Minimum lot size": "LotSize"}, axis=1, inplace=True)
 
+        # df_bse["Exchange"] = ExchangeCode.BSE
         df_bse.set_index(df_bse['Index'], inplace=True)
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
         df_bse.drop(columns="Index", inplace=True)
@@ -219,6 +220,7 @@ class fyers(Exchange):
                        "Symbol ticker": "Symbol", "Tick size": "TickSize",
                        "Minimum lot size": "LotSize"}, axis=1, inplace=True)
 
+        # df_nse["Exchange"] = ExchangeCode.NSE
         df_nse.set_index(df_nse['Index'], inplace=True)
         df_nse.drop(columns="Index", inplace=True)
 
@@ -295,6 +297,7 @@ class fyers(Exchange):
                        "Tick size": "TickSize", "Minimum lot size": "LotSize", "Strike price": "StrikePrice"},
                       axis=1, inplace=True)
 
+            # df["Exchange"] = ExchangeCode.NFO
             df["Expiry"] = cls.pd_datetime(df["Expiry"], unit="s").dt.date
 
             df = df[["Token", "Symbol", "Expiry", "Option",

@@ -157,9 +157,9 @@ class mastertrust(Exchange):
         data = cls._json_parser(response)[ExchangeCode.BSE]
 
         df_bse = cls.data_frame(data)
-        df_bse = df_bse[["trading_symbol", "code", "lotSize"]]
+        df_bse = df_bse[["trading_symbol", "code", "lotSize", "exchange"]]
         df_bse.rename({"trading_symbol": "Symbol", "code": "Token",
-                       "lotSize": "LotSize"}, axis=1, inplace=True)
+                       "lotSize": "LotSize", "exchange": "Exchange"}, axis=1, inplace=True)
 
         df_bse.set_index(df_bse['Symbol'], inplace=True)
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
@@ -172,9 +172,9 @@ class mastertrust(Exchange):
         data = cls._json_parser(response)[ExchangeCode.NSE]
 
         df_nse = cls.data_frame(data)
-        df_nse = df_nse[["symbol", "trading_symbol", "code"]]
+        df_nse = df_nse[["symbol", "trading_symbol", "code", "exchange"]]
         df_nse.rename({"symbol": "Index", "trading_symbol": "Symbol",
-                       "code": "Token"}, axis=1, inplace=True)
+                       "code": "Token", "exchange": "Root"}, axis=1, inplace=True)
 
         df_nse.set_index(df_nse['Index'], inplace=True)
         df_nse.drop(columns="Index", inplace=True)
@@ -247,7 +247,7 @@ class mastertrust(Exchange):
             df['Option'] = dfx[3]
 
             df = df[['Token', 'Symbol', 'Expiry', 'Option',
-                     'StrikePrice', 'LotSize', 'Root',
+                     'StrikePrice', 'LotSize', 'Exchange',
                      ]]
 
             df['StrikePrice'] = df['StrikePrice'].astype(float).astype(int)

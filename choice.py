@@ -202,21 +202,22 @@ class choice(Exchange):
         df = cls.data_reader(link, filetype='csv', dtype={"ISIN": str, "SecName": str, 'Instrument': str, "PriceUnit": str, "QtyUnit": str, "DeliveryUnit": str})
 
         df["PriceTick"] = df["PriceTick"] / df["PriceDivisor"]
+
+        df.drop(columns="Exchange", inplace=True)
         df.rename({"Symbol": "Index", "SecDesc": "Symbol", "PriceTick": "TickSize",
-                   "MarketLot": "LotSize"}, axis=1, inplace=True)
+                   "MarketLot": "LotSize", "Segment": "Exchange"}, axis=1, inplace=True)
 
 
-        df_bse = df[df['Exchange'] == "BSE"]
-        df_bse = df_bse[["Index", "Symbol", "Token", "TickSize", "LotSize"]]
+        df = df[["Index", "Symbol", "Token", "TickSize", "LotSize", "Series", "Exchange"]]
+
+        df_bse = df[df['Exchange'] == cls.req_exchange[ExchangeCode.BSE]]
         df_bse.drop_duplicates(subset=['Index'], keep='first', inplace=True)
         df_bse.set_index(df_bse['Index'], inplace=True)
-        df_bse.drop(columns="Index", inplace=True)
+        df_bse.drop(columns=["Index", "Series"], inplace=True)
 
-
-        df_nse = df[(df['Exchange'] == "NSE") & (df['Series'] == "EQ")]
-        df_nse = df_nse[["Index", "Symbol", "Token", "TickSize", "LotSize"]]
+        df_nse = df[(df['Exchange'] == cls.req_exchange[ExchangeCode.NSE]) & (df['Series'] == "EQ")]
         df_nse.set_index(df_nse['Index'], inplace=True)
-        df_nse.drop(columns="Index", inplace=True)
+        df_nse.drop(columns=["Index", "Series"], inplace=True)
 
         cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
         cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
@@ -271,6 +272,7 @@ class choice(Exchange):
 
         try:
             todaysdate = cls.current_datetime().date().strftime("%d%b%Y")
+            todaysdate = "12Jan2024"
             link = f"{cls.base_urls['market_data']}/SCRIP_MASTER_{todaysdate}.csv"
             df = cls.data_reader(link, filetype='csv', dtype={"ISIN": str, "SecName": str, 'Instrument': str, "PriceUnit": str, "QtyUnit": str, "DeliveryUnit": str})
 
@@ -286,12 +288,13 @@ class choice(Exchange):
                 )]
 
             df = df[["Token", "SecDesc", "Expiry", "OptionType", "StrikePrice", "MarketLot",
-                     "MaxOrderLots", "PriceDivisor", "Symbol", "PriceTick"
+                     "MaxOrderLots", "PriceDivisor", "Symbol", "PriceTick", "Segment"
                      ]]
 
             df.rename({"Symbol": "Root", "SecDesc": "Symbol", "OptionType": "Option",
                        "PriceTick": "TickSize", "MarketLot": "LotSize",
-                       "lastPrice": "LastPrice", "MaxOrderLots": "QtyLimit"},
+                       "lastPrice": "LastPrice", "MaxOrderLots": "QtyLimit",
+                       "Segment": "Exchange"},
                       axis=1, inplace=True)
 
             df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)

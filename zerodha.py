@@ -168,25 +168,25 @@ class zerodha(Exchange):
         """
         df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
         df.rename({"instrument_token": "Token", "tradingsymbol": "Symbol",
-                   "tick_size": "TickSize", "lot_size": "LotSize"
+                   "tick_size": "TickSize", "lot_size": "LotSize", "exchange": "Exchange"
                    }, axis=1, inplace=True)
 
-        df_bse = df[(df['exchange'] == ExchangeCode.BSE) &
+        df_bse = df[(df['Exchange'] == ExchangeCode.BSE) &
                     (df['segment'] == ExchangeCode.BSE) &
                     (~df['name'].isna()) &
                     (~df['Symbol'].str.contains("-"))
                     ]
-        df_bse = df_bse[["Symbol", "Token", "TickSize", "LotSize"]]
+        df_bse = df_bse[["Symbol", "Token", "TickSize", "LotSize", "Exchange"]]
         df_bse.set_index(df_bse['Symbol'], inplace=True)
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
 
 
-        df_nse = df[(df['exchange'] == ExchangeCode.NSE) &
+        df_nse = df[(df['Exchange'] == ExchangeCode.NSE) &
                     (df['segment'] == ExchangeCode.NSE) &
                     (~df['name'].isna()) &
                     (~df['Symbol'].str.contains("-"))
                     ]
-        df_nse = df_nse[["Symbol", "Token", "TickSize", "LotSize"]]
+        df_nse = df_nse[["Symbol", "Token", "TickSize", "LotSize", "Exchange"]]
         df_nse.set_index(df_nse['Symbol'], inplace=True)
         df_nse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
 
@@ -249,13 +249,13 @@ class zerodha(Exchange):
 
             df.rename({"instrument_token": "Token", "name": "Root", "expiry": "Expiry", "tradingsymbol": "Symbol",
                        "instrument_type": "Option", "tick_size": "TickSize", "lot_size": "LotSize",
-                       "last_price": "LastPrice", "strike": "StrikePrice"
+                       "last_price": "LastPrice", "strike": "StrikePrice", "exchange": "Exchange"
                        },
                       axis=1, inplace=True)
 
             df = df[["Token", "Symbol", "Expiry", "Option",
                      "StrikePrice", "LotSize",
-                     "Root", "LastPrice", "TickSize"
+                     "Root", "LastPrice", "TickSize", "Exchange"
                      ]]
 
             df["StrikePrice"] = df["StrikePrice"].astype(int)

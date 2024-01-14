@@ -173,19 +173,22 @@ class angelone(Exchange):
             dict: Unified kronos indices format.
         """
         df = cls.data_reader(cls.base_urls["market_data"], filetype='json')
+
         df['tick_size'] = df['tick_size'].astype(int) / 100
 
-        df_bse = df[df['exch_seg'] == "BSE"][["symbol", "token", "tick_size", "lotsize"]]
+        df_bse = df[df['exch_seg'] == ExchangeCode.BSE][["symbol", "token", "tick_size", "lotsize", "exch_seg"]]
         df_bse.rename({"symbol": "Symbol", "token": "Token",
-                       "tick_size": "TickSize", "lotsize": "LotSize"}, axis=1, inplace=True)
+                       "tick_size": "TickSize", "lotsize": "LotSize",
+                       "exch_seg": "Exchange"}, axis=1, inplace=True)
 
         df_bse.set_index(df_bse['Symbol'], inplace=True)
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
 
 
-        df_nse = df[df['symbol'].str.endswith("-EQ")][["name", "symbol", "token", "tick_size", "lotsize"]]
+        df_nse = df[df['symbol'].str.endswith("-EQ")][["name", "symbol", "token", "tick_size", "lotsize", "exch_seg"]]
         df_nse.rename({"name": "Index", "symbol": "Symbol", "token": "Token",
-                       "tick_size": "TickSize", "lotsize": "LotSize"}, axis=1, inplace=True)
+                       "tick_size": "TickSize", "lotsize": "LotSize",
+                       "exch_seg": "Exchange"}, axis=1, inplace=True)
 
         df_nse.set_index(df_nse['Index'], inplace=True)
         df_nse.drop(columns="Index", inplace=True)
@@ -242,13 +245,13 @@ class angelone(Exchange):
                     (df['name'] == 'FINNIFTY') |
                     (df['name'] == "MIDCPNIFTY")
                 ) &
-                (df['exch_seg'] == 'NFO') &
+                (df['exch_seg'] == ExchangeCode.NFO) &
                 (df['instrumenttype'] == "OPTIDX")
             ]
 
             df.rename({"token": "Token", "name": "Root", "expiry": "Expiry", "symbol": "Symbol",
                        "instrument_type": "Option", "tick_size": "TickSize", "lotsize": "LotSize",
-                       "strike": "StrikePrice"},
+                       "strike": "StrikePrice", "exch_seg": "Exchange"},
                       axis=1, inplace=True)
 
             df['Option'] = df['Symbol'].str.extract(r"(CE|PE)")
@@ -258,7 +261,7 @@ class angelone(Exchange):
 
             df = df[['Token', 'Symbol', 'Expiry', 'Option',
                      'StrikePrice', 'LotSize',
-                     'Root', 'TickSize'
+                     'Root', 'TickSize', "Exchange"
                      ]]
 
             df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)

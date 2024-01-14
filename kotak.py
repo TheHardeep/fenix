@@ -171,16 +171,16 @@ class kotak(Exchange):
 
 
         df.rename({"instrumentToken": "Token", "instrumentName": "Symbol",
-                   'tickSize': 'TickSize', "lotSize": "LotSize"
+                   'tickSize': 'TickSize', "lotSize": "LotSize", "exchange": "Exchange"
                    }, axis=1, inplace=True)
 
-        df_bse = df[df['exchange'] == "BSE"]
+        df_bse = df[df['Exchange'] == ExchangeCode.BSE]
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
-        df_bse.drop(columns="exchange", inplace=True)
+        df_bse.set_index(df_bse['Symbol'], inplace=True)
 
 
-        df_nse = df[df['exchange'] == "BSE"]
-        df_nse.drop(columns="exchange", inplace=True)
+        df_nse = df[df['Exchange'] == ExchangeCode.NSE]
+        df_nse.set_index(df_nse['Symbol'], inplace=True)
 
         cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
         cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
@@ -246,15 +246,16 @@ class kotak(Exchange):
 
             df.rename({"instrumentToken": "Token", "instrumentName": "Root", "expiry": "Expiry",
                        "optionType": "Option", 'tickSize': 'TickSize', "lotSize": "LotSize",
-                       "lastPrice": "LastPrice", "strike": "StrikePrice"
+                       "lastPrice": "LastPrice", "strike": "StrikePrice", "exchange": "Exchange"
                        },
                       axis=1, inplace=True)
 
             df = df[['Token', 'Expiry', 'Option',
                      'StrikePrice', 'LotSize',
-                     'Root', 'LastPrice', 'TickSize'
+                     'Root', 'LastPrice', 'TickSize', "Exchange"
                      ]]
 
+            # df["Exchange"] = ExchangeCode.NFO  # Is NSE in Script Master but not Needed amywhere .
             df['StrikePrice'] = df['StrikePrice'].astype(int)
             df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
 

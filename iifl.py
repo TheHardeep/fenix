@@ -169,19 +169,22 @@ class iifl(Exchange):
 
         df = cls.data_reader(link=str_file, filetype="csv", sep="|", col_names=col_names)
 
-        df.rename({"ExchangeInstrumentID": "Token", "Name": "Index", "Symbol": "XXZ",
+        df.rename({"ExchangeInstrumentID": "Token", "ExchangeSegment": "Exchange",
+                   "Name": "Index", "Symbol": "XXZ",
                    "Description": "Symbol"}, axis=1, inplace=True)
 
 
-        df_bse = df[(df["ExchangeSegment"] == "BSECM")]
-        df_bse = df_bse[["Token", "Index", "Symbol", "LotSize", "TickSize"]]
+        df_bse = df[(df["Exchange"] == "BSECM")]
+        df_bse = df_bse[["Token", "Index", "Symbol", "LotSize", "TickSize", "Exchange"]]
+        # df_bse["Exchange"] = ExchangeCode.BSE
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
         df_bse.set_index(df_bse['Index'], inplace=True)
         df_bse.drop(columns="Index", inplace=True)
 
 
-        df_nse = df[(df["ExchangeSegment"] == "NSECM") & (df['Series'] == 'EQ')]
-        df_nse = df_nse[["Token", "Index", "Symbol", "LotSize", "TickSize"]]
+        df_nse = df[(df["Exchange"] == "NSECM") & (df['Series'] == 'EQ')]
+        df_nse = df_nse[["Token", "Index", "Symbol", "LotSize", "TickSize", "Exchange"]]
+        # df_nse["Exchange"] = ExchangeCode.NSE
         df_nse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
         df_nse.set_index(df_nse['Index'], inplace=True)
         df_nse.drop(columns="Index", inplace=True)
@@ -257,7 +260,8 @@ class iifl(Exchange):
                 )]
 
             df.rename({"ExchangeInstrumentID": "Token", "Name": "Root",
-                       "ContractExpiration": "Expiry", "OptionType": "Option"},
+                       "ContractExpiration": "Expiry", "OptionType": "Option",
+                       "ExchangeSegment": "Exchange"},
                       axis=1, inplace=True)
 
             df['Option'] = df['Symbol'].str.extract(r"(CE|PE)")
@@ -267,7 +271,7 @@ class iifl(Exchange):
 
             df = df[['Token', 'Symbol', 'Expiry', 'Option',
                      'StrikePrice', 'LotSize',
-                     'Root', 'TickSize'
+                     'Root', 'TickSize', "Exchange"
                      ]]
 
             expiry_data = cls.jsonify_expiry(data_frame=df)

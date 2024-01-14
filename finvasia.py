@@ -162,15 +162,14 @@ class finvasia(Exchange):
             dict: Unified kronos indices format.
         """
         df_bse = cls.data_reader(cls.base_urls["market_data"].replace("NFO", ExchangeCode.BSE), filetype='csv')
+        df_bse = df_bse[['Symbol', 'Token', 'LotSize', 'TickSize', "Exchange"]]
 
-        df_bse = df_bse[['Symbol', 'Token', 'LotSize', 'TickSize']]
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
         df_bse.set_index(df_bse['Symbol'], inplace=True)
 
 
         df_nse = cls.data_reader(cls.base_urls["market_data"].replace("NFO", ExchangeCode.NSE), filetype='csv')
-
-        df_nse = df_nse[df_nse['Instrument'] == 'EQ'][['Symbol', 'TradingSymbol', 'TickSize', 'Token', 'LotSize']]
+        df_nse = df_nse[df_nse['Instrument'] == 'EQ'][['Symbol', 'TradingSymbol', 'TickSize', 'Token', 'LotSize', "Exchange"]]
         df_nse.rename({"Symbol": "Index", "TradingSymbol": "Symbol", "token": "Token"}, axis=1, inplace=True)
 
         df_nse.set_index(df_nse['Index'], inplace=True)

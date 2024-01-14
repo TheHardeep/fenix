@@ -193,9 +193,9 @@ class kotakneo(Exchange):
         df_bse = cls.data_reader(final_url, filetype='csv')
 
         df_bse = df_bse[df_bse["dTickSize "] != -1]
-        df_bse = df_bse[['pTrdSymbol', "pSymbol", "lLotSize", "dTickSize "]]
+        df_bse = df_bse[['pTrdSymbol', "pSymbol", "lLotSize", "dTickSize ", "pExchSeg"]]
         df_bse.rename({"pSymbol": "Token", "pTrdSymbol": "Symbol",
-                       "dTickSize ": 'TickSize', "lLotSize": "LotSize"}, axis=1, inplace=True)
+                       "dTickSize ": 'TickSize', "lLotSize": "LotSize", "pExchSeg": "Exchange"}, axis=1, inplace=True)
 
         df_bse["TickSize"] = df_bse["TickSize"] / 100
         df_bse.set_index(df_bse['Symbol'], inplace=True)
@@ -207,9 +207,9 @@ class kotakneo(Exchange):
         df_nse = cls.data_reader(final_url, filetype='csv')
 
         df_nse = df_nse[df_nse['pGroup'] == "EQ"]
-        df_nse = df_nse[["pSymbolName", 'pTrdSymbol', "pSymbol", "lLotSize", "dTickSize "]]
+        df_nse = df_nse[["pSymbolName", 'pTrdSymbol', "pSymbol", "lLotSize", "dTickSize ", "pExchSeg"]]
         df_nse.rename({"pSymbolName": "Index", "pSymbol": "Token", "pTrdSymbol": "Symbol",
-                       "dTickSize ": 'TickSize', "lLotSize": "LotSize"}, axis=1, inplace=True)
+                       "dTickSize ": 'TickSize', "lLotSize": "LotSize", "pExchSeg": "Exchange"}, axis=1, inplace=True)
 
         df_nse["TickSize"] = df_nse["TickSize"] / 100
         df_nse.set_index(df_nse['Index'], inplace=True)
@@ -265,12 +265,12 @@ class kotakneo(Exchange):
 
 
             df.rename({"pOptionType": "Option", "pSymbol": "Token", "pSymbolName": "Root",
-                       "lExpiryDate ": "Expiry", "pTrdSymbol": "Symbol",
+                       "lExpiryDate ": "Expiry", "pTrdSymbol": "Symbol", "pExchSeg": "Exchange",
                        "dTickSize ": 'TickSize', "lLotSize": "LotSize", "dStrikePrice;": "StrikePrice"
                        }, axis=1, inplace=True)
 
             df = df[['Token', 'Symbol', 'Expiry', 'Option', 'StrikePrice',
-                     'LotSize', 'Root', 'TickSize'
+                     'LotSize', 'Root', 'TickSize', "Exchange"
                      ]]
 
             df["TickSize"] = df["TickSize"] / 100

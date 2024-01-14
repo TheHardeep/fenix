@@ -197,27 +197,29 @@ class fivepaisa(Exchange):
             dict: Unified kronos indices format.
         """
         df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
-        df.rename({"Scripcode": "Token", "Name": "Symbol"}, axis=1, inplace=True)
+        df.rename({"Scripcode": "Token", "Name": "Symbol",
+                   "Exch": "Exchange", "ExchType": "ExchangeType"}, axis=1, inplace=True)
 
         df_bse = df[(df['CpType'] == "XX") &
-                    (df['Exch'] == "B") &
-                    (df['ExchType'] == "C") &
+                    (df['Exchange'] == "B") &
+                    (df['ExchangeType'] == "C") &
                     (df['Series'] == "EQ")
                     ]
 
-        df_bse = df_bse[["Symbol", "Token", "TickSize", "LotSize"]]
+        df_bse = df_bse[["Symbol", "Token", "TickSize", "LotSize", "Exchange", "ExchangeType"]]
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
         df_bse.set_index(df_bse['Symbol'], inplace=True)
 
 
 
         df_nse = df[(df['CpType'] == "XX") &
-                    (df['Exch'] == "N") &
-                    (df['ExchType'] == "C") &
+                    (df['Exchange'] == "N") &
+                    (df['ExchangeType'] == "C") &
                     (df['Series'] == "EQ")
                     ]
 
-        df_nse = df_nse[["Symbol", "Token", "TickSize", "LotSize"]]
+        df_nse = df_nse[["Symbol", "Token", "TickSize", "LotSize", "Exchange", "ExchangeType"]]
+        df_nse["Exchange"] = ExchangeCode.NSE
         df_nse.set_index(df_nse['Symbol'], inplace=True)
 
         cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
@@ -281,7 +283,8 @@ class fivepaisa(Exchange):
 
 
             df.rename({"StrikeRate": "StrikePrice", "Scripcode": "Token",
-                       "Name": "Symbol", "CpType": "Option", "Underlyer": "Expiry"},
+                       "Name": "Symbol", "CpType": "Option", "Underlyer": "Expiry",
+                       "Exch": "Exchange", "ExchType": "ExchangeType"},
                       axis=1, inplace=True)
 
             df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)

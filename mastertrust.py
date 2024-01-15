@@ -172,9 +172,10 @@ class mastertrust(Exchange):
         data = cls._json_parser(response)[ExchangeCode.NSE]
 
         df_nse = cls.data_frame(data)
-        df_nse = df_nse[["symbol", "trading_symbol", "code", "exchange"]]
+        df_nse = df_nse[["symbol", "trading_symbol", "code", "exchange_code", "exchange"]]
         df_nse.rename({"symbol": "Index", "trading_symbol": "Symbol",
-                       "code": "Token", "exchange": "Root"}, axis=1, inplace=True)
+                       "exchange_code": "LotSize", "code": "Token",
+                       "exchange": "Exchange"}, axis=1, inplace=True)
 
         df_nse.set_index(df_nse['Index'], inplace=True)
         df_nse.drop(columns="Index", inplace=True)
@@ -239,7 +240,8 @@ class mastertrust(Exchange):
             dfx = df['symbol'].str.rsplit(pat=" ", n=3, expand=True)
 
             df.rename({"code": "Token", "expiry": "Expiry",
-                       "trading_symbol": "Symbol", "lotSize": "LotSize"
+                       "trading_symbol": "Symbol", "lotSize": "LotSize",
+                       "exchange": "Exchange"
                        },
                       axis=1, inplace=True)
 
@@ -247,12 +249,13 @@ class mastertrust(Exchange):
             df['Option'] = dfx[3]
 
             df = df[['Token', 'Symbol', 'Expiry', 'Option',
-                     'StrikePrice', 'LotSize', 'Exchange',
+                     'StrikePrice', 'LotSize', 'Root', 'Exchange',
                      ]]
 
             df['StrikePrice'] = df['StrikePrice'].astype(float).astype(int)
             df['Expiry'] = cls.pd_datetime(df['Expiry'], unit="s").dt.date.astype(str)
             df['Token'] = df['Token'].astype(int)
+            df['LotSize'] = df['LotSize'].astype(int)
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
             cls.nfo_tokens = expiry_data

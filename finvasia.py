@@ -331,7 +331,7 @@ class finvasia(Exchange):
             dict: json response obtained from exchange.
         """
         json_response = cls.on_json_response(response)
-        print(json_response)
+        # print(json_response)
 
         if isinstance(json_response, dict):
             stat = json_response.get('stat', None)

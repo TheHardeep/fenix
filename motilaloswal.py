@@ -19,7 +19,7 @@ class motilaloswal(symphony):
 
     base_urls = {
         "api_documentation_url": "https://moxtsapi.motilaloswal.com:3000/doc/interactive",
-        "market_data_url": "https://moxtsapi.motilaloswal.com:3000/marketdata/instruments/master",
+        "market_data_url": "https://moxtsapi.motilaloswal.com:3000/apimarketdata/instruments/master",
         "base_url": "https://moxtsapi.motilaloswal.com:3000/interactive",
         "access_token": "https://moxtsapi.motilaloswal.com:3000/interactive/user/session"
     }

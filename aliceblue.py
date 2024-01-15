@@ -353,7 +353,10 @@ class aliceblue(Exchange):
 
             df['StrikePrice'] = df['StrikePrice'].astype(int)
             df['Expiry'] = cls.pd_datetime(df['Expiry'], unit='ms').dt.date.astype(str)
-
+            df["Token"] = df["Token"].astype(int)
+            df["TickSize"] = df["TickSize"].astype(float)
+            df["LotSize"] = df["LotSize"].astype(float)
+            
             expiry_data = cls.jsonify_expiry(data_frame=df)
             cls.nfo_tokens = expiry_data
 
@@ -489,7 +492,7 @@ class aliceblue(Exchange):
             dict: json response obtained from exchange.
         """
         json_response = cls.on_json_response(response)
-        print(json_response)
+        # print(json_response)
         if isinstance(json_response, dict):
             stat = json_response.get('stat', None)
 

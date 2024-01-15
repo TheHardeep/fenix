@@ -289,7 +289,10 @@ class paper(Exchange):
 
             df['StrikePrice'] = df['StrikePrice'].astype(int)
             df['Expiry'] = cls.pd_datetime(df['Expiry'], unit='ms').dt.date.astype(str)
-
+            df["Token"] = df["Token"].astype(int)
+            df["TickSize"] = df["TickSize"].astype(float)
+            df["LotSize"] = df["LotSize"].astype(float)
+            
             expiry_data = cls.jsonify_expiry(data_frame=df)
             cls.nfo_tokens = expiry_data
 
@@ -648,7 +651,6 @@ class paper(Exchange):
             if cls.orderbook[index][Order.ID] == order_id:
                 order = cls.orderbook[index]
                 if order[Order.STATUS] == Status.PENDING:
-                    print(price or order[Order.PRICE])
                     order[Order.PRICE] = price or order[Order.PRICE]
                     order[Order.TRIGGERPRICE] = trigger or order[Order.TRIGGERPRICE]
                     order[Order.QUANTITY] = quantity or order[Order.QUANTITY]
@@ -760,9 +762,7 @@ class paper(Exchange):
         for order in cls.orderbook:
 
             if order[Order.STATUS] == Status.FILLED:
-                print(order[Order.SYMBOL] in cls.positions, order[Order.SYMBOL])
                 if order[Order.SYMBOL] in cls.positions:
-                    print(order[Order.STATUS] == Status.FILLED, order[Order.ID], "IF")
                     position = cls.positions[order[Order.SYMBOL]]
 
                     if order[Order.SIDE] == Side.BUY:
@@ -777,7 +777,6 @@ class paper(Exchange):
                     position[Order.AVGPRICE] = tprice / tqty
 
                 else:
-                    print(order[Order.STATUS] == Status.FILLED, order[Order.ID], "else")
                     position = {
                         Position.SYMBOL: order[Order.SYMBOL],
                         Position.TOKEN: order[Order.TOKEN],

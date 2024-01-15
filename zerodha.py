@@ -249,13 +249,13 @@ class zerodha(Exchange):
 
             df.rename({"instrument_token": "Token", "name": "Root", "expiry": "Expiry", "tradingsymbol": "Symbol",
                        "instrument_type": "Option", "tick_size": "TickSize", "lot_size": "LotSize",
-                       "last_price": "LastPrice", "strike": "StrikePrice", "exchange": "Exchange"
+                       "strike": "StrikePrice", "exchange": "Exchange" # "last_price": "LastPrice",
                        },
                       axis=1, inplace=True)
 
             df = df[["Token", "Symbol", "Expiry", "Option",
                      "StrikePrice", "LotSize",
-                     "Root", "LastPrice", "TickSize", "Exchange"
+                     "Root", "TickSize", "Exchange"
                      ]]
 
             df["StrikePrice"] = df["StrikePrice"].astype(int)
@@ -367,7 +367,7 @@ class zerodha(Exchange):
             dict: json response obtained from exchange.
         """
         json_response = cls.on_json_response(response)
-        print(json_response)
+        # print(json_response)
         if json_response['status']:
             return json_response
 

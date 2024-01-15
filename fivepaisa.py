@@ -400,7 +400,7 @@ class fivepaisa(Exchange):
             dict: json response obtained from exchange.
         """
         json_response = cls.on_json_response(response)
-        print(json_response)
+        # print(json_response)
 
         return json_response
 

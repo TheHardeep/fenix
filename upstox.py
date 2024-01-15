@@ -184,16 +184,19 @@ class upstox(Exchange):
         df.rename({"tradingsymbol": "Symbol", "instrument_key": "Token",
                    "exchange_token": "ExchangeToken", "tick_size": "TickSize", "lot_size": "LotSize"
                    }, axis=1, inplace=True)
-
+        
+        
 
         df_bse = df[df['exchange'] == "BSE_EQ"]
         df_bse = df_bse[["Symbol", "Token", "ExchangeToken", "TickSize", "LotSize"]]
+        df_bse["ExchangeToken"] = df_bse["ExchangeToken"].astype(int)
         df_bse.set_index(df_bse['Symbol'], inplace=True)
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
 
 
         df_nse = df[df['exchange'] == "NSE_EQ"]
         df_nse = df_nse[["Symbol", "Token", "ExchangeToken", "TickSize", "LotSize"]]
+        df_nse["ExchangeToken"] = df_nse["ExchangeToken"].astype(int)
         df_nse.set_index(df_nse['Symbol'], inplace=True)
         df_nse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
 
@@ -267,7 +270,6 @@ class upstox(Exchange):
 
         except Exception as exc:
             import traceback
-            print(traceback.format_exc())
             raise TokenDownloadError({"Error": exc.args}) from exc
 
 
@@ -344,7 +346,6 @@ class upstox(Exchange):
                 code = code[-1]
                 break
             else:
-                print("AA")
                 time.sleep(2)
 
         driver.quit()
@@ -396,7 +397,7 @@ class upstox(Exchange):
             dict: json response obtained from exchange.
         """
         json_response = cls.on_json_response(response)
-        print(json_response)
+        # print(json_response)
 
         if json_response["status"] == "success":
             return json_response

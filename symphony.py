@@ -51,7 +51,7 @@ class symphony(Exchange):
         "marketdata_doc": "https://developers.symphonyfintech.in/doc/marketdata",
         "base": "https://smartweb.jmfinancialservices.in/interactive",
         "access_token": "https://smartweb.jmfinancialservices.in/interactive/user/session",
-        "market_data": "https://developers.symphonyfintech.in/marketdata/instruments/master",
+        "market_data": "https://developers.symphonyfintech.in/apimarketdata/instruments/master",
     }
 
 
@@ -129,6 +129,64 @@ class symphony(Exchange):
 
     # NFO Script Fetch
 
+    @classmethod
+    def create_eq_tokens(cls) -> dict:
+        """
+        Gives Indices Info for F&O Segment.
+        Stores them in the aliceblue.indices Dictionary.
+
+        Returns:
+            dict: Unified kronos indices format.
+        """
+        response = cls.fetch(method='POST', url=cls.base_urls["market_data"], json={"exchangeSegmentList": ["BSECM"]})
+        data = cls._json_parser(response)['result']
+        data = [row.split('|') for row in data.split('\n')]
+
+        df_bse = cls.data_frame(data)
+
+        df_bse.rename({ 0: "Exchange",  1: "Token", 3: "Symbol",
+                       11: "TickSize", 12: "LotSize",
+                       },
+                      axis=1, inplace=True)
+
+        df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
+
+        df_bse = df_bse[['Token', 'Symbol', 'LotSize',
+                         'TickSize', 'Exchange'
+                         ]]
+
+        df_bse.set_index(df_bse['Symbol'], inplace=True)
+        df_bse['Token'] = df_bse['Token'].astype(int)
+        df_bse['TickSize'] = df_bse['TickSize'].astype(float)
+        df_bse['LotSize'] = df_bse['LotSize'].astype(int)
+
+
+        response = cls.fetch(method='POST', url=cls.base_urls["market_data"], json={"exchangeSegmentList": ["NSECM"]})
+        data = cls._json_parser(response)['result']
+        data = [row.split('|') for row in data.split('\n')]
+
+        df_nse = cls.data_frame(data)
+        df_nse = df_nse[df_nse[5] == "EQ"]
+
+        df_nse.rename({ 0: "Exchange",  1: "Token", 3: "Symbol",
+                       11: "TickSize", 12: "LotSize",
+                       },
+                      axis=1, inplace=True)
+
+        df_nse = df_nse[['Token', 'Symbol', 'LotSize',
+                         'TickSize', 'Exchange'
+                         ]]
+
+        df_nse.set_index(df_nse['Symbol'], inplace=True)
+        df_nse['Token'] = df_nse['Token'].astype(int)
+        df_nse['TickSize'] = df_nse['TickSize'].astype(float)
+        df_nse['LotSize'] = df_nse['LotSize'].astype(int)
+
+        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
+        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
+
+        return cls.eq_tokens
+
 
     @classmethod
     def create_nfo_tokens(cls):
@@ -147,13 +205,13 @@ class symphony(Exchange):
 
             df = cls.data_frame(data)
 
-            df = df[(df[5] == 'OPTIDX') & (df[3].str.startswith(("BANKNIFTY", "NIFTY")))]
-            df[4] = df[4].str[-2:]
+            df = df[df[5] == 'OPTIDX']
+            df["X"] = df[4].str[-2:]
             df[10] = df[10].astype(int) - 1
 
-            df.rename({1: "Token", 3: "Root", 4: "Option", 10: "QtyLimit",
+            df.rename({1: "Token", 3: "Root", "X": "Option", 10: "QtyLimit",
                        11: "TickSize", 12: "LotSize", 16: "Expiry",
-                       17: "StrikePrice", 19: "Symbol"
+                       17: "StrikePrice", 4: "Symbol"
                        },
                       axis=1, inplace=True)
 
@@ -236,7 +294,7 @@ class symphony(Exchange):
             dict: json response obtained from exchange.
         """
         json_response = cls.on_json_response(response)
-        print(json_response)
+        # print(json_response)
 
         if json_response['type'] == "success":
             return json_response

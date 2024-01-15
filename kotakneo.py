@@ -1905,7 +1905,7 @@ class kotakneo(Exchange):
             "mp": "0",
             "dd": "NA",
         }
-        print(order_data)
+        # print(order_data)
         data = {'jData': cls.json_dumps(order_data)}
 
         response = cls.fetch(method="POST", url=cls.urls["modify_order"],

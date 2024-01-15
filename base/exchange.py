@@ -160,7 +160,7 @@ class Exchange:
         """
         try:
             response = loads(response.text.strip())
-            print(response)
+            # print(response)
             return response
         except Exception as exc:
             raise ResponseError({"Status": response.status_code,
@@ -185,7 +185,7 @@ class Exchange:
         Returns:
             dict: Json Object received from Response.
         """
-        print(response.text)
+        # print(response.text)
         return loads(response.text.strip())
 
 

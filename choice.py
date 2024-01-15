@@ -393,7 +393,7 @@ class choice(Exchange):
             dict: json response obtained from exchange.
         """
         json_response = cls.on_json_response(response)
-        print(json_response)
+        # print(json_response)
         if json_response['Status'] == 'Success':
             return json_response['Response']
         else:

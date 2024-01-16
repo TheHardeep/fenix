@@ -292,7 +292,7 @@ class paper(Exchange):
             df["Token"] = df["Token"].astype(int)
             df["TickSize"] = df["TickSize"].astype(float)
             df["LotSize"] = df["LotSize"].astype(float)
-            
+
             expiry_data = cls.jsonify_expiry(data_frame=df)
             cls.nfo_tokens = expiry_data
 
@@ -456,36 +456,35 @@ class paper(Exchange):
 
 
     @classmethod
-    def create_order(cls,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     token_dict: dict,
-                     price: float = 0.0,
-                     trigger: float = 0.0,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.REGULAR,
-                     ) -> dict[Any, Any]:
-
+    def create_eq_nfo_order(cls,
+                            quantity: int,
+                            side: str,
+                            headers: dict,
+                            token_dict: dict,
+                            price: float = 0.0,
+                            trigger: float = 0.0,
+                            product: str = Product.MIS,
+                            validity: str = Validity.DAY,
+                            variety: str = Variety.REGULAR,
+                            unique_id: str = UniqueID.DEFORDER
+                            ) -> dict[Any, Any]:
         """
-        Place an Order.
+        Place an Order in F&O and Equity Segment.
 
         Parameters:
             quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            product (str, optional): Order product.
-            unique_id (str): Unique user order_id.
+            side (str): Order Side: "BUY", "SELL".
             headers (dict): headers to send order request with.
-            token_dict (dict): a dictionary with details of the token.
-            price (float): Order price
-            trigger (float): order trigger price
-            validity (str, optional): Order validity.
-            variety (str, optional): Order variety.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
+            price (float): price of the order. Defaults to 0.0.
+            trigger (float): trigger price of the order. Defaults to 0.0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: Kronos Unified Order Response.
         """
         if not price and trigger:
             order_type = OrderType.SLM
@@ -496,9 +495,9 @@ class paper(Exchange):
         else:
             order_type = OrderType.SL
 
-        symbol = token_dict["Symbol"]
         token = token_dict["Token"]
         exchange = token_dict["Exchange"]
+        symbol = token_dict["Symbol"]
 
         order = {
             Order.USERID: unique_id,

@@ -547,6 +547,76 @@ class angelone(Exchange):
 
 
     @classmethod
+    def create_eq_nfo_order(cls,
+                            quantity: int,
+                            side: str,
+                            headers: dict,
+                            token_dict: dict,
+                            price: float = 0.0,
+                            trigger: float = 0.0,
+                            product: str = Product.MIS,
+                            validity: str = Validity.DAY,
+                            variety: str = Variety.REGULAR,
+                            unique_id: str = UniqueID.DEFORDER
+                            ) -> dict[Any, Any]:
+        """
+        Place an Order in F&O and Equity Segment.
+
+        Parameters:
+            quantity (int): Order quantity.
+            side (str): Order Side: "BUY", "SELL".
+            headers (dict): headers to send order request with.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
+            price (float): price of the order. Defaults to 0.0.
+            trigger (float): trigger price of the order. Defaults to 0.0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
+
+        Returns:
+            dict: Kronos Unified Order Response.
+        """
+        variety = cls._key_mapper(cls.req_variety, variety, 'variety')
+
+        if not price and trigger:
+            order_type = OrderType.SLM
+            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
+        elif not price:
+            order_type = OrderType.MARKET
+        elif not trigger:
+            order_type = OrderType.LIMIT
+        else:
+            order_type = OrderType.SL
+            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
+
+        token = token_dict["Token"]
+        exchange = token_dict["Exchange"]
+        symbol = token_dict["Symbol"]
+
+        json_data = {
+            "symboltoken": token,
+            "exchange": exchange,
+            "tradingsymbol": symbol,
+            "price": price,
+            "triggerprice": trigger,
+            "quantity": quantity,
+            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+            "ordertype": cls.req_order_type[order_type],
+            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "variety": variety,
+            "ordertag": unique_id,
+            "disclosedquantity": "0",
+        }
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             json=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+
+    @classmethod
     def create_order(cls,
                      token: int,
                      exchange: str,
@@ -2207,7 +2277,7 @@ class angelone(Exchange):
         Returns:
             dict: kronos Unified Order Response.
         """
-        cls.fetch_orderbook(headers=headers)
+        return cls.fetch_orderbook(headers=headers)
 
     @classmethod
     def fetch_order(cls,

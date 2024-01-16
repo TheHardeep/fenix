@@ -304,6 +304,74 @@ class fivepaisa(Exchange):
 
 
     @classmethod
+    def create_eq_nfo_order(cls,
+                            quantity: int,
+                            side: str,
+                            headers: dict,
+                            token_dict: dict,
+                            price: float = 0.0,
+                            trigger: float = 0.0,
+                            product: str = Product.MIS,
+                            validity: str = Validity.DAY,
+                            variety: str = Variety.REGULAR,
+                            unique_id: str = UniqueID.DEFORDER
+                            ) -> dict[Any, Any]:
+        """
+        Place an Order in F&O and Equity Segment.
+
+        Parameters:
+            quantity (int): Order quantity.
+            side (str): Order Side: "BUY", "SELL".
+            headers (dict): headers to send order request with.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
+            price (float): price of the order. Defaults to 0.0.
+            trigger (float): trigger price of the order. Defaults to 0.0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
+
+        Returns:
+            dict: Kronos Unified Order Response.
+        """
+        if not price and trigger:
+            order_type = OrderType.SLM
+        elif not price:
+            order_type = OrderType.MARKET
+        elif not trigger:
+            order_type = OrderType.LIMIT
+        else:
+            order_type = OrderType.SL
+
+        token = token_dict["Token"]
+        exchange = token_dict["Exchange"]
+        symbol = token_dict["Symbol"]
+
+        json_data = [
+            {
+                "symbol_id": token,
+                "exch": exchange,
+                "trading_symbol": symbol,
+                "price": price,
+                "trigPrice": trigger,
+                "qty": quantity,
+                "transtype": cls._key_mapper(cls.req_side, side, 'side'),
+                "prctyp": cls.req_order_type[order_type],
+                "pCode": cls._key_mapper(cls.req_product, product, 'product'),
+                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "complexty": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "orderTag": unique_id,
+                "discqty": 0,
+            }
+        ]
+
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
+                             json=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, key_to_check="NOrdNo", headers=headers)
+
+
+    @classmethod
     def create_headers(cls,
                        params: dict,
                        ) -> dict[str, str]:

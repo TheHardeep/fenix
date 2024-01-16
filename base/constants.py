@@ -195,10 +195,12 @@ class UniqueID:
     """
     Default Unique Order ID Constants.
     """
+    DEFORDER= "KronosOrder"
     MARKETORDER = "MarketOrder"
     LIMITORDER = "LIMITOrder"
     SLORDER = "SLOrder"
     SLMORDER = "SLMOrder"
+    DEFORDERNO = 100
     MARKETORDERNO = 101
     LIMITORDERNO = 102
     SLORDERNO = 102

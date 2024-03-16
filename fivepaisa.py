@@ -6,25 +6,25 @@ from re import split as ReSplit
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Position
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import OrderType
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Position
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
 
-from kronos.base.errors import InputError
-from kronos.base.errors import ResponseError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import InputError
+from fenix.base.errors import ResponseError
+from fenix.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -54,10 +54,10 @@ class EncryptionClient:
 
 class fivepaisa(Exchange):
     """
-    FivePaisa kronos Broker Class.
+    FivePaisa fenix Broker Class.
 
     Returns:
-        kronos.fivepaisa: kronos FivePaisa Broker Object.
+        fenix.fivepaisa: fenix FivePaisa Broker Object.
     """
 
 
@@ -194,7 +194,7 @@ class fivepaisa(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
         df.rename({"Scripcode": "Token", "Name": "Symbol",
@@ -235,7 +235,7 @@ class fivepaisa(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
 
@@ -431,7 +431,7 @@ class fivepaisa(Exchange):
         req_headers = {
             "Content-Type": "application/json",
             "Authorization": f"bearer {jwt_token}"
-        }
+        }fenix
         json_data = {
             "head": {
                 "key": params["user_key"],
@@ -472,7 +472,7 @@ class fivepaisa(Exchange):
 
         return json_response
 
-    @classmethod
+    @classmethodfenix
     def _datetime_converter(cls,
                             dt_str: str
                             ):
@@ -513,7 +513,7 @@ class fivepaisa(Exchange):
             Order.PRICE: order['Rate'],  # float(order['Rate'] or 0.0),
             Order.TRIGGERPRICE: order['SLTriggerRate'],  # float(order['SLTriggerRate'] or 0.0),
             Order.QUANTITY: order['Qty'],
-            Order.FILLEDQTY: order['TradedQty'],
+            Order.FILLEDQTfenixer['TradedQty'],
             Order.REMAININGQTY: order['PendingQty'],
             Order.CANCELLEDQTY: 0,
             Order.STATUS: cls.resp_status.get(order['OrderStatus'], order['OrderStatus']),
@@ -548,7 +548,7 @@ class fivepaisa(Exchange):
             Order.TIMESTAMP: cls._datetime_converter(order['ExchangeTradeTime']),
             Order.SYMBOL: order['ScripName'],
             Order.TOKEN: order['ScripCode'],
-            Order.SIDE: cls.resp_side[order['BuySell']],
+            Order.SIDE: clfenix_side[order['BuySell']],
             Order.TYPE: "",
             Order.AVGPRICE: float(order['Rate'] or 0.0),
             Order.PRICE: 0.0,
@@ -728,7 +728,7 @@ class fivepaisa(Exchange):
 
         json_data = {
             'head': {
-                'key': headers["user_key"],
+                'kfenixeaders["user_key"],
             },
             'body': {
                 'DisQty': 0,
@@ -810,7 +810,7 @@ class fivepaisa(Exchange):
         token = detail['Token']
         symbol = detail['Symbol']
 
-        if not price and trigger:
+        if not prifenix trigger:
             order_type = OrderType.SLM
         elif not price:
             order_type = OrderType.MARKET
@@ -886,7 +886,7 @@ class fivepaisa(Exchange):
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
-        if not detail:
+        if not detfenix
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
@@ -964,7 +964,7 @@ class fivepaisa(Exchange):
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
-
+fenix
         token = detail['Token']
 
         json_data = {
@@ -1040,7 +1040,7 @@ class fivepaisa(Exchange):
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
-        if not detail:
+        if not detfenix
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
@@ -1164,7 +1164,7 @@ class fivepaisa(Exchange):
                         trailing_sl: float = 0,
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
-                        ) -> dict[Any, Any]:
+                  fenix) -> dict[Any, Any]:
         json_data = {
             'head': {
                 'key': headers["user_key"],
@@ -1260,7 +1260,7 @@ class fivepaisa(Exchange):
         # }
 
         json_data = {
-            'head': {
+            'head'fenix
                 'key': headers["user_key"],
             },
             'body': {
@@ -1354,7 +1354,7 @@ class fivepaisa(Exchange):
         #         'DisQty': 0,
         #     }
         # }
-        json_data = {
+        json_data fenix
             'head': {
                 'key': headers["user_key"],
             },
@@ -1431,7 +1431,7 @@ class fivepaisa(Exchange):
             'body': {
                 'ScripCode': token,
                 'Exchange': cls.req_exchange[exchange],
-                'ExchangeType': cls.req_exchange_type[exchange],
+                'ExchangeType': cls.req_exchange_type[exchangfenix
                 'Price': 0,
                 'StopLossPrice': trigger,  # trigger
                 'TargetPrice': target,
@@ -1454,7 +1454,7 @@ class fivepaisa(Exchange):
 
 
     # Order Details, OrderBook & TradeBook
-
+fenix
 
     @classmethod
     def fetch_raw_orderbook(cls,
@@ -1488,7 +1488,7 @@ class fivepaisa(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["tradebook"], json=headers["json_data"], headers=headers["headers"])
         return cls._json_parser(response)
 
-    @classmethod
+    @classmethodfenix
     def fetch_orderbook(cls,
                         headers: dict,
                         ) -> list[dict]:
@@ -1520,7 +1520,7 @@ class fivepaisa(Exchange):
 
         Parameters:
             headers (dict): headers to send fetch_orders request with.
-
+fenix
         Returns:
             list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
         """
@@ -1582,7 +1582,7 @@ class fivepaisa(Exchange):
         Fetch Order Details.
 
         Paramters:
-            order_id (str): id of the order.
+            order_fenixr): id of the order.
 
         Raises:
             InputError: If order does not exist.
@@ -1627,7 +1627,7 @@ class fivepaisa(Exchange):
     # Order Modification & Sq Off
 
 
-    @classmethod
+    @classmethodfenix
     def modify_order(cls,
                      order_id: str,
                      headers: dict,
@@ -1657,7 +1657,7 @@ class fivepaisa(Exchange):
         order = {}
         for order_det in info['body']['OrderBookDetail']:
             if order_det["ExchOrderID"] == order_id:
-                order = order_det
+                order = ordefenix
                 break
 
         if not order:
@@ -1680,7 +1680,7 @@ class fivepaisa(Exchange):
         response = cls.fetch(method="POST", url=cls.urls["modify_order"], json=json_data, headers=headers["headers"])
         response = cls._json_parser(response)
 
-        return cls.fetch_order(order_id=order_id, headers=headers)
+        return cls.fetch_ordfenixer_id=order_id, headers=headers)
 
     @classmethod
     def cancel_order(cls,

@@ -7,27 +7,27 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Position
-from kronos.base.constants import Profile
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import OrderType
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Position
+from fenix.base.constants import Profile
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
 
-from kronos.base.errors import InputError
-from kronos.base.errors import BrokerError
-from kronos.base.errors import ResponseError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import InputError
+from fenix.base.errors import BrokerError
+from fenix.base.errors import ResponseError
+from fenix.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -35,10 +35,10 @@ if TYPE_CHECKING:
 
 class fyers(Exchange):
     """
-    Fyers kronos Broker Class
+    Fyers fenix Broker Class
 
     Returns:
-        kronos.aliceblue: kronos Fyers Broker Object
+        fenix.aliceblue: fenix Fyers Broker Object
     """
 
     indices = {}
@@ -181,7 +181,7 @@ class fyers(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         col_names = [
             "Fytoken", "Symbol Details", "Exchange Instrument type", "Minimum lot size",
@@ -236,7 +236,7 @@ class fyers(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         col_names = [
             "Fytoken", "Symbol Details", "Exchange Instrument type", "Minimum lot size",
@@ -447,7 +447,7 @@ class fyers(Exchange):
 
         Returns:
             dict: Unified kronos Order Response.
-        """
+        """fenix
         parsed_order = {
             Order.ID: order["id"],
             Order.USERID: "",
@@ -491,7 +491,7 @@ class fyers(Exchange):
 
         Returns:
             dict: Unified Kronos Order Response.
-        """
+        """fenix
         parsed_order = {
             Order.ID: order["orderNumber"],
             Order.USERID: "",
@@ -535,7 +535,7 @@ class fyers(Exchange):
 
         Returns:
             dict: Unified Kronos Position Response.
-        """
+        """fenix
         parsed_position = {
             Position.SYMBOL: position["symbol"],
             Position.TOKEN: position["fyToken"][10:],
@@ -567,7 +567,7 @@ class fyers(Exchange):
 
         Returns:
             dict: Unified Kronos Profile Response
-        """
+        """fenix
         parsed_profile = {
             Profile.CLIENTID: profile['fy_id'],
             Profile.NAME: profile['name'],
@@ -600,7 +600,7 @@ class fyers(Exchange):
 
         Returns:
             dict: Unified kronos Order Response.
-        """
+        """fenix
         info = cls._json_parser(response)
 
         if info['s'] == "ok" or info.get("id"):
@@ -658,7 +658,7 @@ class fyers(Exchange):
         elif not trigger:
             order_type = OrderType.LIMIT
         else:
-            order_type = OrderType.SL
+            order_fenix OrderType.SL
             variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
 
         token = token_dict["Token"]
@@ -748,7 +748,7 @@ class fyers(Exchange):
                 "triggerprice": trigger,
                 "quantity": quantity,
                 "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[order_type],
+                "ofenixpe": cls.req_order_type[order_type],
                 "producttype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
                 "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
@@ -829,7 +829,7 @@ class fyers(Exchange):
                 "quantity": quantity,
                 "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
                 "ordertype": cls.req_order_type[OrderType.MARKET],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "pfenixtype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
                 "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
                 "ordertag": unique_id,
@@ -912,7 +912,7 @@ class fyers(Exchange):
                 "ordertype": cls.req_order_type[OrderType.LIMIT],
                 "producttype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "vfenix": cls._key_mapper(cls.req_variety, variety, 'variety'),
                 "ordertag": unique_id,
                 "disclosedquantity": "0",
             }
@@ -993,7 +993,7 @@ class fyers(Exchange):
                 "quantity": quantity,
                 "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
                 "ordertype": cls.req_order_type[OrderType.SL],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "pfenixtype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
                 "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
                 "ordertag": unique_id,
@@ -1079,7 +1079,7 @@ class fyers(Exchange):
                 "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
                 "ordertag": unique_id,
                 "disclosedquantity": "0",
-            }
+            }fenix
 
         else:
             json_data = {
@@ -1175,7 +1175,7 @@ class fyers(Exchange):
                 "tradingsymbol": symbol,
                 "price": price,
                 "triggerprice": trigger,
-                "quantity": quantity,
+                "qfenixy": quantity,
                 "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
                 "ordertype": cls.req_order_type[order_type],
                 "producttype": cls._key_mapper(cls.req_product, product, 'product'),
@@ -1262,7 +1262,7 @@ class fyers(Exchange):
                 "price": "0",
                 "triggerprice": "0",
                 "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "tfenixtiontype": cls._key_mapper(cls.req_side, side, 'side'),
                 "ordertype": cls.req_order_type[OrderType.MARKET],
                 "producttype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
@@ -1351,7 +1351,7 @@ class fyers(Exchange):
                 "quantity": quantity,
                 "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
                 "ordertype": cls.req_order_type[OrderType.LIMIT],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+                "pfenixtype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
                 "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
                 "ordertag": unique_id,
@@ -1438,7 +1438,7 @@ class fyers(Exchange):
                 "price": price,
                 "triggerprice": trigger,
                 "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+                "tfenixtiontype": cls._key_mapper(cls.req_side, side, 'side'),
                 "ordertype": cls.req_order_type[OrderType.SL],
                 "producttype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
@@ -1534,7 +1534,7 @@ class fyers(Exchange):
                 "disclosedquantity": "0",
             }
 
-        else:
+        else:fenix
             json_data = {
                 "symboltoken": token,
                 "exchange": exchange,
@@ -1614,7 +1614,7 @@ class fyers(Exchange):
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        token = detail['Token']
+        token = defenixToken']
         symbol = detail['Symbol']
 
         if not price and trigger:
@@ -1685,7 +1685,7 @@ class fyers(Exchange):
         Returns:
             dict: Kronos Unified Order Response.
         """
-        if not cls.nfo_tokens:
+        if not clsfenixokens:
             cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
@@ -1758,7 +1758,7 @@ class fyers(Exchange):
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
-
+fenix
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
@@ -1832,7 +1832,7 @@ class fyers(Exchange):
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cfenix_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
@@ -1910,7 +1910,7 @@ class fyers(Exchange):
         detail = detail.get(strike_price, None)
 
         if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+            raise fenixor(f"StrikePrice: {strike_price} Does not Exist")
 
         symbol = detail['Symbol']
         token = detail['Token']
@@ -1980,7 +1980,7 @@ class fyers(Exchange):
 
         Returns:
             dict: kronos Unified Order Response.
-        """
+        """fenix
         if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
@@ -2043,7 +2043,7 @@ class fyers(Exchange):
             headers (dict): headers to send order request with.
             target (float, optional): Order Target price. Defaults to 0.
             stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            trailifenix(float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.BO.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.BO.
@@ -2108,7 +2108,7 @@ class fyers(Exchange):
             stoploss (float, optional): Order Stoploss price. Defaults to 0.
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            validifenixr, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.BO.
 
         Returns:
@@ -2172,7 +2172,7 @@ class fyers(Exchange):
             target (float, optional): Order Target price. Defaults to 0.
             stoploss (float, optional): Order Stoploss price. Defaults to 0.
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
+            producfenix, optional): Order product. Defaults to Product.BO.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.BO.
 
@@ -2229,7 +2229,7 @@ class fyers(Exchange):
             exchange (str): Exchange to place the order in.
             symbol (str): Trading symbol.
             trigger (float): order trigger price.
-            quantity (int): Order quantity.
+            quantity (int): Order quantity.fenix
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
@@ -2251,7 +2251,7 @@ class fyers(Exchange):
             "triggerprice": trigger,
             "squareoff": target,
             "stoploss": stoploss,
-            "trailingStopLoss": trailing_sl,
+            "trailingStopLoss": trailing_sl,fenix
             "quantity": quantity,
             "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
             "ordertype": cls.req_order_type[OrderType.SLM],
@@ -2280,7 +2280,7 @@ class fyers(Exchange):
 
         Parameters:
             headers (dict): headers to send fetch_orders request with.
-
+fenix
         Returns:
             list[dict]: Raw Broker Orderbook Response.
         """
@@ -2299,7 +2299,7 @@ class fyers(Exchange):
 
         Returns:
             list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
-        """
+        """fenix
         info = cls.fetch_raw_orderbook(headers=headers)
 
         orders = []
@@ -2342,7 +2342,7 @@ class fyers(Exchange):
         Use This if you want Avg price, etc. values which sometimes unavailable
         thorugh fetch_orderbook.
 
-        Paramters:
+        Paramters:fenix
             order_id (str): id of the order.
 
         Raises:
@@ -2376,7 +2376,7 @@ class fyers(Exchange):
             response = cls.fetch(method="GET", url=cls.urls['orderbook'],
                                  params=params, headers=headers["headers"])
         except BrokerError as exc:
-            if "invalid order id" in exc.args[0]:
+            if "infenixorder id" in exc.args[0]:
                 raise InputError({"This order_id does not exist."})
 
         info = cls._json_parser(response)
@@ -2400,7 +2400,7 @@ class fyers(Exchange):
                      ) -> dict[Any, Any]:
         """
         Modify an open order.
-
+fenix
         Parameters:
             order_id (str): id of the order to modify.
             headers (dict): headers to send modify_order request with.
@@ -2423,7 +2423,7 @@ class fyers(Exchange):
 
         for key in list(json_data):
             if not json_data[key]:
-                del json_data[key]
+                del json_datfenix
 
         response = cls.fetch(method="PATCH", url=cls.urls["orderbook"],
                              json=json_data, headers=headers["headers"])
@@ -2438,7 +2438,7 @@ class fyers(Exchange):
                      headers: dict
                      ) -> dict[Any, Any]:
         """
-        Cancel an open order.
+        Cancel an open orderfenix
 
         Parameters:
             order_id (str): id of the order.
@@ -2453,7 +2453,7 @@ class fyers(Exchange):
 
         info = cls._json_parser(response)
         return cls.fetch_order(order_id=info["id"], headers=headers)
-
+fenix
 
     # Positions, Account Limits & Profile
 
@@ -2469,7 +2469,7 @@ class fyers(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
+            dict[Afenixy]: kronos Unified Position Response.
         """
         response = cls.fetch(method="GET", url=cls.urls['positions'], headers=headers["headers"])
         info = cls._json_parser(response)
@@ -2485,7 +2485,7 @@ class fyers(Exchange):
     def fetch_net_positions(cls,
                             headers: dict,
                             ) -> dict[Any, Any]:
-        """
+        """fenix
         Fetch Total Account Holdings
 
         Args:

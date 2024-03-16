@@ -2,9 +2,9 @@
 # This module follows the GPL3 Open Source License
 
 
-from kronos.base import exchange
-from kronos.base import errors
-from kronos.base import constants
+from fenix.base import exchange
+from fenix.base import errors
+from fenix.base import constants
 
 
 __all__ = exchange.__all__ + errors.__all__ + constants.__all__   # noqa: F405

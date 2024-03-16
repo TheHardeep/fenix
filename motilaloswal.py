@@ -1,12 +1,12 @@
-from kronos.symphony import symphony
+from fenix.symphony import symphony
 
 
 class motilaloswal(symphony):
     """
-    Motilal Oswal kronos Broker Class
+    Motilal Oswal fenix Broker Class
 
     Returns:
-        kronos.motilaloswal: kronos Motilal Oswal Broker Object
+        fenix.motilaloswal: fenix Motilal Oswal Broker Object
     """
 
 

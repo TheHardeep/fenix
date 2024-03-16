@@ -1,12 +1,12 @@
-from kronos.symphony import symphony
+from fenix.symphony import symphony
 
 
 class vpc(symphony):
     """
-    VPC kronos Broker Class
+    VPC fenix Broker Class
 
     Returns:
-        kronos.vpc: kronos VPC Broker Object
+        fenix.vpc: fenix VPC Broker Object
     """
 
 

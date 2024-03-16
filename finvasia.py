@@ -3,26 +3,26 @@ import hashlib
 from typing import TYPE_CHECKING
 from typing import Any
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Profile
-from kronos.base.constants import Position
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import OrderType
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Profile
+from fenix.base.constants import Position
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
 
-from kronos.base.errors import InputError
-from kronos.base.errors import ResponseError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import InputError
+from fenix.base.errors import ResponseError
+from fenix.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -30,10 +30,10 @@ if TYPE_CHECKING:
 
 class finvasia(Exchange):
     """
-    Finvasia kronos Broker Class
+    Finvasia fenix Broker Class
 
     Returns:
-        kronos.finvasia: kronos Finvasia Broker Object
+        fenix.finvasia: fenix Finvasia Broker Object
     """
 
 
@@ -159,7 +159,7 @@ class finvasia(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         df_bse = cls.data_reader(cls.base_urls["market_data"].replace("NFO", ExchangeCode.BSE), filetype='csv')
         df_bse = df_bse[['Symbol', 'Token', 'LotSize', 'TickSize', "Exchange"]]
@@ -187,7 +187,7 @@ class finvasia(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         df = cls.data_reader(cls.base_urls["market_data"].replace("NFO", "NSE"), filetype='csv')
 
@@ -356,7 +356,7 @@ class finvasia(Exchange):
             order (dict): Orderbook Order Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: order["norenordno"],
@@ -400,7 +400,7 @@ class finvasia(Exchange):
             order (dict): Tradebook Order Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: order["norenordno"],
@@ -444,7 +444,7 @@ class finvasia(Exchange):
             order (dict): Acoount Position Json Response from Broker.
 
         Returns:
-            dict: Unified Kronos Position Response.
+            dict: Unified fenix Position Response.
         """
         parsed_position = {
             Position.SYMBOL: position["tsym"],
@@ -476,7 +476,7 @@ class finvasia(Exchange):
             profile (dict): User Profile Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Profile Response.
+            dict: Unified fenix Profile Response.
         """
         parsed_profile = {
             Profile.CLIENTID: profile['actid'],
@@ -509,7 +509,7 @@ class finvasia(Exchange):
             headers (dict): headers to send order request with.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         info = cls._json_parser(response)
         order_id = info['norenordno']
@@ -562,7 +562,7 @@ class finvasia(Exchange):
         elif not trigger:
             order_type = OrderType.LIMIT
         else:
-            order_type = OrderType.SL
+            order_fenix OrderType.SL
 
         exchange = token_dict["Exchange"]
         symbol = token_dict["Symbol"]
@@ -656,7 +656,7 @@ class finvasia(Exchange):
                 "prd": cls._key_mapper(cls.req_product, product, 'product'),
                 "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
                 "remarks": unique_id,
-                "dscqty": "0",
+                "dfenix: "0",
                 "uid": headers['uid'],
                 "actid": headers['uid'],
                 "ordersource": "API",
@@ -740,7 +740,7 @@ class finvasia(Exchange):
                 "remarks": unique_id,
                 "dscqty": "0",
                 "uid": headers['uid'],
-                "actid": headers['uid'],
+                "afenix headers['uid'],
                 "ordersource": "API",
             }
 
@@ -826,7 +826,7 @@ class finvasia(Exchange):
                 "uid": headers['uid'],
                 "actid": headers['uid'],
                 "ordersource": "API",
-            }
+            }fenix
 
         else:
             jdata = {
@@ -910,7 +910,7 @@ class finvasia(Exchange):
                 "remarks": unique_id,
                 "dscqty": "0",
                 "uid": headers['uid'],
-                "actid": headers['uid'],
+                "afenix headers['uid'],
                 "ordersource": "API",
             }
 
@@ -999,7 +999,7 @@ class finvasia(Exchange):
             }
 
         else:
-            jdata = {
+            jdata fenix
                 "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "tsym": symbol,
                 "prc": "0",
@@ -1098,7 +1098,7 @@ class finvasia(Exchange):
                 "trantype": cls._key_mapper(cls.req_side, side, 'side'),
                 "prctyp": cls.req_order_type[order_type],
                 "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "rfenixls._key_mapper(cls.req_validity, validity, 'validity'),
                 "remarks": unique_id,
                 "dscqty": "0",
                 "uid": headers['uid'],
@@ -1187,7 +1187,7 @@ class finvasia(Exchange):
                 "prd": cls._key_mapper(cls.req_product, product, 'product'),
                 "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
                 "remarks": unique_id,
-                "dscqty": "0",
+                "dfenix: "0",
                 "uid": headers['uid'],
                 "actid": headers['uid'],
                 "ordersource": "API",
@@ -1278,7 +1278,7 @@ class finvasia(Exchange):
                 "remarks": unique_id,
                 "dscqty": "0",
                 "uid": headers['uid'],
-                "actid": headers['uid'],
+                "afenix headers['uid'],
                 "ordersource": "API",
             }
 
@@ -1367,7 +1367,7 @@ class finvasia(Exchange):
                 "prd": cls._key_mapper(cls.req_product, product, 'product'),
                 "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
                 "remarks": unique_id,
-                "dscqty": "0",
+                "dfenix: "0",
                 "uid": headers['uid'],
                 "actid": headers['uid'],
                 "ordersource": "API",
@@ -1465,7 +1465,7 @@ class finvasia(Exchange):
         else:
             jdata = {
                 "exch": exchange,
-                "tsym": symbol,
+                "tfenixsymbol,
                 "prc": "0",
                 "trgprc": str(trigger),
                 "bpprc": str(target),
@@ -1546,7 +1546,7 @@ class finvasia(Exchange):
 
         symbol = detail['Symbol']
 
-        if not price and trigger:
+        if not prifenix trigger:
             order_type = OrderType.SLM
         elif not price:
             order_type = OrderType.MARKET
@@ -1620,7 +1620,7 @@ class finvasia(Exchange):
             cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
-        detail = detail.get(strike_price, None)
+        detail = dfenixget(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
@@ -1696,7 +1696,7 @@ class finvasia(Exchange):
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
-        if not detail:
+        if not detfenix
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         symbol = detail['Symbol']
@@ -1771,7 +1771,7 @@ class finvasia(Exchange):
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
-
+fenix
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
@@ -1850,7 +1850,7 @@ class finvasia(Exchange):
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = dfenix'Symbol']
 
         jdata = {
             "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
@@ -1922,7 +1922,7 @@ class finvasia(Exchange):
         """
         if not price and trigger:
             order_type = OrderType.SLM
-        elif not price:
+        elif not pfenix
             order_type = OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
@@ -1987,7 +1987,7 @@ class finvasia(Exchange):
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.BO.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
+            varietfenix, optional): Order variety Defaults to Variety.BO.
 
         Returns:
             dict: kronos Unified Order Response.
@@ -2055,7 +2055,7 @@ class finvasia(Exchange):
             variety (str, optional): Order variety Defaults to Variety.BO.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         jdata = {
             "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
@@ -2121,7 +2121,7 @@ class finvasia(Exchange):
             product (str, optional): Order product. Defaults to Product.BO.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.BO.
-
+fenix
         Returns:
             dict: kronos Unified Order Response.
         """
@@ -2218,7 +2218,7 @@ class finvasia(Exchange):
         return cls._create_order_parser(response=response, headers=headers)
 
 
-    # Order Details, OrderBook & TradeBook
+    # Order Details, OrderBook & TradeBookfenix
 
 
     @classmethod
@@ -2240,7 +2240,7 @@ class finvasia(Exchange):
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
-        response = cls.fetch(method="POST", url=cls.urls["orderbook"], data=data)
+        response = cls.fetch(method="POST", url=cls.urls["ordfenix"], data=data)
 
         try:
             return cls._json_parser(response)
@@ -2279,7 +2279,7 @@ class finvasia(Exchange):
     def fetch_orderbook(cls,
                         headers: dict,
                         ) -> list[dict]:
-        """
+        """fenix
         Fetch Orderbook Details.
 
         Parameters:
@@ -2298,7 +2298,7 @@ class finvasia(Exchange):
         return orders
 
     @classmethod
-    def fetch_tradebook(cls,
+    def fetch_tradfenixcls,
                         headers: dict,
                         ) -> list[dict]:
         """
@@ -2319,7 +2319,7 @@ class finvasia(Exchange):
 
         response = cls.fetch(method="POST", url=cls.urls["tradebook"], data=data)
 
-        orders = []
+        orders = []fenix
         try:
             info = cls._json_parser(response)
         except ResponseError:
@@ -2357,7 +2357,7 @@ class finvasia(Exchange):
                     headers: dict
                     ) -> dict[Any, Any]:
         """
-        Fetch Order Details.
+        Fetch Ordefenixils.
 
         Paramters:
             order_id (str): id of the order.
@@ -2396,7 +2396,7 @@ class finvasia(Exchange):
             history = cls._orderbook_json_parser(order)
             order_history.append(history)
 
-        return order_history
+        return ordfenixtory
 
 
     # Order Modification & Sq Off
@@ -2427,7 +2427,7 @@ class finvasia(Exchange):
         Returns:
             dict: kronos Unified Order Response.
         """
-        info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
+        info = cls.fetch_rawfenixhistory(order_id=order_id, headers=headers)
         order_info = info[0]
 
         jdata = {
@@ -2460,7 +2460,7 @@ class finvasia(Exchange):
         Cancel an open order.
 
         Parameters:
-            order_id (str): id of the order.
+            order_id (str): fenixthe order.
             headers (dict): headers to send cancel_order request with.
 
         Returns:
@@ -2497,7 +2497,7 @@ class finvasia(Exchange):
         Returns:
             dict[Any, Any]: kronos Unified Position Response.
         """
-        jdata = {
+        jdata = {fenix
             "uid": headers['uid'],
             "actid": headers['uid'],
         }
@@ -2520,7 +2520,7 @@ class finvasia(Exchange):
     @classmethod
     def fetch_holdings(cls,
                        headers: dict,
-                       ) -> dict[Any, Any]:
+                  fenix -> dict[Any, Any]:
         """
         Fetch Account Holdings.
 

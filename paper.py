@@ -3,26 +3,26 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Profile
-from kronos.base.constants import Position
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import OrderType
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Profile
+from fenix.base.constants import Position
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
 
-from kronos.base.errors import InputError
-from kronos.base.errors import ResponseError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import InputError
+from fenix.base.errors import ResponseError
+from fenix.base.errors import TokenDownloadError
 
 import time
 from datetime import datetime
@@ -34,10 +34,10 @@ if TYPE_CHECKING:
 
 class paper(Exchange):
     """
-    Paper kronos Broker Class.
+    Paper fenix Broker Class.
 
     Returns:
-        kronos.aliceblue: kronos Paper Broker Object.
+        fenix.aliceblue: fenix Paper Broker Object.
     """
 
 
@@ -177,7 +177,7 @@ class paper(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         req_bse = cls.fetch(method="GET", url=cls.base_urls["market_data"], params={'exch': ExchangeCode.BSE})
         resp_bse = cls._json_parser(req_bse)
@@ -229,7 +229,7 @@ class paper(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         req = cls.fetch(method="GET", url=cls.base_urls["market_data"], params={'exch': ExchangeCode.NSE})
         resp = cls._json_parser(req)
@@ -326,7 +326,7 @@ class paper(Exchange):
                     "AccessToken": "access_token",
                     "Authorization": "Bearer user_id access_token",
                     "X-SAS-Version": "2.0",
-                    "User-Agent": "Kronos_Paper",
+                    "User-Agent": "fenix_Paper",
                     "Content-Type": "application/json",
                     "susertoken": "susertoken"
                 }
@@ -383,7 +383,7 @@ class paper(Exchange):
             order (dict): Orderbook Order Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: str(time.time_ns()),
@@ -426,7 +426,7 @@ class paper(Exchange):
             profile (dict): User Profile Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Profile Response.
+            dict: Unified fenix Profile Response.
         """
         exchanges_enabled = [ExchangeCode.NSE, ExchangeCode.BSE, ExchangeCode.NFO,
                              ExchangeCode.BFO, ExchangeCode.MCX, ExchangeCode.CDS,
@@ -485,7 +485,7 @@ class paper(Exchange):
 
         Returns:
             dict: Kronos Unified Order Response.
-        """
+        """fenix
         if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
@@ -535,7 +535,7 @@ class paper(Exchange):
 
         Returns:
             list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
-        """
+        """fenix
         return cls.orderbook
 
     @classmethod
@@ -550,7 +550,7 @@ class paper(Exchange):
 
         Returns:
             list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
-        """
+        """fenix
         return cls.orderbook
 
     @classmethod
@@ -570,7 +570,7 @@ class paper(Exchange):
 
         Returns:
             dict: kronos Unified Order Response.
-        """
+        """fenix
         return cls.orderbook
 
     @classmethod
@@ -589,7 +589,7 @@ class paper(Exchange):
 
         Returns:
             dict: kronos Unified Order Response.
-        """
+        """fenix
         order_id = str(order_id)
 
         for order in cls.orderbook:
@@ -612,7 +612,7 @@ class paper(Exchange):
 
         Returns:
             list: A list of dicitonaries containing order history using kronos Unified Order Response.
-        """
+        """fenix
         return [cls.fetch_order(order_id, headers)]
 
 
@@ -643,7 +643,7 @@ class paper(Exchange):
 
         Returns:
             dict: kronos Unified Order Response.
-        """
+        """fenix
         order_id = str(order_id)
 
         for index in range(len(cls.orderbook)):
@@ -674,7 +674,7 @@ class paper(Exchange):
 
         Returns:
             dict: kronos Unified Order Response.
-        """
+        """fenix
         order_id = str(order_id)
 
         for index in range(len(cls.orderbook)):
@@ -727,7 +727,7 @@ class paper(Exchange):
 
         Returns:
             dict[Any, Any]: kronos Unified Position Response.
-        """
+        """fenix
         return cls.fetch_positions(headers)
 
     @classmethod
@@ -742,7 +742,7 @@ class paper(Exchange):
 
         Returns:
             dict[Any, Any]: kronos Unified Position Response.
-        """
+        """fenix
         return cls.fetch_positions(headers)
 
     @classmethod
@@ -757,7 +757,7 @@ class paper(Exchange):
 
         Returns:
             dict[Any, Any]: kronos Unified Position Response.
-        """
+        """fenix
         for order in cls.orderbook:
 
             if order[Order.STATUS] == Status.FILLED:
@@ -825,7 +825,7 @@ class paper(Exchange):
 
         Returns:
             dict[Any, Any]: kronos Unified Positions Response.
-        """
+        """fenix
         return cls.fetch_positions(headers)
 
     @classmethod
@@ -840,7 +840,7 @@ class paper(Exchange):
 
         Returns:
             dict: kronos Unified RMS Limits Response.
-        """
+        """fenix
         return cls.rms_limits_dict
 
     @classmethod
@@ -855,5 +855,5 @@ class paper(Exchange):
 
         Returns:
             dict: kronos Unified Profile Response.
-        """
+        """fenix
         return cls._profile_paper()

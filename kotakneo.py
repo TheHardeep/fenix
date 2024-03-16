@@ -5,24 +5,24 @@ from typing import Any
 import jwt
 import base64
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import OrderType
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
-from kronos.base.errors import BrokerError
-from kronos.base.errors import InputError
-from kronos.base.errors import ResponseError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import BrokerError
+from fenix.base.errors import InputError
+from fenix.base.errors import ResponseError
+from fenix.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -31,10 +31,10 @@ if TYPE_CHECKING:
 
 class kotakneo(Exchange):
     """
-    Kotak Neo kronos Broker Class.
+    Kotak Neo fenix Broker Class.
 
     Returns:
-        kronos.kotakneo: kronos Kotak Neo Broker Object.
+        fenix.kotakneo: fenix Kotak Neo Broker Object.
     """
 
 
@@ -186,7 +186,7 @@ class kotakneo(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         final_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
                                                          ).replace("<exchange>", cls.req_exchange[ExchangeCode.BSE])
@@ -229,7 +229,7 @@ class kotakneo(Exchange):
         Stores them in the kotakneo.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         final_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
                                                          ).replace("<exchange>", cls.req_exchange[ExchangeCode.NSE])
@@ -437,13 +437,13 @@ class kotakneo(Exchange):
                                   order: dict,
                                   ) -> dict[Any, Any]:
         """
-        Parses Order History Json Response to a kronos Unified Order Response.
+        Parses Order History Json Response to a fenix Unified Order Response.
 
         Parameters:
             order (dict): Order History Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: order["nOrdNo"],
@@ -487,7 +487,7 @@ class kotakneo(Exchange):
             order (dict): Orderbook Order Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: order["nOrdNo"],
@@ -534,7 +534,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send order request with.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         info = cls._json_parser(response)
 
@@ -576,7 +576,7 @@ class kotakneo(Exchange):
             unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not price and trigger:
             order_type = OrderType.SLM
@@ -657,7 +657,7 @@ class kotakneo(Exchange):
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not price and trigger:
             order_type = OrderType.SLM
@@ -733,7 +733,7 @@ class kotakneo(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not target:
             order_data = {
@@ -802,7 +802,7 @@ class kotakneo(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not target:
             order_data = {
@@ -873,7 +873,7 @@ class kotakneo(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not target:
             order_data = {
@@ -942,7 +942,7 @@ class kotakneo(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not target:
             order_data = {
@@ -1016,7 +1016,7 @@ class kotakneo(Exchange):
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.eq_tokens:
             cls.create_eq_tokens()
@@ -1097,7 +1097,7 @@ class kotakneo(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.eq_tokens:
             cls.create_eq_tokens()
@@ -1171,7 +1171,7 @@ class kotakneo(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.eq_tokens:
             cls.create_eq_tokens()
@@ -1247,7 +1247,7 @@ class kotakneo(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.eq_tokens:
             cls.create_eq_tokens()
@@ -1321,7 +1321,7 @@ class kotakneo(Exchange):
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not target:
             order_data = {
@@ -1398,7 +1398,7 @@ class kotakneo(Exchange):
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1484,7 +1484,7 @@ class kotakneo(Exchange):
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1561,7 +1561,7 @@ class kotakneo(Exchange):
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1640,7 +1640,7 @@ class kotakneo(Exchange):
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1717,7 +1717,7 @@ class kotakneo(Exchange):
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1828,7 +1828,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
+            list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
         """
         info = cls.fetch_raw_orderbook(headers=headers)
 
@@ -1850,7 +1850,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
+            list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
         """
         params = {"sId": headers["sId"]}
         response = cls.fetch(method="GET", url=cls.urls["tradebook"],
@@ -1875,7 +1875,7 @@ class kotakneo(Exchange):
             InputError: If order does not exist.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         return cls.fetch_orderbook(headers=headers)
 
@@ -1894,7 +1894,7 @@ class kotakneo(Exchange):
             InputError: If order does not exist.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
         order = info["data"][0]
@@ -1913,7 +1913,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send orderhistory request with.
 
         Returns:
-            list: A list of dicitonaries containing order history using kronos Unified Order Response.
+            list: A list of dicitonaries containing order history using fenix Unified Order Response.
         """
         info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
 
@@ -1951,7 +1951,7 @@ class kotakneo(Exchange):
             validity (str | None, optional): Order validity Defaults to None.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         order_history = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
         order_info = order_history["data"][0]
@@ -1996,7 +1996,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send cancel_order request with.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
 
@@ -2034,7 +2034,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
+            dict[Any, Any]: fenix Unified Position Response.
         """
         params = {"sId": headers["sId"]}
         response = cls.fetch(method="GET", url=cls.urls["positions"],
@@ -2057,7 +2057,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
+            dict[Any, Any]: fenix Unified Position Response.
         """
         return cls.fetch_day_positions(headers=headers)
 
@@ -2072,7 +2072,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
+            dict[Any, Any]: fenix Unified Position Response.
         """
         return cls.fetch_day_positions(headers=headers)
 
@@ -2087,7 +2087,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Positions Response.
+            dict[Any, Any]: fenix Unified Positions Response.
         """
         params = {'alt': 'false'}
         response = cls.fetch(method="GET", url=cls.urls['holdings'],
@@ -2109,7 +2109,7 @@ class kotakneo(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict: kronos Unified RMS Limits Response.
+            dict: fenix Unified RMS Limits Response.
         """
         params = {"sId": headers["sId"]}
         data = {"jData": "{'seg':'CASH','exch':'NSE','prod':'ALL'}"}

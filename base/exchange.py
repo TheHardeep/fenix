@@ -24,14 +24,14 @@ from requests.exceptions import TooManyRedirects
 from requests.exceptions import RequestException
 from requests.exceptions import ConnectionError as requestsConnectionError
 
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
 
-from kronos.base.errors import InputError
-from kronos.base.errors import ResponseError
-from kronos.base.errors import RequestTimeout
-from kronos.base.errors import NetworkError
-from kronos.base.errors import BrokerError
+from fenix.base.errors import InputError
+from fenix.base.errors import ResponseError
+from fenix.base.errors import RequestTimeout
+from fenix.base.errors import NetworkError
+from fenix.base.errors import BrokerError
 
 options.mode.chained_assignment = None
 
@@ -52,7 +52,7 @@ class Exchange:
     _session = None
 
     def __repr__(self):
-        return f"kronos.{self.id}()"
+        return f"fenix.{self.id}()"
 
     @staticmethod
     def _create_session():
@@ -414,7 +414,7 @@ class Exchange:
     @staticmethod
     def jsonify_expiry(data_frame: DataFrame) -> dict[Any, Any]:
         """
-        Creates a kronos Unified Dicitonary for BankNifty & Nifty Options,
+        Creates a fenix Unified Dicitonary for BankNifty & Nifty Options,
         in the following Format:
 
             Global[expiry][root][option][strikeprice]
@@ -451,7 +451,7 @@ class Exchange:
             }
 
         Parameters:
-            data_frame (DataFrame): DataFrame to Convert to kronos Unified Expiry Dictionary
+            data_frame (DataFrame): DataFrame to Convert to fenix Unified Expiry Dictionary
 
         Returns:
             dict[Any, Any]: Dictioanry With 3 Most Recent Expiries for Both BankNifty & Nifty.

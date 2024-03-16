@@ -2,22 +2,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
 
-from kronos.base.errors import InputError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import InputError
+from fenix.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -25,10 +25,10 @@ if TYPE_CHECKING:
 
 class kotak(Exchange):
     """
-    AliceBlue kronos Broker Class.
+    AliceBlue fenix Broker Class.
 
     Returns:
-        kronos.kotak: kronos AliceBlue Broker Object.
+        fenix.kotak: fenix AliceBlue Broker Object.
     """
 
 
@@ -159,7 +159,7 @@ class kotak(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         date_obj = cls.data_datetime()
         link = f"{cls.base_urls['market_data']}/TradeApiInstruments_Cash_{date_obj}.txt"
@@ -195,7 +195,7 @@ class kotak(Exchange):
         Stores them in the kotak.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         date_obj = cls.data_datetime()
         link = f"{cls.base_urls['market_data']}/TradeApiInstruments_Cash_{date_obj}.txt"
@@ -376,7 +376,7 @@ class kotak(Exchange):
             order (dict): Orderbook Order Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: order["orderId"],
@@ -417,7 +417,7 @@ class kotak(Exchange):
             order (dict): Orderbook Order Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: order['exchOrderId'],
@@ -460,7 +460,7 @@ class kotak(Exchange):
             headers (dict): headers to send order request with.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         info = cls._json_parser(response)
 
@@ -886,7 +886,7 @@ class kotak(Exchange):
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
+            list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
         """
         info = cls.fetch_raw_orderbook(headers=headers)
 
@@ -908,7 +908,7 @@ class kotak(Exchange):
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
+            list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
         """
         response = cls.fetch(method="GET", url=cls.fetch_trade_book_url, headers=headers["headers"])
         info = cls._json_parser(response)
@@ -937,7 +937,7 @@ class kotak(Exchange):
             InputError: If order does not exist.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         return cls.fetch_orderbook(headers=headers)
 
@@ -956,7 +956,7 @@ class kotak(Exchange):
             InputError: If order does not exist.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         order_id = str(order_id)
         info = cls.fetch_raw_orderbook(headers=headers)
@@ -983,7 +983,7 @@ class kotak(Exchange):
             InputError: If order does not exist.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         final_url = f"{cls.fetch_trade_book_url}/{order_id}"
 
@@ -1012,7 +1012,7 @@ class kotak(Exchange):
             headers (dict): headers to send cancel_order request with.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         final_url = f"{cls.order_cancel_url}/{order_id}"
 

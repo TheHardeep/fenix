@@ -1,12 +1,12 @@
-from kronos.symphony import symphony
+from fenix.symphony import symphony
 
 
 class kunjee(symphony):
     """
-    Kunjee kronos Broker Class
+    Kunjee fenix Broker Class
 
     Returns:
-        kronos.kunjee: kronos Kunjee Broker Object
+        fenix.kunjee: fenix Kunjee Broker Object
     """
 
 

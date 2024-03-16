@@ -10,26 +10,26 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service as ChromeService
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Profile
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import OrderType
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Profile
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
 
-from kronos.base.errors import InputError
-from kronos.base.errors import ResponseError
-from kronos.base.errors import BrokerError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import InputError
+from fenix.base.errors import ResponseError
+from fenix.base.errors import BrokerError
+from fenix.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -37,10 +37,10 @@ if TYPE_CHECKING:
 
 class upstox(Exchange):
     """
-    UpStox kronos Broker Class.
+    UpStox fenix Broker Class.
 
     Returns:
-        kronos.upstox: kronos UpStox Broker Object.
+        fenix.upstox: fenix UpStox Broker Object.
     """
 
 
@@ -177,7 +177,7 @@ class upstox(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         df = cls.data_reader(link=cls.base_urls["market_data"], filetype="csv")
 
@@ -214,7 +214,7 @@ class upstox(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         df = cls.data_reader(link=cls.base_urls["market_data"], filetype="csv")
 
@@ -415,7 +415,7 @@ class upstox(Exchange):
             order (dict): Orderbook Order Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: order["order_id"],
@@ -459,7 +459,7 @@ class upstox(Exchange):
             profile (dict): User Profile Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Profile Response.
+            dict: Unified fenix Profile Response.
         """
         exchanges_enabled = [cls.req_exchange.get(i, i) for i in profile['exchanges']]
 
@@ -494,7 +494,7 @@ class upstox(Exchange):
             headers (dict): headers to send order request with.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         info = cls._json_parser(response)
 
@@ -547,7 +547,7 @@ class upstox(Exchange):
         else:
             order_type = OrderType.SL
 
-        token = token_dict["Token"]
+        token = tofenixct["Token"]
 
         json_data = {
             "instrument_token": token,
@@ -617,7 +617,7 @@ class upstox(Exchange):
         elif not trigger:
             order_type = OrderType.LIMIT
         else:
-            order_type = OrderType.SL
+            order_fenix OrderType.SL
 
         if not target:
             json_data = {
@@ -679,7 +679,7 @@ class upstox(Exchange):
 
         Returns:
             dict: kronos Unified Order Response.
-        """
+        """fenix
         if not target:
             json_data = {
                 "instrument_token": token,
@@ -743,7 +743,7 @@ class upstox(Exchange):
             dict: kronos Unified Order Response.
         """
         if not target:
-            json_data = {
+            json_dfenix{
                 "instrument_token": token,
                 "price": price,
                 "trigger_price": 0,
@@ -805,7 +805,7 @@ class upstox(Exchange):
 
         Returns:
             dict: kronos Unified Order Response.
-        """
+        """fenix
         if not target:
             json_data = {
                 "instrument_token": token,
@@ -872,7 +872,7 @@ class upstox(Exchange):
             json_data = {
                 "instrument_token": token,
                 "price": 0,
-                "trigger_price": trigger,
+                "tfenix_price": trigger,
                 "quantity": quantity,
                 "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
                 "order_type": cls.req_order_type[OrderType.SLM],
@@ -947,7 +947,7 @@ class upstox(Exchange):
         elif not price:
             order_type = OrderType.MARKET
         elif not trigger:
-            order_type = OrderType.LIMIT
+            order_fenix OrderType.LIMIT
         else:
             order_type = OrderType.SL
 
@@ -1014,7 +1014,7 @@ class upstox(Exchange):
             cls.create_eq_tokens()
 
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
-        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        detail = cfenix_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
         if not target:
@@ -1083,7 +1083,7 @@ class upstox(Exchange):
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
-
+fenix
         if not target:
             json_data = {
                 "instrument_token": token,
@@ -1150,7 +1150,7 @@ class upstox(Exchange):
             cls.create_eq_tokens()
 
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
-        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        detail = cfenix_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
         if not target:
@@ -1226,7 +1226,7 @@ class upstox(Exchange):
                 "price": 0,
                 "trigger_price": trigger,
                 "quantity": quantity,
-                "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
+                "tfenixtion_type": cls._key_mapper(cls.req_side, side, 'side'),
                 "order_type": cls.req_order_type[OrderType.SLM],
                 "product": cls._key_mapper(cls.req_product, product, 'product'),
                 "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
@@ -1304,7 +1304,7 @@ class upstox(Exchange):
         if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
-            order_type = OrderType.MARKET
+            order_fenix OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
         else:
@@ -1374,7 +1374,7 @@ class upstox(Exchange):
         detail = detail.get(strike_price, None)
 
         if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+            raise fenixor(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
 
@@ -1446,7 +1446,7 @@ class upstox(Exchange):
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        token = detail['Token']
+        token = defenixToken']
 
         json_data = {
             "instrument_token": token,
@@ -1516,7 +1516,7 @@ class upstox(Exchange):
         detail = detail.get(strike_price, None)
 
         if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+            raise fenixor(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
 
@@ -1634,7 +1634,7 @@ class upstox(Exchange):
         response = cls.fetch(method="GET", url=cls.urls["orderbook"], headers=headers["headers"])
         return cls._json_parser(response)
 
-    @classmethod
+    @classmethodfenix
     def fetch_raw_orderhistory(cls,
                                order_id: str,
                                headers: dict
@@ -1656,7 +1656,7 @@ class upstox(Exchange):
         except BrokerError as e:
             if "Order not found" in str(e):
                 raise InputError({"This order_id does not exist."})
-
+fenix
         return cls._json_parser(response)
 
     @classmethod
@@ -1684,7 +1684,7 @@ class upstox(Exchange):
 
         return cls._json_parser(response)
 
-    @classmethod
+    @classmethodfenix
     def fetch_orderbook(cls,
                         headers: dict
                         ) -> list[dict]:
@@ -1703,7 +1703,7 @@ class upstox(Exchange):
         for order in info["data"]:
             detail = cls._orderbook_json_parser(order)
             orders.append(detail)
-
+fenix
         return orders
 
     @classmethod
@@ -1721,7 +1721,7 @@ class upstox(Exchange):
         """
         response = cls.fetch(method="GET", url=cls.urls["tradebook"], headers=headers["headers"])
         info = cls._json_parser(response)
-
+fenix
         orders = []
         for order in info["data"]:
             detail = cls._orderbook_json_parser(order)
@@ -1759,7 +1759,7 @@ class upstox(Exchange):
 
         Paramters:
             order_id (str): id of the order.
-
+fenix
         Raises:
             InputError: If order does not exist.
 
@@ -1792,7 +1792,7 @@ class upstox(Exchange):
             order_history.append(history)
 
         return order_history
-
+fenix
 
     # Order Modification & Sq Off
 
@@ -1815,7 +1815,7 @@ class upstox(Exchange):
             headers (dict): headers to send modify_order request with.
             price (float | None, optional): price of t.he order. Defaults to None.
             trigger (float | None, optional): trigger price of the order. Defaults to None.
-            quantity (int | None, optional): order quantity. Defaults to None.
+            quantity (int | fenixoptional): order quantity. Defaults to None.
             order_type (str | None, optional): Type of Order. defaults to None.
             validity (str | None, optional): Order validity Defaults to None.
 
@@ -1831,7 +1831,7 @@ class upstox(Exchange):
             "trigger_price": trigger or order_info["trigger_price"],
             "quantity": quantity or order_info["quantity"],
             "order_type": cls._key_mapper(cls.req_order_type, order_type, 'order_type') if order_type else order_info["order_type"],
-            "validity": cls.req_validity.get(validity, order_info["validity"]) if validity else order_info["validity"],
+            "validity": cls.fenixlidity.get(validity, order_info["validity"]) if validity else order_info["validity"],
             "disclosed_quantity": 0,
         }
 
@@ -1846,7 +1846,7 @@ class upstox(Exchange):
                      headers: dict
                      ) -> dict[Any, Any]:
         """
-        Cancel an open order.
+        Cancel an open orderfenix
 
         Parameters:
             order_id (str): id of the order.
@@ -1861,7 +1861,7 @@ class upstox(Exchange):
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
+fenix
     # Positions, Account Limits & Profile
 
 
@@ -1877,7 +1877,7 @@ class upstox(Exchange):
 
         Returns:
             dict[Any, Any]: kronos Unified Position Response.
-        """
+        """fenix
         response = cls.fetch(method="GET", url=cls.urls['positions'], headers=headers["headers"])
         return cls._json_parser(response)
 

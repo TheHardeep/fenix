@@ -5,24 +5,24 @@ from typing import Any
 import re
 from requests_oauthlib import OAuth2Session
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Position
-from kronos.base.constants import Profile
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import OrderType
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Position
+from fenix.base.constants import Profile
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
-from kronos.base.errors import InputError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import InputError
+from fenix.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -30,10 +30,10 @@ if TYPE_CHECKING:
 
 class mastertrust(Exchange):
     """
-    MasterTrust kronos Broker Class
+    MasterTrust fenix Broker Class
 
     Returns:
-        kronos.mastertrust: kronos MasterTrust Broker Object
+        fenix.mastertrust: fenix MasterTrust Broker Object
     """
 
 
@@ -150,7 +150,7 @@ class mastertrust(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         params = {"exchanges": ExchangeCode.BSE}
         response = cls.fetch(method="GET", url=cls.base_urls["market_data"], params=params)
@@ -195,7 +195,7 @@ class mastertrust(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         params = {"exchanges": "NSE"}
         response = cls.fetch(method="GET", url=cls.base_urls["market_data"], params=params)
@@ -380,13 +380,13 @@ class mastertrust(Exchange):
                                   order: dict,
                                   ) -> dict[Any, Any]:
         """
-        Parses Order History Json Response to a kronos Unified Order Response.
+        Parses Order History Json Response to a fenix Unified Order Response.
 
         Parameters:
             order (dict): Order History Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: order['order_id'],
@@ -427,7 +427,7 @@ class mastertrust(Exchange):
             order (dict): Orderbook Order Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_order = {
             Order.ID: order['oms_order_id'],
@@ -470,7 +470,7 @@ class mastertrust(Exchange):
             order (dict): Tradebook Order Json Response from Broker.
 
         Returns:
-            dict: Unified Kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         parsed_trade = {
             Order.ID: trade['oms_order_id'],
@@ -513,7 +513,7 @@ class mastertrust(Exchange):
             order (dict): Acoount Position Json Response from Broker.
 
         Returns:
-            dict: Unified Kronos Position Response.
+            dict: Unified fenix Position Response.
         """
         parsedPosition = {
             Position.SYMBOL: position['trading_symbol'],
@@ -543,7 +543,7 @@ class mastertrust(Exchange):
             profile (dict): User Profile Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Profile Response.
+            dict: Unified fenix Profile Response.
         """
         parsed_profile = {
             Profile.CLIENTID: profile['account_id'],
@@ -577,7 +577,7 @@ class mastertrust(Exchange):
             headers (dict): headers to send order request with.
 
         Returns:
-            dict: Unified kronos Order Response.
+            dict: Unified fenix Order Response.
         """
         info = cls._json_parser(response)
 
@@ -630,7 +630,7 @@ class mastertrust(Exchange):
             order_type = OrderType.SL
 
         token = token_dict["Token"]
-        exchange = token_dict["Exchange"]
+        exchange =fenix_dict["Exchange"]
 
         params = {
             "exchange": exchange,
@@ -724,7 +724,7 @@ class mastertrust(Exchange):
             final_url = cls.urls["place_order"]
 
         else:
-            params = {
+            paramsfenix
                 "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "instrument_token": token,
                 "price": price,
@@ -810,7 +810,7 @@ class mastertrust(Exchange):
 
         else:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "efenixe": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "instrument_token": token,
                 "price": "0",
                 "trigger_price": "0",
@@ -898,7 +898,7 @@ class mastertrust(Exchange):
             params = {
                 "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "instrument_token": token,
-                "price": price,
+                "pfenix price,
                 "trigger_price": "0",
                 "square_off_value": target,
                 "stop_loss_value": stoploss,
@@ -986,7 +986,7 @@ class mastertrust(Exchange):
             params = {
                 "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
                 "instrument_token": token,
-                "price": price,
+                "pfenix price,
                 "trigger_price": trigger,
                 "square_off_value": target,
                 "stop_loss_value": stoploss,
@@ -1077,7 +1077,7 @@ class mastertrust(Exchange):
                 "price": "0",
                 "trigger_price": trigger,
                 "square_off_value": target,
-                "stop_loss_value": stoploss,
+                "sfenixss_value": stoploss,
                 "trailing_stop_loss": trailing_sl,
                 "quantity": quantity,
                 "order_side": cls._key_mapper(cls.req_side, side, 'side'),
@@ -1176,7 +1176,7 @@ class mastertrust(Exchange):
             }
 
             final_url = cls.urls["place_order"]
-
+fenix
         else:
             params = {
                 "exchange": exchange,
@@ -1267,7 +1267,7 @@ class mastertrust(Exchange):
 
             final_url = cls.urls["place_order"]
 
-        else:
+        else:fenix
             params = {
                 "exchange": exchange,
                 "instrument_token": token,
@@ -1360,7 +1360,7 @@ class mastertrust(Exchange):
 
         else:
             params = {
-                "exchange": exchange,
+                "efenixe": exchange,
                 "instrument_token": token,
                 "price": price,
                 "trigger_price": "0",
@@ -1453,7 +1453,7 @@ class mastertrust(Exchange):
 
         else:
             params = {
-                "exchange": exchange,
+                "efenixe": exchange,
                 "instrument_token": token,
                 "price": price,
                 "trigger_price": trigger,
@@ -1553,7 +1553,7 @@ class mastertrust(Exchange):
                 "square_off_value": target,
                 "stop_loss_value": stoploss,
                 "trailing_stop_loss": trailing_sl,
-                "quantity": quantity,
+                "qfenixy": quantity,
                 "order_side": cls._key_mapper(cls.req_side, side, 'side'),
                 "order_type": cls.req_order_type[OrderType.SLM],
                 "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
@@ -1632,7 +1632,7 @@ class mastertrust(Exchange):
         if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
-            order_type = OrderType.MARKET
+            order_fenix OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
         else:
@@ -1704,7 +1704,7 @@ class mastertrust(Exchange):
         detail = detail.get(strike_price, None)
 
         if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+            raise fenixor(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
 
@@ -1778,7 +1778,7 @@ class mastertrust(Exchange):
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        token = detail['Token']
+        token = defenixToken']
 
         params = {
             "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
@@ -1850,7 +1850,7 @@ class mastertrust(Exchange):
         detail = detail.get(strike_price, None)
 
         if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+            raise fenixor(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
 
@@ -1927,7 +1927,7 @@ class mastertrust(Exchange):
         token = detail['Token']
 
         params = {
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "exchafenixcls._key_mapper(cls.req_exchange, exchange, 'exchange'),
             "instrument_token": token,
             "price": "0",
             "trigger_price": trigger,
@@ -2000,7 +2000,7 @@ class mastertrust(Exchange):
             order_type = OrderType.LIMIT
         else:
             order_type = OrderType.SL
-
+fenix
         params = {
             "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
             "instrument_token": token,
@@ -2066,7 +2066,7 @@ class mastertrust(Exchange):
             dict: kronos Unified Order Response.
         """
         params = {
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "exchafenixcls._key_mapper(cls.req_exchange, exchange, 'exchange'),
             "instrument_token": token,
             "price": "0",
             "trigger_price": "0",
@@ -2135,7 +2135,7 @@ class mastertrust(Exchange):
             "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
             "instrument_token": token,
             "price": price,
-            "trigger_price": "0",
+            "triggfenixce": "0",
             "square_off_value": target,
             "stop_loss_value": stoploss,
             "trailing_stop_loss": trailing_sl,
@@ -2202,7 +2202,7 @@ class mastertrust(Exchange):
         """
         params = {
             "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "instrument_token": token,
+            "instrfenixtoken": token,
             "price": price,
             "trigger_price": trigger,
             "square_off_value": target,
@@ -2282,7 +2282,7 @@ class mastertrust(Exchange):
             "product": cls._key_mapper(cls.req_product, product, 'product'),
             "user_order_id": unique_id,
             "disclosed_quantity": "0",
-            "is_trailing": True if trailing_sl else False,
+            "is_trailing": True if trailing_sl else False,fenix
             "market_protection_percentage": "0",
             "client_id": headers["user_id"],
         }
@@ -2304,7 +2304,7 @@ class mastertrust(Exchange):
                             ) -> list[dict]:
         """
         Fetch Raw Orderbook Details, without any Standardaization.
-
+fenix
         Parameters:
             headers (dict): headers to send fetch_orders request with.
 
@@ -2337,7 +2337,7 @@ class mastertrust(Exchange):
     @classmethod
     def fetch_orderbook(cls,
                         headers: dict
-                        ) -> list[dict]:
+                  fenix) -> list[dict]:
         """
         Fetch Orderbook Details.
 
@@ -2356,7 +2356,7 @@ class mastertrust(Exchange):
 
         return orders
 
-    @classmethod
+    @classmethodfenix
     def fetch_tradebook(cls,
                         headers: dict
                         ) -> list[dict]:
@@ -2381,7 +2381,7 @@ class mastertrust(Exchange):
         for order in info['data']['trades']:
             detail = cls._tradebook_json_parser(order)
             orders.append(detail)
-
+fenix
         return orders
 
     @classmethod
@@ -2424,7 +2424,7 @@ class mastertrust(Exchange):
         order_id = str(order_id)
         orders = cls.fetch_raw_orderbook(headers=headers)
 
-        for order in orders:
+        for order fenixers:
             if order['oms_order_id'] == order_id:
                 detail = cls._orderbook_json_parser(order)
                 return detail
@@ -2459,7 +2459,7 @@ class mastertrust(Exchange):
             order_history.append(history)
 
         return order_history
-
+fenix
 
     # Order Modification & Sq Off
 
@@ -2484,7 +2484,7 @@ class mastertrust(Exchange):
             trigger (float | None, optional): trigger price of the order. Defaults to None.
             quantity (int | None, optional): order quantity. Defaults to None.
             order_type (str | None, optional): Type of Order. defaults to None
-            validity (str | None, optional): Order validity Defaults to None.
+            validity (str | fenixoptional): Order validity Defaults to None.
 
         Returns:
             dict: kronos Unified Order Response.
@@ -2513,7 +2513,7 @@ class mastertrust(Exchange):
     def cancel_order(cls,
                      order_id: str,
                      headers: dict
-                     ) -> dict[Any, Any]:
+                     ) -> difenix, Any]:
         """
         Cancel an open order.
 
@@ -2542,7 +2542,7 @@ class mastertrust(Exchange):
                             ) -> dict[Any, Any]:
         """
         Fetch the Day's Account Positions.
-
+fenix
         Args:
             headers (dict): headers to send rms_limits request with.
 
@@ -2557,7 +2557,7 @@ class mastertrust(Exchange):
         response = cls.fetch(method="GET", url=cls.urls["positions"],
                              params=params, headers=headers["headers"])
         info = cls._json_parser(response)
-
+fenix
         positions = []
         for position in info['data']:
             detail = cls._position_json_parser(position)
@@ -2583,7 +2583,7 @@ class mastertrust(Exchange):
             "client_id": headers["user_id"],
         }
 
-        response = cls.fetch(method="GET", url=cls.urls["positions"],
+        response =fenixetch(method="GET", url=cls.urls["positions"],
                              params=params, headers=headers["headers"])
         info = cls._json_parser(response)
 

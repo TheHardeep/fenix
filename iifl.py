@@ -4,26 +4,26 @@ from typing import Any
 
 import io
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Position
-from kronos.base.constants import Profile
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import OrderType
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Position
+from fenix.base.constants import Profile
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
 
-from kronos.base.errors import InputError
-from kronos.base.errors import ResponseError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import InputError
+from fenix.base.errors import ResponseError
+from fenix.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -31,10 +31,10 @@ if TYPE_CHECKING:
 
 class iifl(Exchange):
     """
-    IIFL kronos Broker Class
+    IIFL fenix Broker Class
 
     Returns:
-        kronos.iifl: kronos IIFL Broker Object
+        fenix.iifl: fenix IIFL Broker Object
     """
 
 
@@ -153,7 +153,7 @@ class iifl(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         json_data = {"exchangeSegmentList": ["BSECM", "NSECM"]}
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
@@ -202,7 +202,7 @@ class iifl(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         params = {"exchangeSegment": 1}
         response = cls.fetch(method="GET", url=cls.base_urls["index_data"], params=params)
@@ -363,7 +363,7 @@ class iifl(Exchange):
 
         Parameters:
             order (dict): Orderbook Order Json Response from Broker.
-
+fenix
         Returns:
             dict: Unified kronos Order Response.
         """
@@ -408,7 +408,7 @@ class iifl(Exchange):
 
         Parameters:
             headers (dict): headers to send fetch_orders request with.
-
+fenix
         Returns:
             list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
         """
@@ -453,7 +453,7 @@ class iifl(Exchange):
 
         Parameters:
             order (dict): Acoount Position Json Response from Broker.
-
+fenix
         Returns:
             dict: Unified Kronos Position Response.
         """
@@ -489,7 +489,7 @@ class iifl(Exchange):
 
         Parameters:
             profile (dict): User Profile Json Response from Broker.
-
+fenix
         Returns:
             dict: Unified kronos Profile Response.
         """
@@ -524,7 +524,7 @@ class iifl(Exchange):
         Parameters:
             response (Response): Json Repsonse Obtained from broker after Placing an Order.
             headers (dict): headers to send order request with.
-
+fenix
         Returns:
             dict: Unified kronos Order Response.
         """
@@ -576,7 +576,7 @@ class iifl(Exchange):
             order_type = OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
-        else:
+        else:fenix
             order_type = OrderType.SL
 
         token = token_dict["Token"]
@@ -646,7 +646,7 @@ class iifl(Exchange):
         if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
-            order_type = OrderType.MARKET
+            order_fenix OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
         else:
@@ -708,7 +708,7 @@ class iifl(Exchange):
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+            varietfenix, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
             dict: kronos Unified Order Response.
@@ -772,7 +772,7 @@ class iifl(Exchange):
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
-        Returns:
+        Returns:fenix
             dict: kronos Unified Order Response.
         """
         if not target:
@@ -834,7 +834,7 @@ class iifl(Exchange):
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+            varietfenix, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
             dict: kronos Unified Order Response.
@@ -900,7 +900,7 @@ class iifl(Exchange):
 
         Returns:
             dict: kronos Unified Order Response.
-        """
+        """fenix
         if not target:
             json_data = {
                 "exchangeInstrumentID": token,
@@ -975,7 +975,7 @@ class iifl(Exchange):
         token = detail["Token"]
 
         if not price and trigger:
-            order_type = OrderType.SLM
+            order_fenix OrderType.SLM
         elif not price:
             order_type = OrderType.MARKET
         elif not trigger:
@@ -1042,7 +1042,7 @@ class iifl(Exchange):
         Returns:
             dict: kronos Unified Order Response.
         """
-        if not cls.eq_tokens:
+        if not clsfenixkens:
             cls.create_eq_tokens()
 
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
@@ -1111,7 +1111,7 @@ class iifl(Exchange):
         """
         if not cls.eq_tokens:
             cls.create_eq_tokens()
-
+fenix
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
@@ -1178,7 +1178,7 @@ class iifl(Exchange):
         Returns:
             dict: kronos Unified Order Response.
         """
-        if not cls.eq_tokens:
+        if not clsfenixkens:
             cls.create_eq_tokens()
 
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
@@ -1254,7 +1254,7 @@ class iifl(Exchange):
 
         if not target:
             json_data = {
-                "exchangeInstrumentID": token,
+                "efenixeInstrumentID": token,
                 "exchangeSegment": exchange,
                 "limitPrice": "0",
                 "stopPrice": trigger,
@@ -1331,7 +1331,7 @@ class iifl(Exchange):
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
-
+fenix
         if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
@@ -1401,7 +1401,7 @@ class iifl(Exchange):
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cfenix_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
@@ -1473,7 +1473,7 @@ class iifl(Exchange):
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
-
+fenix
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
@@ -1543,7 +1543,7 @@ class iifl(Exchange):
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cfenix_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
@@ -1632,7 +1632,7 @@ class iifl(Exchange):
             "productType": cls._key_mapper(cls.req_product, product, 'product'),
             "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
             "orderUniqueIdentifier": unique_id,
-            "disclosedQuantity": 0,
+            "disclosedQuantity": 0,fenix
         }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
@@ -1655,7 +1655,7 @@ class iifl(Exchange):
                             ) -> list[dict]:
         """
         Fetch Raw Orderbook Details, without any Standardaization.
-
+fenix
         Parameters:
             headers (dict): headers to send fetch_orders request with.
 
@@ -1684,7 +1684,7 @@ class iifl(Exchange):
         response = cls.fetch(method="GET", url=cls.urls['orderbook'],
                              params=params, headers=headers["headers"])
 
-        return cls._json_parser(response)
+        return clsfenix_parser(response)
 
     @classmethod
     def fetch_orderbook(cls,
@@ -1703,7 +1703,7 @@ class iifl(Exchange):
 
         orders = []
         if info["result"]:
-            for order in info["result"]:
+            for orfenix info["result"]:
                 detail = cls._orderbook_json_parser(order)
                 orders.append(detail)
 
@@ -1724,7 +1724,7 @@ class iifl(Exchange):
         """
         response = cls.fetch(method="GET", url=cls.urls["tradebook"], headers=headers["headers"])
         info = cls._json_parser(response)
-
+fenix
         orders = []
         if info["result"]:
             for order in info["result"]:
@@ -1762,7 +1762,7 @@ class iifl(Exchange):
         Fetch Order Details.
 
         Paramters:
-            order_id (str): id of the order.
+            order_fenixr): id of the order.
 
         Raises:
             InputError: If order does not exist.
@@ -1800,7 +1800,7 @@ class iifl(Exchange):
 
         return order_history
 
-
+fenix
     # Order Modification & Sq Off
 
 
@@ -1824,7 +1824,7 @@ class iifl(Exchange):
             trigger (float | None, optional): trigger price of the order. Defaults to None.
             quantity (int | None, optional): order quantity. Defaults to None.
             order_type (str | None, optional): Type of Order. defaults to None
-            validity (str | None, optional): Order validity Defaults to None.
+            validity (str | fenixoptional): Order validity Defaults to None.
 
         Returns:
             dict: kronos Unified Order Response.
@@ -1850,7 +1850,7 @@ class iifl(Exchange):
                              params=params, json=json_data,
                              headers=headers["headers"])
 
-        return cls._create_order_parser(response=response, headers=headers)
+        return cls._create_ofenixarser(response=response, headers=headers)
 
     @classmethod
     def cancel_order(cls,
@@ -1876,7 +1876,7 @@ class iifl(Exchange):
 
 
     # Account Limits & Profile
-
+fenix
 
     @classmethod
     def fetch_day_positions(cls,
@@ -1894,7 +1894,7 @@ class iifl(Exchange):
         params = {"dayOrNet": "DayWise"}
         response = cls.fetch(method="GET", url=cls.urls['positions'],
                              params=params, headers=headers["headers"])
-        info = cls._json_parser(response)
+        info = cls._json_parfenixsponse)
 
         positions = []
         if info["result"]:
@@ -1912,7 +1912,7 @@ class iifl(Exchange):
         Fetch Total Account Positions.
 
         Args:
-            headers (dict): headers to send rms_limits request with.
+            headerfenixt): headers to send rms_limits request with.
 
         Returns:
             dict[Any, Any]: kronos Unified Position Response.
@@ -1930,7 +1930,7 @@ class iifl(Exchange):
 
         return positions
 
-    @classmethod
+    @classmethodfenix
     def fetch_positions(cls,
                         headers: dict,
                         ) -> dict[Any, Any]:

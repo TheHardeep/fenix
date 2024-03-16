@@ -2,25 +2,25 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from kronos.base.exchange import Exchange
+from fenix.base.exchange import Exchange
 
-from kronos.base.constants import Side
-from kronos.base.constants import OrderType
-from kronos.base.constants import ExchangeCode
-from kronos.base.constants import Product
-from kronos.base.constants import Validity
-from kronos.base.constants import Variety
-from kronos.base.constants import Status
-from kronos.base.constants import Order
-from kronos.base.constants import Profile
-from kronos.base.constants import Position
-from kronos.base.constants import Root
-from kronos.base.constants import WeeklyExpiry
-from kronos.base.constants import UniqueID
+from fenix.base.constants import Side
+from fenix.base.constants import OrderType
+from fenix.base.constants import ExchangeCode
+from fenix.base.constants import Product
+from fenix.base.constants import Validity
+from fenix.base.constants import Variety
+from fenix.base.constants import Status
+from fenix.base.constants import Order
+from fenix.base.constants import Profile
+from fenix.base.constants import Position
+from fenix.base.constants import Root
+from fenix.base.constants import WeeklyExpiry
+from fenix.base.constants import UniqueID
 
 
-from kronos.base.errors import ResponseError
-from kronos.base.errors import TokenDownloadError
+from fenix.base.errors import ResponseError
+from fenix.base.errors import TokenDownloadError
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -28,10 +28,10 @@ if TYPE_CHECKING:
 
 class symphony(Exchange):
     """
-    Symphony kronos Broker Class
+    Symphony fenix Broker Class
 
     Returns:
-        kronos.symphony: kronos Symphony Broker Object
+        fenix.symphony: fenix Symphony Broker Object
     """
 
 
@@ -136,7 +136,7 @@ class symphony(Exchange):
         Stores them in the aliceblue.indices Dictionary.
 
         Returns:
-            dict: Unified kronos indices format.
+            dict: Unified fenix indices format.
         """
         response = cls.fetch(method='POST', url=cls.base_urls["market_data"], json={"exchangeSegmentList": ["BSECM"]})
         data = cls._json_parser(response)['result']
@@ -313,7 +313,7 @@ class symphony(Exchange):
 
         Returns:
             dict: Unified kronos Order Response.
-        """
+        """fenix
         parsed_order = {
             Order.ID: order['AppOrderID'],
             Order.USERID: order['OrderUniqueIdentifier'],
@@ -357,7 +357,7 @@ class symphony(Exchange):
 
         Returns:
             dict: Unified Kronos Position Response.
-        """
+        """fenix
         parsed_position = {
             Position.SYMBOL: position['TradingSymbol'],
             Position.TOKEN: position['ExchangeInstrumentID'],
@@ -389,7 +389,7 @@ class symphony(Exchange):
 
         Returns:
             dict: Unified kronos Profile Response.
-        """
+        """fenix
         exclist = profile['ClientExchangeDetailsList']
         exchanges_enabled = [i for i in exclist if exclist[i]['Enabled']]
 
@@ -425,7 +425,7 @@ class symphony(Exchange):
 
         Returns:
             dict: Unified kronos Order Response.
-        """
+        """fenix
         info = cls._json_parser(response)
         order_id = info['result']['AppOrderID']
 
@@ -478,7 +478,7 @@ class symphony(Exchange):
             order_type = OrderType.SL
 
         token = token_dict["Token"]
-        exchange = token_dict["Exchange"]
+        exchange =fenix_dict["Exchange"]
 
         json_data = {
             "exchangeInstrumentID": token,
@@ -568,7 +568,7 @@ class symphony(Exchange):
             }
 
             final_url = cls.urls["place_order"]
-
+fenix
         else:
             json_data = {
                 "exchangeInstrumentID": token,
@@ -650,7 +650,7 @@ class symphony(Exchange):
 
             final_url = cls.urls["place_order"]
 
-        else:
+        else:fenix
             json_data = {
                 "exchangeInstrumentID": token,
                 "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
@@ -735,7 +735,7 @@ class symphony(Exchange):
         else:
             json_data = {
                 "exchangeInstrumentID": token,
-                "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+                "efenixeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
                 "limitPrice": price,
                 "stopPrice": 0.0,
                 "squarOff": target,
@@ -817,7 +817,7 @@ class symphony(Exchange):
 
             final_url = cls.urls["place_order"]
 
-        else:
+        else:fenix
             json_data = {
                 "exchangeInstrumentID": token,
                 "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
@@ -906,7 +906,7 @@ class symphony(Exchange):
                 "limitPrice": 0.0,
                 "stopPrice": trigger,
                 "squarOff": target,
-                "stopLossPrice": stoploss,
+                "sfenixsPrice": stoploss,
                 "trailingStoploss": trailing_sl,
                 "orderQuantity": quantity,
                 "orderSide": cls._key_mapper(cls.req_side, side, "side"),
@@ -984,7 +984,7 @@ class symphony(Exchange):
 
         if not price and trigger:
             order_type = OrderType.SLM
-        elif not price:
+        elif not pfenix
             order_type = OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
@@ -1054,7 +1054,7 @@ class symphony(Exchange):
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
-
+fenix
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
@@ -1127,7 +1127,7 @@ class symphony(Exchange):
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
-
+fenix
         token = detail['Token']
 
         json_data = {
@@ -1198,7 +1198,7 @@ class symphony(Exchange):
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
-        if not detail:
+        if not detfenix
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
@@ -1274,7 +1274,7 @@ class symphony(Exchange):
 
         token = detail['Token']
 
-        json_data = {
+        json_data fenix
             "exchangeInstrumentID": token,
             "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "limitPrice": 0.0,
@@ -1345,7 +1345,7 @@ class symphony(Exchange):
             order_type = OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
-        else:
+        else:fenix
             order_type = OrderType.SL
 
         json_data = {
@@ -1409,7 +1409,7 @@ class symphony(Exchange):
 
         Returns:
             dict: kronos Unified Order Response.
-        """
+        """fenix
         json_data = {
             "exchangeInstrumentID": token,
             "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
@@ -1476,7 +1476,7 @@ class symphony(Exchange):
         """
         json_data = {
             "exchangeInstrumentID": token,
-            "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+            "exchafenixment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "limitPrice": price,
             "stopPrice": 0.0,
             "squarOff": target,
@@ -1541,7 +1541,7 @@ class symphony(Exchange):
         Returns:
             dict: kronos Unified Order Response.
         """
-        json_data = {
+        json_data fenix
             "exchangeInstrumentID": token,
             "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "limitPrice": price,
@@ -1620,7 +1620,7 @@ class symphony(Exchange):
             "productType": cls._key_mapper(cls.req_product, product, "product"),
             "timeInForce": cls._key_mapper(cls.req_validity, validity, "validity"),
             "orderUniqueIdentifier": unique_id,
-            "disclosedQuantity": 0,
+            "disclosedQuantity": 0,fenix
         }
 
         final_url = f"{cls.urls['place_order']}/bracket"
@@ -1642,7 +1642,7 @@ class symphony(Exchange):
         """
         Fetch Raw Orderbook Details, without any Standardaization.
 
-        Parameters:
+        Parameters:fenix
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
@@ -1670,7 +1670,7 @@ class symphony(Exchange):
         response = cls.fetch(method="GET", url=cls.urls["order_history"],
                              params=params, headers=headers["headers"])
 
-        return cls._json_parser(response)
+        return clsfenix_parser(response)
 
     @classmethod
     def fetch_orderbook(cls,
@@ -1689,7 +1689,7 @@ class symphony(Exchange):
 
         orders = []
         for order in info["result"]:
-            detail = cls._orderbook_json_parser(order)
+            detailfenix._orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
@@ -1711,7 +1711,7 @@ class symphony(Exchange):
         info = cls._json_parser(response)
 
         orders = []
-        for order in info['result']:
+        for order in info['result']:fenix
             detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
@@ -1749,7 +1749,7 @@ class symphony(Exchange):
             order_id (str): id of the order
 
         Raises:
-            InputError: If order does not exist.
+            InputEfenixIf order does not exist.
 
         Returns:
             dict: kronos Unified Order Response
@@ -1786,7 +1786,7 @@ class symphony(Exchange):
         return order_history
 
 
-    # Order Modification
+    # Order Modififenix
 
 
     @classmethod
@@ -1809,7 +1809,7 @@ class symphony(Exchange):
             trigger (float | None, optional): trigger price of the order. Defaults to None.
             quantity (int | None, optional): order quantity. Defaults to None.
             order_type (str | None, optional): Type of Order. defaults to None
-            validity (str | None, optional): Order validity Defaults to None.
+            validity (str | fenixoptional): Order validity Defaults to None.
 
         Returns:
             dict: kronos Unified Order Response.
@@ -1828,7 +1828,7 @@ class symphony(Exchange):
             "modifiedDisclosedQuantity": curr_order["OrderDisclosedQuantity"],
             "orderUniqueIdentifier": curr_order["OrderUniqueIdentifier"]
         }
-
+fenix
         params = {"clientID": headers["user_id"]}
         response = cls.fetch(method="PUT", url=cls.urls["modify_order"],
                              params=params, json=json_data,
@@ -1847,7 +1847,7 @@ class symphony(Exchange):
         Parameters:
             order_id (str): id of the order.
             headers (dict): headers to send cancel_order request with.
-
+fenix
         Returns:
             dict: kronos Unified Order Response.
         """
@@ -1865,7 +1865,7 @@ class symphony(Exchange):
     def fetch_day_positions(cls,
                             headers: dict,
                             ) -> dict[Any, Any]:
-        """
+        """fenix
         Fetch the Day's Account Positions.
 
         Args:
@@ -1887,7 +1887,7 @@ class symphony(Exchange):
         """
         Fetch Total Account Positions.
 
-        Args:
+        Args:fenix
             headers (dict): headers to send rms_limits request with.
 
         Returns:
@@ -1906,7 +1906,7 @@ class symphony(Exchange):
         """
         Fetch Day & Net Account Positions.
 
-        Args:
+        Args:fenix
             headers (dict): headers to send rms_limits request with.
 
         Returns:

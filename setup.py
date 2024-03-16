@@ -1,12 +1,26 @@
 import setuptools
+import codecs
+import os.path
 
+def read(rel_path):
+    here = os.path.abspath(os.path.dirname(__file__))
+    with codecs.open(os.path.join(here, rel_path), 'r') as fp:
+        return fp.read()
+
+def get_version(rel_path):
+    for line in read(rel_path).splitlines():
+        if line.startswith('__version__'):
+            delim = '"' if '"' in line else "'"
+            return line.split(delim)[1]
+    else:
+        raise RuntimeError("Unable to find version string.")
 
 with open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
 setuptools.setup(
     name="fenix",
-    version="1.0.0",
+    version=get_version("fenix/__init__.py"),
     keywords="fenix, aliceblue, angelone, choice, finvasia, fivepaisa, fyers, iifl, kotak, kotakneo, kunjee, mastertrust, motilaloswal, paper, symphony, upstox, vpc, zerodha, finance, broker, trader, XTS, kite, algorithmic, algotrading, api, arbitrage, real-time, realtime, backtest, backtesting, etc, framework, invest, investing, investor, library, market, market data, ohlcv, order, orderbook, order book, strategy, ticker, tickers, toolkit, trade, trader, trading, volume, websocket, websockets, web socket, web sockets, ws",
     author="Hardeep Singh",
     author_email="hardeep.hd13@gmail.com",

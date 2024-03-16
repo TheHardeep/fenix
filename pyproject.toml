@@ -1,0 +1,108 @@
+[build-system]
+requires = ["setuptools >= 56.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fenix"
+dynamic = ["version"]
+dependencies = [
+    "cryptography>=42.0.5",
+    "numpy>=1.24.4",
+    "pandas>=2.0.3",
+    "pycryptodome>=3.20.0",
+    "PyJWT>=2.8.0",
+    "pyotp>=2.9.0",
+    "requests>=2.31.0",
+    "requests-oauthlib>=1.4.0",
+    "selenium>=4.18.1",
+    "urllib3>=2.2.1",
+    "webdriver-manager>=4.0.1",
+]
+requires-python = ">=3.8"
+authors = [
+    {name = "Hardeep Singh", email = "hardeep.hd13@gmail.com"}
+]
+maintainers = [
+    {name = "Hardeep Singh", email = "hardeep.hd13@gmail.com"}
+]
+description = "A Python library for trading in the Indian Finance Sector with support for multiple broker APIs."
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = [
+    "fenix",
+    "aliceblue",
+    "angelone",
+    "choice",
+    "finvasia",
+    "fivepaisa",
+    "fyers",
+    "iifl",
+    "kotak",
+    "kotakneo",
+    "kunjee",
+    "mastertrust",
+    "motilaloswal",
+    "paper",
+    "symphony",
+    "upstox",
+    "vpc",
+    "zerodha",
+    "finance",
+    "broker",
+    "trader",
+    "XTS",
+    "kite",
+    "algorithmic",
+    "algotrading",
+    "api",
+    "arbitrage",
+    "real-time",
+    "realtime",
+    "backtest",
+    "backtesting",
+    "etc",
+    "framework",
+    "invest",
+    "investing",
+    "investor",
+    "library",
+    "market",
+    "market data",
+    "ohlcv",
+    "order",
+    "orderbook",
+    "order book",
+    "strategy",
+    "ticker",
+    "tickers",
+    "toolkit",
+    "trade",
+    "trader",
+    "trading",
+    "volume",
+    "websocket",
+    "websockets",
+    "web socket",
+    "web sockets",
+    "ws"
+]
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Financial and Insurance Industry',
+    'Intended Audience :: Information Technology',
+    'Topic :: Software Development :: Build Tools',
+    'Topic :: Office/Business :: Financial :: Investment',
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Operating System :: OS Independent',
+    'Environment :: Console'
+]
+
+[project.urls]
+Homepage = "https://fenix.hardeep.tech"
+Documentation = "https://github.com/TheHardeep/fenix/fenix/wiki"
+Repository = "https://github.com/TheHardeep/fenix.git"

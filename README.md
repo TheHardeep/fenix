@@ -37,7 +37,7 @@ The fenix library currently supports the following 16 indian brokers and their t
 |[<img src='https://assets.fyers.in/images/logo.svg' width='80'>](https://login.fyers.in/)| fyers | [Fyers](https://login.fyers.in/) | 🟢 |
 |[<img src='https://www.iifl.com/files/2022-04/iifl-securities.webp' width='70'>](https://smartapps.iifl.com/CustomerPortal/Login)| iifl | [IIFL](https://smartapps.iifl.com/CustomerPortal/Login) | 🟢 |
 |[<img src='https://www.kotaksecurities.com/trade/9f5989b5a2a4ec74830f.svg' width='140'>](https://www.kotaksecurities.com/trade/login)| kotak | [Kotak](https://www.kotaksecurities.com/trade/login) | 🟢 |
-|[<img src='https://www.kotaksecurities.com/trade/26482affd706bc8fc0c2.svg' width='50'>](https://Fkotaksecurities.com/Login)| kotak| [Kotak](https://Fkotaksecurities.com/Login) | 🟢 |
+|[<img src='https://www.kotaksecurities.com/trade/26482affd706bc8fc0c2.svg' width='50'>](https://neo.kotaksecurities.com/)| kotakneo| [Kotak Neo](https://neo.kotaksecurities.com/) | 🟢 |
 |[<img src='https://www.farsightshares.com/assets/icons/kunjee.png' width='80' height='70'>](https://trade.kunjee.net:3000/#!/app)| kunjee | [Kunjee](https://trade.kunjee.net:3000/#!/app) | 🟢 |
 |[<img src='https://salesiq.zohopublic.in/hasharesstockbrokersltd/clogo/1613986085716_60005626196/photo.ls?nps=202' width='100'>](https://www.mastertrust.co.in/trade-login)| mastertrust | [Master Trust](https://www.mastertrust.co.in/trade-login) | 🟢 |
 |[<img src='https://www.motilaloswal.com/img/mologo.png?1210' width='80'>](https://invest.motilaloswal.com/)| motilaloswal | [Motilal Oswal](https://invest.motilaloswal.com/) | 🟢 |

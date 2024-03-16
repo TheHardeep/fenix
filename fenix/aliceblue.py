@@ -320,7 +320,7 @@ class aliceblue(Exchange):
     def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the zerodha.nfo_tokens Dictionary.
+        Stores them in the aliceblue.nfo_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.

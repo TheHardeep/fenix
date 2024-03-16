@@ -167,7 +167,7 @@ class angelone(Exchange):
     def create_eq_tokens(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the angelone.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -204,7 +204,7 @@ class angelone(Exchange):
     def create_indices(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the angelone.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -230,7 +230,7 @@ class angelone(Exchange):
     def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the aliceblue.nfo_tokens Dictionary.
+        Stores them in the angelone.nfo_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.

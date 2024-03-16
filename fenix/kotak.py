@@ -25,10 +25,10 @@ if TYPE_CHECKING:
 
 class kotak(Exchange):
     """
-    AliceBlue fenix Broker Class.
+    Kotak fenix Broker Class.
 
     Returns:
-        fenix.kotak: fenix AliceBlue Broker Object.
+        fenix.kotak: fenix Kotak Broker Object.
     """
 
 
@@ -156,7 +156,7 @@ class kotak(Exchange):
     def create_eq_tokens(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the Kotak.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -221,7 +221,7 @@ class kotak(Exchange):
     def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the zerodha.nfo_tokens Dictionary.
+        Stores them in the kotak.nfo_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.

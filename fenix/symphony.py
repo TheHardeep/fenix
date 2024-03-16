@@ -133,7 +133,7 @@ class symphony(Exchange):
     def create_eq_tokens(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the symphony.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -192,7 +192,7 @@ class symphony(Exchange):
     def create_nfo_tokens(cls):
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the aliceblue.nfo_tokens Dictionary.
+        Stores them in the symphony.nfo_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.
@@ -312,8 +312,8 @@ class symphony(Exchange):
             order (dict): Orderbook Order Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Order Response.
-        """fenix
+            dict: Unified fenix Order Response.
+        """
         parsed_order = {
             Order.ID: order['AppOrderID'],
             Order.USERID: order['OrderUniqueIdentifier'],
@@ -356,8 +356,8 @@ class symphony(Exchange):
             order (dict): Acoount Position Json Response from Broker.
 
         Returns:
-            dict: Unified Kronos Position Response.
-        """fenix
+            dict: Unified fenix Position Response.
+        """
         parsed_position = {
             Position.SYMBOL: position['TradingSymbol'],
             Position.TOKEN: position['ExchangeInstrumentID'],
@@ -388,8 +388,8 @@ class symphony(Exchange):
             profile (dict): User Profile Json Response from Broker.
 
         Returns:
-            dict: Unified kronos Profile Response.
-        """fenix
+            dict: Unified fenix Profile Response.
+        """
         exclist = profile['ClientExchangeDetailsList']
         exchanges_enabled = [i for i in exclist if exclist[i]['Enabled']]
 
@@ -424,8 +424,8 @@ class symphony(Exchange):
             headers (dict): headers to send order request with.
 
         Returns:
-            dict: Unified kronos Order Response.
-        """fenix
+            dict: Unified fenix Order Response.
+        """
         info = cls._json_parser(response)
         order_id = info['result']['AppOrderID']
 
@@ -466,7 +466,7 @@ class symphony(Exchange):
             unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not price and trigger:
             order_type = OrderType.SLM
@@ -478,7 +478,7 @@ class symphony(Exchange):
             order_type = OrderType.SL
 
         token = token_dict["Token"]
-        exchange =fenix_dict["Exchange"]
+        exchange = token_dict["Exchange"]
 
         json_data = {
             "exchangeInstrumentID": token,
@@ -541,7 +541,7 @@ class symphony(Exchange):
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not price and trigger:
             order_type = OrderType.SLM
@@ -568,7 +568,7 @@ class symphony(Exchange):
             }
 
             final_url = cls.urls["place_order"]
-fenix
+
         else:
             json_data = {
                 "exchangeInstrumentID": token,
@@ -631,7 +631,7 @@ fenix
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not target:
             json_data = {
@@ -650,7 +650,7 @@ fenix
 
             final_url = cls.urls["place_order"]
 
-        else:fenix
+        else:
             json_data = {
                 "exchangeInstrumentID": token,
                 "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
@@ -713,7 +713,7 @@ fenix
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not target:
             json_data = {
@@ -735,7 +735,7 @@ fenix
         else:
             json_data = {
                 "exchangeInstrumentID": token,
-                "efenixeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+                "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
                 "limitPrice": price,
                 "stopPrice": 0.0,
                 "squarOff": target,
@@ -798,7 +798,7 @@ fenix
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not target:
             json_data = {
@@ -817,7 +817,7 @@ fenix
 
             final_url = cls.urls["place_order"]
 
-        else:fenix
+        else:
             json_data = {
                 "exchangeInstrumentID": token,
                 "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
@@ -880,7 +880,7 @@ fenix
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not target:
             json_data = {
@@ -906,7 +906,7 @@ fenix
                 "limitPrice": 0.0,
                 "stopPrice": trigger,
                 "squarOff": target,
-                "sfenixsPrice": stoploss,
+                "stopLossPrice": stoploss,
                 "trailingStoploss": trailing_sl,
                 "orderQuantity": quantity,
                 "orderSide": cls._key_mapper(cls.req_side, side, "side"),
@@ -969,7 +969,7 @@ fenix
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -984,7 +984,7 @@ fenix
 
         if not price and trigger:
             order_type = OrderType.SLM
-        elif not pfenix
+        elif not price:
             order_type = OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
@@ -1047,14 +1047,14 @@ fenix
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
-fenix
+
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
@@ -1117,7 +1117,7 @@ fenix
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1127,7 +1127,7 @@ fenix
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
-fenix
+
         token = detail['Token']
 
         json_data = {
@@ -1190,7 +1190,7 @@ fenix
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1198,7 +1198,7 @@ fenix
         detail = cls.nfo_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
-        if not detfenix
+        if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
@@ -1261,7 +1261,7 @@ fenix
             KeyError: If Strike Price Does not Exist.
 
         Returns:
-            dict: Kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
@@ -1274,7 +1274,7 @@ fenix
 
         token = detail['Token']
 
-        json_data fenix
+        json_data = {
             "exchangeInstrumentID": token,
             "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "limitPrice": 0.0,
@@ -1337,7 +1337,7 @@ fenix
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         if not price and trigger:
             order_type = OrderType.SLM
@@ -1345,7 +1345,7 @@ fenix
             order_type = OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
-        else:fenix
+        else:
             order_type = OrderType.SL
 
         json_data = {
@@ -1408,8 +1408,8 @@ fenix
             variety (str, optional): Order variety Defaults to Variety.BO.
 
         Returns:
-            dict: kronos Unified Order Response.
-        """fenix
+            dict: fenix Unified Order Response.
+        """
         json_data = {
             "exchangeInstrumentID": token,
             "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
@@ -1472,11 +1472,11 @@ fenix
             variety (str, optional): Order variety Defaults to Variety.BO.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         json_data = {
             "exchangeInstrumentID": token,
-            "exchafenixment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+            "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "limitPrice": price,
             "stopPrice": 0.0,
             "squarOff": target,
@@ -1539,9 +1539,9 @@ fenix
             variety (str, optional): Order variety Defaults to Variety.BO.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
-        json_data fenix
+        json_data = {
             "exchangeInstrumentID": token,
             "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "limitPrice": price,
@@ -1604,7 +1604,7 @@ fenix
             variety (str, optional): Order variety Defaults to Variety.BO.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         json_data = {
             "exchangeInstrumentID": token,
@@ -1620,7 +1620,7 @@ fenix
             "productType": cls._key_mapper(cls.req_product, product, "product"),
             "timeInForce": cls._key_mapper(cls.req_validity, validity, "validity"),
             "orderUniqueIdentifier": unique_id,
-            "disclosedQuantity": 0,fenix
+            "disclosedQuantity": 0,
         }
 
         final_url = f"{cls.urls['place_order']}/bracket"
@@ -1642,7 +1642,7 @@ fenix
         """
         Fetch Raw Orderbook Details, without any Standardaization.
 
-        Parameters:fenix
+        Parameters:
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
@@ -1670,7 +1670,7 @@ fenix
         response = cls.fetch(method="GET", url=cls.urls["order_history"],
                              params=params, headers=headers["headers"])
 
-        return clsfenix_parser(response)
+        return cls._json_parser(response)
 
     @classmethod
     def fetch_orderbook(cls,
@@ -1683,13 +1683,13 @@ fenix
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using kronos Unified Order Response
+            list[dict]: List of dicitonaries of orders using fenix Unified Order Response
         """
         info = cls.fetch_raw_orderbook(headers=headers)
 
         orders = []
         for order in info["result"]:
-            detailfenix._orderbook_json_parser(order)
+            detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
@@ -1705,13 +1705,13 @@ fenix
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using kronos Unified Order Response
+            list[dict]: List of dicitonaries of orders using fenix Unified Order Response
         """
         response = cls.fetch(method="GET", url=cls.urls["tradebook"], headers=headers["headers"])
         info = cls._json_parser(response)
 
         orders = []
-        for order in info['result']:fenix
+        for order in info['result']:
             detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
@@ -1733,7 +1733,7 @@ fenix
             InputError: If order does not exist.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: fenix Unified Order Response
         """
         return cls.fetch_orderbook(headers=headers)
 
@@ -1749,10 +1749,10 @@ fenix
             order_id (str): id of the order
 
         Raises:
-            InputEfenixIf order does not exist.
+            InputError: If order does not exist.
 
         Returns:
-            dict: kronos Unified Order Response
+            dict: fenix Unified Order Response
         """
         info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
 
@@ -1774,7 +1774,7 @@ fenix
             headers (dict): headers to send orderhistory request with.
 
         Returns:
-            list: A list of dicitonaries containing order history using kronos Unified Order Response
+            list: A list of dicitonaries containing order history using fenix Unified Order Response
         """
         info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
 
@@ -1786,7 +1786,7 @@ fenix
         return order_history
 
 
-    # Order Modififenix
+    # Order Modification
 
 
     @classmethod
@@ -1809,10 +1809,10 @@ fenix
             trigger (float | None, optional): trigger price of the order. Defaults to None.
             quantity (int | None, optional): order quantity. Defaults to None.
             order_type (str | None, optional): Type of Order. defaults to None
-            validity (str | fenixoptional): Order validity Defaults to None.
+            validity (str | None, optional): Order validity Defaults to None.
 
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
         curr_order = info["result"][-1]
@@ -1828,7 +1828,7 @@ fenix
             "modifiedDisclosedQuantity": curr_order["OrderDisclosedQuantity"],
             "orderUniqueIdentifier": curr_order["OrderUniqueIdentifier"]
         }
-fenix
+
         params = {"clientID": headers["user_id"]}
         response = cls.fetch(method="PUT", url=cls.urls["modify_order"],
                              params=params, json=json_data,
@@ -1847,9 +1847,9 @@ fenix
         Parameters:
             order_id (str): id of the order.
             headers (dict): headers to send cancel_order request with.
-fenix
+
         Returns:
-            dict: kronos Unified Order Response.
+            dict: fenix Unified Order Response.
         """
         params = {"appOrderID": order_id}
         response = cls.fetch(method="DELETE", url=cls.urls["cancel_order"],
@@ -1865,14 +1865,14 @@ fenix
     def fetch_day_positions(cls,
                             headers: dict,
                             ) -> dict[Any, Any]:
-        """fenix
+        """
         Fetch the Day's Account Positions.
 
         Args:
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
+            dict[Any, Any]: fenix Unified Position Response.
         """
         params = {'dayOrNet': "DayWise"}
         response = cls.fetch(method="GET", url=cls.urls["positions"],
@@ -1887,11 +1887,11 @@ fenix
         """
         Fetch Total Account Positions.
 
-        Args:fenix
+        Args:
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
+            dict[Any, Any]: fenix Unified Position Response.
         """
         params = {"dayOrNet": "NetWise"}
         response = cls.fetch(method="GET", url=cls.urls["positions"],
@@ -1906,11 +1906,11 @@ fenix
         """
         Fetch Day & Net Account Positions.
 
-        Args:fenix
+        Args:
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
+            dict[Any, Any]: fenix Unified Position Response.
         """
         day_positions = cls.fetch_day_positions(headers=headers)
         net_positions = cls.fetch_net_positions(headers=headers)
@@ -1928,7 +1928,7 @@ fenix
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Positions Response.
+            dict[Any, Any]: fenix Unified Positions Response.
         """
         params = {"clientID": headers["user_id"]}
         response = cls.fetch(method="GET", url=cls.urls["holdings"],
@@ -1950,7 +1950,7 @@ fenix
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict: kronos Unified RMS Limits Response.
+            dict: fenix Unified RMS Limits Response.
         """
         params = {"clientID": headers["user_id"]}
         response = cls.fetch(method="GET", url=cls.urls["rms_limits"],
@@ -1969,7 +1969,7 @@ fenix
             headers (dict): headers to send profile request with.
 
         Returns:
-            dict: kronos Unified Profile Response.
+            dict: fenix Unified Profile Response.
         """
         params = {"clientID": headers["user_id"]}
         response = cls.fetch(method="GET", url=cls.urls["profile"],

@@ -161,7 +161,7 @@ class zerodha(Exchange):
     def create_eq_tokens(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the zeordha.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -200,7 +200,7 @@ class zerodha(Exchange):
     def create_indices(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the zeordha.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -1706,7 +1706,7 @@ class zerodha(Exchange):
 
     # BO Order Functions
 
-    # NO BO Orders For IIFL
+    # NO BO Orders For Zerodha
 
 
     # Order Details, OrderBook & TradeBook

@@ -192,7 +192,7 @@ class choice(Exchange):
     def create_eq_tokens(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the choice.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -228,7 +228,7 @@ class choice(Exchange):
     def create_indices(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the choice.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -264,7 +264,7 @@ class choice(Exchange):
     def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the aliceblue.nfo_tokens Dictionary.
+        Stores them in the choice.nfo_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.
@@ -318,7 +318,7 @@ class choice(Exchange):
                        params: dict,
                        ) -> dict[str, str]:
         """
-        Generate Headers used to access Endpoints in AliceBlue.
+        Generate Headers used to access Endpoints in choice.
 
         Parameters:
             Params (dict) : A dictionary which should consist the following keys:

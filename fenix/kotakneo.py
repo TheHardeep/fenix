@@ -183,7 +183,7 @@ class kotakneo(Exchange):
     def create_eq_tokens(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the kotakneo.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -251,7 +251,7 @@ class kotakneo(Exchange):
     def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the zerodha.nfo_tokens Dictionary.
+        Stores them in the kotakneo.nfo_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.
@@ -1759,7 +1759,7 @@ class kotakneo(Exchange):
 
     # BO Order Functions
 
-    # NO BO Orders For Upstox
+    # NO BO Orders For KotakNeo
 
 
     # Order Details, OrderBook & TradeBook

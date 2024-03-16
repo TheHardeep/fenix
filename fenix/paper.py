@@ -37,7 +37,7 @@ class paper(Exchange):
     Paper fenix Broker Class.
 
     Returns:
-        fenix.aliceblue: fenix Paper Broker Object.
+        fenix.paper: fenix Paper Broker Object.
     """
 
 
@@ -174,7 +174,7 @@ class paper(Exchange):
     def create_eq_tokens(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the paper.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -226,7 +226,7 @@ class paper(Exchange):
     def create_indices(cls) -> dict:
         """
         Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Stores them in the paper.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
@@ -256,7 +256,7 @@ class paper(Exchange):
     def create_nfo_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the zerodha.nfo_tokens Dictionary.
+        Stores them in the paper.nfo_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.
@@ -484,8 +484,8 @@ class paper(Exchange):
             unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
 
         Returns:
-            dict: Kronos Unified Order Response.
-        """fenix
+            dict: fenix Unified Order Response.
+        """
         if not price and trigger:
             order_type = OrderType.SLM
         elif not price:
@@ -534,8 +534,8 @@ class paper(Exchange):
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
-        """fenix
+            list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
+        """
         return cls.orderbook
 
     @classmethod
@@ -549,8 +549,8 @@ class paper(Exchange):
             headers (dict): headers to send fetch_orders request with.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using kronos Unified Order Response.
-        """fenix
+            list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
+        """
         return cls.orderbook
 
     @classmethod
@@ -569,8 +569,8 @@ class paper(Exchange):
             InputError: If order does not exist.
 
         Returns:
-            dict: kronos Unified Order Response.
-        """fenix
+            dict: fenix Unified Order Response.
+        """
         return cls.orderbook
 
     @classmethod
@@ -588,8 +588,8 @@ class paper(Exchange):
             InputError: If order does not exist.
 
         Returns:
-            dict: kronos Unified Order Response.
-        """fenix
+            dict: fenix Unified Order Response.
+        """
         order_id = str(order_id)
 
         for order in cls.orderbook:
@@ -611,8 +611,8 @@ class paper(Exchange):
             headers (dict): headers to send orderhistory request with.
 
         Returns:
-            list: A list of dicitonaries containing order history using kronos Unified Order Response.
-        """fenix
+            list: A list of dicitonaries containing order history using fenix Unified Order Response.
+        """
         return [cls.fetch_order(order_id, headers)]
 
 
@@ -642,8 +642,8 @@ class paper(Exchange):
             validity (str | None, optional): Order validity Defaults to None.
 
         Returns:
-            dict: kronos Unified Order Response.
-        """fenix
+            dict: fenix Unified Order Response.
+        """
         order_id = str(order_id)
 
         for index in range(len(cls.orderbook)):
@@ -673,8 +673,8 @@ class paper(Exchange):
             headers (dict): headers to send cancel_order request with.
 
         Returns:
-            dict: kronos Unified Order Response.
-        """fenix
+            dict: fenix Unified Order Response.
+        """
         order_id = str(order_id)
 
         for index in range(len(cls.orderbook)):
@@ -726,8 +726,8 @@ class paper(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
-        """fenix
+            dict[Any, Any]: fenix Unified Position Response.
+        """
         return cls.fetch_positions(headers)
 
     @classmethod
@@ -741,8 +741,8 @@ class paper(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
-        """fenix
+            dict[Any, Any]: fenix Unified Position Response.
+        """
         return cls.fetch_positions(headers)
 
     @classmethod
@@ -756,8 +756,8 @@ class paper(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Position Response.
-        """fenix
+            dict[Any, Any]: fenix Unified Position Response.
+        """
         for order in cls.orderbook:
 
             if order[Order.STATUS] == Status.FILLED:
@@ -824,8 +824,8 @@ class paper(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict[Any, Any]: kronos Unified Positions Response.
-        """fenix
+            dict[Any, Any]: fenix Unified Positions Response.
+        """
         return cls.fetch_positions(headers)
 
     @classmethod
@@ -839,8 +839,8 @@ class paper(Exchange):
             headers (dict): headers to send rms_limits request with.
 
         Returns:
-            dict: kronos Unified RMS Limits Response.
-        """fenix
+            dict: fenix Unified RMS Limits Response.
+        """
         return cls.rms_limits_dict
 
     @classmethod
@@ -854,6 +854,6 @@ class paper(Exchange):
             headers (dict): headers to send profile request with.
 
         Returns:
-            dict: kronos Unified Profile Response.
-        """fenix
+            dict: fenix Unified Profile Response.
+        """
         return cls._profile_paper()

@@ -29,7 +29,7 @@ The fenix library currently supports the following 16 indian brokers and their t
 
 | Logo | Id  | Name | Supported |
 |------|-----|-----|-----------|
-|[<img src='https://aliceblueonline.com/wp-content/uploads/2022/10/logo.webp' width='80'>](https://ant.aliceblueonline.com/)| aliceblue | [AliceBlue](https://ant.aliceblueonline.com/) | :green_circle: |
+|[<img src='https://global.discourse-cdn.com/business4/uploads/aliceblueonline/original/1X/e83a546773cc49916c1a15f7095ee5185340ddbf.png' width='110'>](https://ant.aliceblueonline.com/)| aliceblue | [AliceBlue](https://ant.aliceblueonline.com/) | :green_circle: |
 |[<img src='https://w3assets.angelone.in/wp-content/uploads/2023/08/AO-R-Logo.png' width='80'>](https://www.angelone.in/login/?redirectUrl=)| angelone | [AngelOne](https://www.angelone.in/login/?redirectUrl=) | :green_circle: |
 |[<img src='https://finx.choiceindia.com/assets/images/finx-icons/finx-login-logo.svg' width='80'>](https://finx.choiceindia.com/auth/login)| choice | [Choice](https://finx.choiceindia.com/auth/login) | :green_circle: |
 |[<img src='https://shoonya.com/static/img/shoonya_logo.1937b07.png' width='80'>](https://shoonya.com/)| finvasia | [Finvasia](https://shoonya.com/) | :green_circle: |

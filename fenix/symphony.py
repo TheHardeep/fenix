@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-class symphony(Exchange):
+class symphony(Broker):
     """
     Symphony fenix Broker Class
 
@@ -41,7 +41,7 @@ class symphony(Exchange):
     nfo_tokens = {}
     token_params = ["user_id", "api_key", "api_secret"]
     id = 'symphony'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

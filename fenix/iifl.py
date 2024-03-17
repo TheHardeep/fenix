@@ -4,7 +4,7 @@ from typing import Any
 
 import io
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-class iifl(Exchange):
+class iifl(Broker):
     """
     IIFL fenix Broker Class
 
@@ -43,7 +43,7 @@ class iifl(Exchange):
     eq_tokens = {}
     token_params = ["api_key", "api_secret"]
     id = 'iifl'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

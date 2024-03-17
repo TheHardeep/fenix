@@ -5,7 +5,7 @@ from urllib.parse import parse_qs
 from typing import TYPE_CHECKING
 from typing import Any
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-class zerodha(Exchange):
+class zerodha(Broker):
     """
     Zerodha fenix Broker Class
 
@@ -46,7 +46,7 @@ class zerodha(Exchange):
     nfo_tokens = {}
     token_params = ["user_id", "password", "totpstr", "api_key", "api_secret"]
     id = "zerodha"
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

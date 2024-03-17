@@ -60,8 +60,7 @@ pip install fenix
 
 ```Python
 import fenix
-print(fenix.exchanges)
-
+print(fenix.brokers)
 # print a list of all available exchange classes
 ```
 

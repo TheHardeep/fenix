@@ -5,7 +5,7 @@ from typing import Any
 import re
 from requests_oauthlib import OAuth2Session
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-class mastertrust(Exchange):
+class mastertrust(Broker):
     """
     MasterTrust fenix Broker Class
 
@@ -44,7 +44,7 @@ class mastertrust(Exchange):
     nfo_tokens = {}
     token_params = ["user_id", "password", "totpstr", "api_id", "api_secret"]
     id = 'mastertrust'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

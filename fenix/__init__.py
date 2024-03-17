@@ -6,7 +6,7 @@ __version__ = "1.0.2"
 
 #  ------------------------------------------------------------------------------
 
-from fenix.base.exchange import Exchange               # noqa: F401
+from fenix.base.broker import Broker               # noqa: F401
 
 
 from fenix.base import errors                          # noqa: F401
@@ -53,7 +53,7 @@ from fenix.vpc import vpc                              # noqa :F401
 from fenix.zerodha import zerodha                      # noqa :F401
 
 
-exchanges = [
+brokers = [
     "aliceblue",
     "angelone",
     "choice",
@@ -74,9 +74,9 @@ exchanges = [
 ]
 
 base = [
-    "Exchange",
-    "exchanges",
+    "Broker",
+    "brokers",
     "constants",
 ]
 
-__all__ = base + errors.__all__ + exchanges + constants.__all__
+__all__ = base + errors.__all__ + brokers + constants.__all__

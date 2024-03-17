@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 
 
-class paper(Exchange):
+class paper(Broker):
     """
     Paper fenix Broker Class.
 
@@ -50,7 +50,7 @@ class paper(Exchange):
     orderbook = []
     positions = {}
     id = 'paper'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

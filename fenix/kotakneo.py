@@ -5,7 +5,7 @@ from typing import Any
 import jwt
 import base64
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 
-class kotakneo(Exchange):
+class kotakneo(Broker):
     """
     Kotak Neo fenix Broker Class.
 
@@ -47,7 +47,7 @@ class kotakneo(Exchange):
                     "pin", "consumer_key", "consumer_secret", "trade_password"
                     ]
     id = 'kotakneo'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

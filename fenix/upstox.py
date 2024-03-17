@@ -10,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service as ChromeService
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-class upstox(Exchange):
+class upstox(Broker):
     """
     UpStox fenix Broker Class.
 
@@ -51,7 +51,7 @@ class upstox(Exchange):
     nfo_tokens = {}
     token_params = ["api_key", "api_secret", "redirect_uri", "totpstr", "mobile_no", "pin"]
     id = 'upstox'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

@@ -6,7 +6,7 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -46,7 +46,7 @@ class EncryptionClient:
         return base64.b64encode(self.ciphertext).decode()
 
 
-class choice(Exchange):
+class choice(Broker):
 
     """ Class for Choice """
 
@@ -58,7 +58,7 @@ class choice(Exchange):
     nfo_tokens = {}
     token_params = ["user_name", "password", "vendor_id", "vendor_key", "encryption_key", "encryption_iv"]
     id = 'choice'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

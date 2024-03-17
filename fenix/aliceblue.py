@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher
 from cryptography.hazmat.primitives.ciphers import algorithms
 from cryptography.hazmat.primitives.ciphers import modes
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -78,7 +78,7 @@ class CryptoJsAES:
         return CryptoJsAES.__unpad(aes.decryptor.update(encrypted[16:]) + aes.decryptor().finalize())
 
 
-class aliceblue(Exchange):
+class aliceblue(Broker):
     """
     AliceBlue fenix Broker Class.
 
@@ -94,7 +94,7 @@ class aliceblue(Exchange):
     nfo_tokens = {}
     token_params = ["user_id", "password", "birth_year", "totpstr", "api_key"]
     id = 'aliceblue'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

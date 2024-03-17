@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-class fyers(Exchange):
+class fyers(Broker):
     """
     Fyers fenix Broker Class
 
@@ -46,7 +46,7 @@ class fyers(Exchange):
     nfo_tokens = {}
     token_params = ["user_id", "pin", "totpstr", "api_key", "api_secret", "redirect_uri"]
     id = 'fyers'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

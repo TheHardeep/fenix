@@ -6,7 +6,7 @@ from re import split as ReSplit
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import OrderType
@@ -52,7 +52,7 @@ class EncryptionClient:
         return str(base64.b64encode(cipher.encrypt(padded_text)), encoding="utf-8")
 
 
-class fivepaisa(Exchange):
+class fivepaisa(Broker):
     """
     FivePaisa fenix Broker Class.
 
@@ -70,7 +70,7 @@ class fivepaisa(Exchange):
                     "dob", "app_name", "user_key", "encryption_key"
                     ]
     id = "fivepaisa"
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

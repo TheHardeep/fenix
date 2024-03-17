@@ -37,11 +37,11 @@ options.mode.chained_assignment = None
 
 
 __all__ = [
-    'Exchange',
+    'Broker',
 ]
 
 
-class Exchange:
+class Broker:
 
     """ Base Class Common to All Brokers """
 

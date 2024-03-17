@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import Any
 
-from fenix.base.exchange import Exchange
+from fenix.base.broker import Broker
 
 from fenix.base.constants import Side
 from fenix.base.constants import ExchangeCode
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-class kotak(Exchange):
+class kotak(Broker):
     """
     Kotak fenix Broker Class.
 
@@ -39,7 +39,7 @@ class kotak(Exchange):
     nfo_tokens = {}
     token_params = ["user_id", "password", "consumer_key", "access_token"]
     id = 'kotak'
-    _session = Exchange._create_session()
+    _session = Broker._create_session()
 
 
     # Base URLs

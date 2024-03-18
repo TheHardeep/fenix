@@ -2,6 +2,7 @@ __all__ = [
     "Side",
     "Root",
     "WeeklyExpiry",
+    "Option",
     "OrderType",
     "ExchangeCode",
     "Product",
@@ -43,6 +44,12 @@ class WeeklyExpiry:
     EXPIRY = "Expiry"
     LOTSIZE = "LotSize"
 
+class Option:
+    """
+    Trading Options
+    """
+    CE = "CE"
+    PE = "PE"
 
 class OrderType:
     """
@@ -195,7 +202,7 @@ class UniqueID:
     """
     Default Unique Order ID Constants.
     """
-    DEFORDER= "KronosOrder"
+    DEFORDER= "FenixOrder"
     MARKETORDER = "MarketOrder"
     LIMITORDER = "LIMITOrder"
     SLORDER = "SLOrder"

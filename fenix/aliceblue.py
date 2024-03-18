@@ -351,7 +351,7 @@ class aliceblue(Broker):
                      'LotSize', 'Root', 'TickSize', "Exchange"
                      ]]
 
-            df['StrikePrice'] = df['StrikePrice'].astype(int)
+            df['StrikePrice'] = df['StrikePrice'].astype(str)
             df['Expiry'] = cls.pd_datetime(df['Expiry'], unit='ms').dt.date.astype(str)
             df["Token"] = df["Token"].astype(int)
             df["TickSize"] = df["TickSize"].astype(float)

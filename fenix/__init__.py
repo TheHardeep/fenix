@@ -22,6 +22,7 @@ from fenix.base import constants                       # noqa: F401
 from fenix.base.constants import Side                  # noqa: F401
 from fenix.base.constants import Root                  # noqa: F401
 from fenix.base.constants import WeeklyExpiry          # noqa: F401
+from fenix.base.constants import Option                # noqa: F401
 from fenix.base.constants import OrderType             # noqa: F401
 from fenix.base.constants import ExchangeCode          # noqa: F401
 from fenix.base.constants import Product               # noqa: F401

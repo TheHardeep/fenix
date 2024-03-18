@@ -5,9 +5,10 @@ The fenix library is a collection of Indian *brokers* or broker classes. Each cl
 # Brokers
 
 - [Usage](#usage)
-- [Broker Structure](#broker-structure)
-
-
+- [Paper Broker](#paper-testnet-environment)
+- [Common Broker Attrbiutes](#common-broker-attributes)
+- [Request Attributes](#request-parameters-attributes)
+- [Response Attributes](#response-parameters-attributes)
 
 The Fenix library currently supports the following 16 Indian Brokers and their trading APIs:
 
@@ -38,17 +39,13 @@ To connect to an broker and start trading you need to import an exchange class f
 
 To get the full list of ids of supported broker programmatically:
 
-#### **Python**
 
 ```python
 import fenix
 print (fenix.brokers)
 ```
 
-An broker can be used like shown in the examples below:
-
-
-#### **Python**
+A broker can be used as shown in the examples below:
 
 ```python
 import fenix
@@ -71,25 +68,21 @@ broker_headers = broker_class.create_headers({
     })
 ```
 
-### Paper Testnet Environment
+## Paper Testnet Environment
 
 Fenix provides you with a *paper* broker class for testing purposes that allows developers to trade using a virtual broker without having to test their code on to the actual broker. This sandboxed API is a clone of the unified Fenix production API, so, it's literally has the same methods, except for the URL to the broker server which is use to download instrument tokens.
 
-#### **Python**
 ```python
 broker = ccxt.paper # SandBox Broker
 broker.fetch_orderbook(headers={})
 ```
 
-## Broker Structure
+## Common Broker Attributes
 
-Every broker has a set of properties and methods, most of which you can override by passing an associative array of params to an exchange constructor. You can also make a subclass and override everything.
-
+Every broker has a set of properties and methods.
 Here's an overview of generic broker properties with values added for example:
 
-
 ```python
-
 # Market Data Dictonaries
 
 id = 'aliceblue'
@@ -139,10 +132,46 @@ urls = {
     "rms_limits": f"{base_urls['base']}/getRmsLimits",
     "profile": f"{base_urls['base']}/accountDetails",
 }
+```
 
 
-# Request Parameters Dictionaries
+- `id`: Each broker has an id. The id is not used for anything, it's a string literal for breokr identification purposes. You can differentiate brokers by ids. ids are all lowercase and correspond to broker names.
 
+- `indices`: It is a dictionary used to store all the indices obtained from the broker's Master Script. It contains the indices symbol and token.
+
+- `eq_tokens`: A dicitonary used to manage the data of all the symbols in the Equity Segment along with their token ,tick size, lot size and Exchange.
+
+- `nfo_tokens
+`: A dictionary used to store all the data pertaining to the FNO Segment BankNifty, Nifty, FinNifty, MidcapNifty, Sensex to name a few. The data is nested dictionary containing all the data needed for a FNO Symbol like it's Strike Price, Expiry, Option, Trading Symbol, Lot Size, Tick Size and Exchange.
+
+- `token_params`: An array of strings containig all the parameters requre to create the HTTP *headers* used to access endpoints for placing orders, fetching orderbook, positions, etc.
+
+- `_session`: A request session used to send all the reuqests by the broker class.
+
+- `base_urls`: A dictionary containg all the basic endpoints of a broker such as the broker API Documetation URL, marketdata URL, base broker endpoint, etc.
+
+- `token_urls`: A dictionary containing the endpoints required to generate headers.
+
+- `urls`: A dictionary storing all the endpoints related to placing orders, fetching orderbook, positionbook, modify & cancel orders, profile, etc.
+
+
+## Request Parameters Attributes
+
+These dictationaries convert the Fenix Constants to their respective broker counterparts which are then used to send the API requests to the broker.
+
+- `req_exchange`: Mapping all the Unified Exchange Codes to the broker specific notation.
+
+- `req_order_type`: Mapping all the Unified Order Type Notation to broker's specification.
+
+- `req_product`: Mapping the Order's Product Type provided by the broker to Fenix Notation.
+
+- `req_side`: Maps the Broker's Buy & Sell notation.
+
+- `req_validity`: Mapping Order Validity to Unified fenix notation.
+
+- `req_variety`: Map Order Variety to Unified fenix notation.
+
+```python
 req_exchange = {
     ExchangeCode.NSE: "NSE",
     ExchangeCode.NFO: "NFO",
@@ -185,9 +214,27 @@ req_variety = {
     Variety.AMO: "AMO",
 }
 
+```
 
-# Response Parameters Dictionaries
+## Response Parameters Attributes
 
+These dictationaries convert the Broker JSON Response data to Fenix Constants counterparts to standardize the JSON response across all brokers.
+
+- `resp_exchange`: Maps Broker Exchange Notation to Unified Fenix Notation.
+
+- `resp_order_type`: Maps Broker Order Type values to Fenix Notation.
+
+- `resp_product`: Used to map an Order's Product type to Unified Fenix Notation.
+
+- `resp_side`: Used to map Order Side to Unified Fenix Notation.
+
+- `resp_segment`: Maps the Segment in which the order is palced to a Unified Fenix Notation
+
+- `resp_validity`: Used to map an Order's Response validity to Unified Fenix Notation.
+
+- `resp_status`: Used to map an Order's current status to Unified Fenix Notation.
+
+```python
 resp_order_type = {
     "MKT": OrderType.MARKET,
     "L": OrderType.LIMIT,
@@ -234,75 +281,42 @@ resp_status = {
 }
 ```
 
-### Broker Properties
 
-Below is a detailed description of each of the base broker properties:
+# Fenix Constants
 
-- `id`: Each broker has an id. The id is not used for anything, it's a string literal for breokr identification purposes. You can differentiate brokers by ids. ids are all lowercase and correspond to broker names.
-
-- `indices`: It is a dictionary used to store all the indices obtained from the broker's Master Script. It contains the indices symbol and token.
-
-- `eq_tokens`: A dicitonary used to manage the data of all the symbols in the Equity Segment along with their token ,tick size, lot size and Exchange.
-
-- `nfo_tokens
-`: A dictionary used to store all the data pertaining to the FNO Segment BankNifty, Nifty, FinNifty, MidcapNifty, Sensex to name a few. The data is nested dictionary containing all the data needed for a FNO Symbol like it's Strike Price, Expiry, Option, Trading Symbol, Lot Size, Tick Size and Exchange.
-
-- `token_params`: An array of strings containig all the parameters requre to create the HTTP *headers* used to access endpoints for placing orders, fetching orderbook, positions, etc.
-
-- `_session`: A request session used to send all the reuqests by the broker class.
-
-- `base_urls`: A dictionary containg all the basic endpoints of a broker such as the broker API Documetation URL, marketdata URL, base broker endpoint, etc.
-
-- `token_urls`: A dictionary containing the endpoints required to generate headers.
-
-- `urls`: A dictionary storing all the endpoints related to placing orders, fetching orderbook, positionbook, modify & cancel orders, profile, etc.
+To standardize JSON Responses across all brokers and to keep all method parameters the same, various Enum classes are used.
 
 
-### Request Parameters Dictionaries
+The following Enums are used across the fenix library:
 
-These dictationaries convert the Fenix Constants to their respective broker counterparts which are then used to send the API requests to the broker.
+- `Side`: Constants representing order sides (BUY, SELL).
 
-- `req_exchange`: Mapping all the Unified Exchange Codes to the broker specific notation.
+- `Root`: Constants representing symbols (BNF, NF, FNF, MIDCPNF).
 
-- `req_order_type`: Mapping all the Unified Order Type Notation to broker's specification.
+- `WeeklyExpiry`: Constants representing weekly expiry options (CURRENT, NEXT, FAR, Expiry, LotSize).
 
-- `req_product`: Mapping the Order's Product Type provided by the broker to Fenix Notation.
+- `Option`: Constants representing trading options (CE, PE).
 
-- `req_side`: Maps the Broker's Buy & Sell notation.
+- `OrderType`: Constants representing order types (MARKET, LIMIT, SLM, SL).
 
-- `req_validity`: Mapping Order Validity to Unified fenix notation.
+- `ExchangeCode`: Constants representing exchange codes (NSE, NFO, BSE, BFO, NCO, BCO, BCD, MCX, CDS).
 
-- `req_variety`: Map Order Variety to Unified fenix notation.
+- `Product`: Constants representing product types (CNC, NRML, MARGIN, MIS, BO, CO, SM).
 
+- `Validity`: Constants representing order validity types (DAY, IOC, GTD, GTC, FOK, TTL).
 
-### Response Parameters Dictionaries
+- `Variety`: Constants representing order variety types (REGULAR, STOPLOSS, AMO, BO, CO, ICEBERG, AUCTION).
 
-These dictationaries convert the Broker JSON Response data to Fenix Constants counterparts to standardize the JSON response across all brokers.
+- `Status`: Constants representing order status types (PENDING, OPEN, PARTIALLYFILLED, FILLED, REJECTED, CANCELLED, MODIFIED).
 
+- `Order`: Constants representing keys in unified order response dictionaries.
 
-- `resp_exchange`: Maps Broker Exchange Notation to Unified Fenix Notation.
+- `Position`: Constants representing keys in unified account positions response dictionaries.
 
-- `resp_order_type`: Maps Broker Order Type values to Fenix Notation.
+- `Profile`: Constants representing keys in unified account profile response dictionaries.
 
-- `resp_product`: Used to map an Order's Product type to Unified Fenix Notation.
+- `UniqueID`: Constants representing default unique order IDs.
 
-- `resp_side`: Used to map Order Side to Unified Fenix Notation.
-
-- `resp_segment`: Maps the Segment in which the order is palced to a Unified Fenix Notation
-
-- `resp_validity`: Used to map an Order's Response validity to Unified Fenix Notation.
-
-- `resp_status`: Used to map an Order's current status to Unified Fenix Notation.
-
-
-
-
-## Fenix Constants
-
-To standardize JSON Responses across all brokers and to keep all method parameters the same, various Enum classes are used. The following Enums are used across the fenix library:
-
-
-### Examples
 
 ```python
 from fenix import constants, aliceblue
@@ -339,201 +353,203 @@ aliceblue.market_order_nfo(option = Option.CE, # CE
                            )
 ```
 
-
-
-
-
-## Loading Broker Master Scripts
+# Loading Broker Master Scripts
 
 In most cases you are required to load the data of trading symbols for a particular broker prior to accessing other API methods. If you forget to load the symbol data the fenix library will do that automatically upon your first call to the unified API. It will send two HTTP requests, first for symbols and then the second one for other data, sequentially. For that reason, your first call to a unified Fenix API method like create_order, create_nfo_order, create_bo_order, etc. will take more time, than the consequent calls, since it has to do more work loading the market information from the Broker API.
 
-In order to load trading symbol data manually beforehand call the `create_nfo_tokens ()` / `create_eq_tokens ()` method on an broker instance. It returns a dictionary of markets indexed by trading symbol/expiry. If you want more control over the execution of your logic, preloading markets by hand is recommended.
+In order to load trading symbol data manually beforehand call the `create_nfo_tokens ()` / `create_eq_tokens ()` method on a broker class. It returns a dictionary of markets indexed by trading symbol/expiry. If you want more control over the execution of your logic, preloading markets by hand is recommended.
 
-The broker MasterScript data is formatted into a standarized way by the following functions:
+The broker MasterScript data is formatted into a standarized way and stored in the following class variables:
 
-- `create_eq_tokens ()`: This method downlaod the trading symbols from both *NSE & BSE* exchanges and formats them into a dictionary. The data can be accessed by using the broker.eq_tokens class attribute.
+## cls.eq_tokens
 
-    ```python
-    #     Exchange
-    #     ↓
-    #     ↓        Ticker of Script Similar to TradingView
-    #     ↓        ↓
-    #     ↓        ↓        Script Data
-    #     ↓        ↓        ↓
-    #     ↓        ↓        ↓
-    #     ↓        ↓        ↓
-    #     ↓        ↓        ↓
-    #     ↓        ↓        ↓
-    #     ↓        ↓        ↓
-    {
-        "NSE":{ "SAIL": {"Symbol": "SAIL-EQ",
-                         "Token": 2963,
-                         "LotSize": 1,
-                         "TickSize": 0.05,
-                         "Exchange": "NSE"
+This class variable stores the trading symbols from both *NSE & BSE* exchanges. The data is formatted in the following form:
+
+```python
+#     Exchange
+#     ↓
+#     ↓        Ticker of Script Similar to TradingView
+#     ↓        ↓
+#     ↓        ↓        Script Data
+#     ↓        ↓        ↓
+#     ↓        ↓        ↓
+#     ↓        ↓        ↓
+#     ↓        ↓        ↓
+#     ↓        ↓        ↓
+#     ↓        ↓        ↓
+{
+    "NSE":{ "SAIL": {"Symbol": "SAIL-EQ",
+                        "Token": 2963,
+                        "LotSize": 1,
+                        "TickSize": 0.05,
+                        "Exchange": "NSE"
+                    },
+
+        "AARTIIND": {"Symbol": "AARTIIND-EQ",
+                        "Token": 7,
+                        "LotSize": 1,
+                        "TickSize": 0.05,
+                        "Exchange": "NSE"
+                    },
+
+        "RELIANCE": {"Symbol": "RELIANCE-EQ",
+                        "Token": 2885,
+                        "LotSize": 1,
+                        "TickSize": 0.05,
+                        "Exchange": "NSE"
+                    },
+        ...
+        },
+
+    "BSE":{ "ONGC": {"Symbol": "ONGC",
+                        "Token": 500312,
+                        "TickSize": 0.05,
+                        "LotSize": 1,
+                        "Exchange": "BSE"
+                    },
+
+            "JSWSTEEL": {"Symbol": "JSWSTEEL",
+                            "Token": 500228,
+                            "TickSize": 0.05,
+                            "LotSize": 1,
+                            "Exchange": "BSE"
                         },
 
-            "AARTIIND": {"Symbol": "AARTIIND-EQ",
-                         "Token": 7,
-                         "LotSize": 1,
-                         "TickSize": 0.05,
-                         "Exchange": "NSE"
+            "RELIANCE": {"Symbol": "RELIANCE",
+                            "Token": 500325,
+                            "TickSize": 0.05,
+                            "LotSize": 1,
+                            "Exchange": "BSE"
                         },
+        ...
+        }
+}
+```
 
-            "RELIANCE": {"Symbol": "RELIANCE-EQ",
-                         "Token": 2885,
-                         "LotSize": 1,
-                         "TickSize": 0.05,
-                         "Exchange": "NSE"
-                        },
-            ...
-            },
+## cls.indices
 
-        "BSE":{ "ONGC": {"Symbol": "ONGC",
-                         "Token": 500312,
-                         "TickSize": 0.05,
-                         "LotSize": 1,
-                         "Exchange": "BSE"
-                        },
+This dictionary stores the Indices data from both *NSE & BSE* exchanges and is formatted in the following way:
 
-                "JSWSTEEL": {"Symbol": "JSWSTEEL",
-                             "Token": 500228,
-                             "TickSize": 0.05,
-                             "LotSize": 1,
-                             "Exchange": "BSE"
-                            },
+```python
+#      Ticker of Index Similar to TradingView
+#      ↓
+#      ↓        Index Data
+#      ↓        ↓
+#      ↓        ↓
+#      ↓        ↓
+#      ↓        ↓
+#      ↓        ↓
+#      ↓        ↓
+{
+    "NIFTY": {"Symbol": "NIFTY 50", "Token": "26000"},
+    "NIFTY 500": {"Symbol": "NIFTY 500", "Token": "26004"},
+    "NIFTY AUTO": {"Symbol": "NIFTY AUTO", "Token": "26029"},
+    "BANKNIFTY": {"Symbol": "NIFTY BANK", "Token": "26009"},
+    "FINNIFTY": {"Symbol": "NIFTY FIN SERVICE", "Token": "26037"},
+    "MIDCPNIFTY": {"Symbol": "NIFTY MIDCAP SELECT", "Token": "26074"},
+}
+```
 
-                "RELIANCE": {"Symbol": "RELIANCE",
-                             "Token": 500325,
-                             "TickSize": 0.05,
-                             "LotSize": 1,
-                             "Exchange": "BSE"
-                            },
-            ...
-            }
-    }
-    ```
+## cls.nfo_tokens
 
-- `create_indices ()`: This method downlaod the Indices data from both *NSE & BSE* exchanges and formats them into a dictionary. The data can be accessed by using the broker.indices class attribute.
+This class variable is a dictionary sotring the data for the FNO segment in the following format:
 
-    ```python
-    #      Ticker of Index Similar to TradingView
-    #      ↓
-    #      ↓        Index Data
-    #      ↓        ↓
-    #      ↓        ↓
-    #      ↓        ↓
-    #      ↓        ↓
-    #      ↓        ↓
-    #      ↓        ↓
-    {
-        "NIFTY": {"Symbol": "NIFTY 50", "Token": "26000"},
-        "NIFTY 500": {"Symbol": "NIFTY 500", "Token": "26004"},
-        "NIFTY AUTO": {"Symbol": "NIFTY AUTO", "Token": "26029"},
-        "BANKNIFTY": {"Symbol": "NIFTY BANK", "Token": "26009"},
-        "FINNIFTY": {"Symbol": "NIFTY FIN SERVICE", "Token": "26037"},
-        "MIDCPNIFTY": {"Symbol": "NIFTY MIDCAP SELECT", "Token": "26074"},
-    }
-    ```
-
-- `create_nfo_tokens ()`: This method creates a dictionary of the FNO Segment and stores the data in the class attribute broker.nfo_tokens.
-
-    ```python
-    #      Weekly Expiry: CURRENT, NEXT, FAR, Expiry (Expiry Dates), LotSize
-    #      ↓
-    #      ↓          Segment: BANKNIFTY, NIFTY, FININIFTY, MIDCPNIFTY, SENSEX
-    #      ↓          ↓
-    #      ↓          ↓           Option: CE, PE
-    #      ↓          ↓           ↓
-    #      ↓          ↓           ↓        Strike Price: 38500, 39000, ...
-    #      ↓          ↓           ↓        ↓
-    #      ↓          ↓           ↓        ↓          Script Data
-    #      ↓          ↓           ↓        ↓          ↓
-    #      ↓          ↓           ↓        ↓          ↓
-    #      ↓          ↓           ↓        ↓          ↓
-    #      ↓          ↓           ↓        ↓          ↓
-    #      ↓          ↓           ↓        ↓          ↓
-    {
-        "CURRENT": {"BANKNIFTY": {
-                                "CE": {
-                                        "38500": {
-                                                    "Token": 40589,
-                                                    "Symbol": "BANKNIFTY20MAR24C38500",
-                                                    "Expiry": "2024-03-20",
-                                                    "Option": "CE",
-                                                    "StrikePrice": "38500",
-                                                    "LotSize": 15,
-                                                    "Root": "BANKNIFTY",
-                                                    "TickSize": 0.05,
-                                                    "Exchange": "NFO",
-                                                    "ExpiryName": "CURRENT"
-                                                },
-                                        "39000": {
-                                                    "Token": 40642,
-                                                    "Symbol": "BANKNIFTY20MAR24C39000",
-                                                    "Expiry": "2024-03-20",
-                                                    "Option": "CE",
-                                                    "StrikePrice": "39000",
-                                                    "LotSize": 15,
-                                                    "Root": "BANKNIFTY",
-                                                    "TickSize": 0.05,
-                                                    "Exchange": "NFO",
-                                                    "ExpiryName": "CURRENT"
-                                                }
-                                },
-                                "PE": {
-                                        "38500": {
-                                                "Token": 40592,
-                                                "Symbol": "BANKNIFTY20MAR24P38500",
+```python
+#      Weekly Expiry: CURRENT, NEXT, FAR, Expiry (Expiry Dates), LotSize
+#      ↓
+#      ↓          Segment: BANKNIFTY, NIFTY, FININIFTY, MIDCPNIFTY, SENSEX
+#      ↓          ↓
+#      ↓          ↓           Option: CE, PE
+#      ↓          ↓           ↓
+#      ↓          ↓           ↓        Strike Price: 38500, 39000, ...
+#      ↓          ↓           ↓        ↓
+#      ↓          ↓           ↓        ↓          Script Data
+#      ↓          ↓           ↓        ↓          ↓
+#      ↓          ↓           ↓        ↓          ↓
+#      ↓          ↓           ↓        ↓          ↓
+#      ↓          ↓           ↓        ↓          ↓
+#      ↓          ↓           ↓        ↓          ↓
+{
+    "CURRENT": {"BANKNIFTY": {
+                            "CE": {
+                                    "38500": {
+                                                "Token": 40589,
+                                                "Symbol": "BANKNIFTY20MAR24C38500",
                                                 "Expiry": "2024-03-20",
-                                                "Option": "PE",
+                                                "Option": "CE",
                                                 "StrikePrice": "38500",
                                                 "LotSize": 15,
                                                 "Root": "BANKNIFTY",
                                                 "TickSize": 0.05,
                                                 "Exchange": "NFO",
                                                 "ExpiryName": "CURRENT"
-                                        },
-                                        "39000": {
-                                                "Token": 40645,
-                                                "Symbol": "BANKNIFTY20MAR24P39000",
+                                            },
+                                    "39000": {
+                                                "Token": 40642,
+                                                "Symbol": "BANKNIFTY20MAR24C39000",
                                                 "Expiry": "2024-03-20",
-                                                "Option": "PE",
+                                                "Option": "CE",
                                                 "StrikePrice": "39000",
                                                 "LotSize": 15,
                                                 "Root": "BANKNIFTY",
                                                 "TickSize": 0.05,
                                                 "Exchange": "NFO",
                                                 "ExpiryName": "CURRENT"
-                                            }+
-                                }
+                                            }
                             },
-                    "NIFTY": {...},
-                    "FINNIFTY": {...},
-                    "MIDCPNIFTY": {...},
-                    "SENSEX": {...}
-                    },
-        "NEXT": {...},
-        "FAR": {...},
-        "Expiry": {
-            "BANKNIFTY": ["2024-03-20", ...],
-            "NIFTY": ["2024-03-21", ...],
-            "FINNIFTY": ["2024-03-19", ...],
-            "MIDCPNIFTY": ["2024-03-18", ...],
-            "SENSEX": ["2024-03-18", ...],
-            },
-        "LotSize": {
-            "BANKNIFTY": 15,
-            "NIFTY": 50,
-            "FINNIFTY": 40,
-            "MIDCPNIFTY": 75,
-            "SENSEX": 10
-        }
+                            "PE": {
+                                    "38500": {
+                                            "Token": 40592,
+                                            "Symbol": "BANKNIFTY20MAR24P38500",
+                                            "Expiry": "2024-03-20",
+                                            "Option": "PE",
+                                            "StrikePrice": "38500",
+                                            "LotSize": 15,
+                                            "Root": "BANKNIFTY",
+                                            "TickSize": 0.05,
+                                            "Exchange": "NFO",
+                                            "ExpiryName": "CURRENT"
+                                    },
+                                    "39000": {
+                                            "Token": 40645,
+                                            "Symbol": "BANKNIFTY20MAR24P39000",
+                                            "Expiry": "2024-03-20",
+                                            "Option": "PE",
+                                            "StrikePrice": "39000",
+                                            "LotSize": 15,
+                                            "Root": "BANKNIFTY",
+                                            "TickSize": 0.05,
+                                            "Exchange": "NFO",
+                                            "ExpiryName": "CURRENT"
+                                        }+
+                            }
+                        },
+                "NIFTY": {...},
+                "FINNIFTY": {...},
+                "MIDCPNIFTY": {...},
+                "SENSEX": {...}
+                },
+    "NEXT": {...},
+    "FAR": {...},
+    "Expiry": {
+        "BANKNIFTY": ["2024-03-20", ...],
+        "NIFTY": ["2024-03-21", ...],
+        "FINNIFTY": ["2024-03-19", ...],
+        "MIDCPNIFTY": ["2024-03-18", ...],
+        "SENSEX": ["2024-03-18", ...],
+        },
+    "LotSize": {
+        "BANKNIFTY": 15,
+        "NIFTY": 50,
+        "FINNIFTY": 40,
+        "MIDCPNIFTY": 75,
+        "SENSEX": 10
     }
-    ```
+}
+```
 
 
-## API Methods / Endpoints
+# API Methods / Endpoints
 
 Each broker offers a set of API methods. Each method of the API is called an *endpoint*. Endpoints are HTTP URLs for querying various types of information. All endpoints return JSON in response to client requests.
 
@@ -543,7 +559,7 @@ Because the set of methods differs from broker to broker, the fenix library impl
 
 The following are the unified Methods / Endpoints provided by Fenix library:
 
-### Market Data Methods
+## Market Data Methods
 
 These methods download the MasterScript of the broker and stores the data of the Script in the form of a dictionary storing the following values: `Symbol`, `Token`, `LotSize`, `TickSize`, `Exchange`, `Expiry`, `Strike Price`, etc...
 
@@ -554,16 +570,17 @@ These methods download the MasterScript of the broker and stores the data of the
 - `create_nfo_tokens ()`: Fetches all the FNO Segment data. Stores the data in the `nfo_tokens` attribute of the broker.
 
 
-### Headers Method
+## Headers Method
 
 The `create_headers (params: dict)` method takes the user's credentials of the respective broker in the form of a dictionary. The keys of the `params` dictionary can be found by using the `tokens_params` attribute.
 
 
-### Order Placing Methods
+## Order Placing Methods
 
 The methods which have the following name `create_order_*** ()` are used to place any type of order in the respective segments:
 
-- `create_order_nfo ()`: This method allows the user to place any type of order in the FNO Segment. It takes the following parameters:
+    ### create_order_nfo ()
+    This method allows the user to place any type of order in the FNO Segment. It takes the following parameters:
 
     - `exchange` (str): Exchange to place the order in. [ExchangeCode.NFO]
     - `root` (str): Derivative: BANKNIFTY, NIFTY, etc...
@@ -580,24 +597,24 @@ The methods which have the following name `create_order_*** ()` are used to plac
     - `price` (float, optional): price of the order. Defaults to 0.
     - `trigger` (float, optional): trigger price of the order. Defaults to 0.
 
-    #### Example
-    ```python
-    finvasia.create_order_nfo(exchange = constants.ExchangeCode.NFO,
-                              root = constants.Root.BNF,
-                              expiry = constants.WeeklyExpiry.CURRENT,
-                              option = "CE",
-                              strike_price = '45500',
-                              quantity = 15,
-                              side = "BUY",
-                              product = constants.Product.MIS,
-                              validity = constants.Validity.DAY,
-                              variety = constants.Variety.REGULAR,
-                              unique_id = 'CREATEOrderNFO',
-                              headers = {}, # Add your headers dict.
-                              price = 13.0,
-                              trigger = 12.0
-                              )
-    ```
+
+        ```python
+        finvasia.create_order_nfo(exchange = constants.ExchangeCode.NFO,
+                                root = constants.Root.BNF,
+                                expiry = constants.WeeklyExpiry.CURRENT,
+                                option = "CE",
+                                strike_price = '45500',
+                                quantity = 15,
+                                side = "BUY",
+                                product = constants.Product.MIS,
+                                validity = constants.Validity.DAY,
+                                variety = constants.Variety.REGULAR,
+                                unique_id = 'CREATEOrderNFO',
+                                headers = {}, # Add your headers dict.
+                                price = 13.0,
+                                trigger = 12.0
+                                )
+        ```
 
 - `create_order_eq ()`: This method allows the user to place any type of order in the Equity Segment. It takes the following parameters:
 
@@ -616,20 +633,19 @@ The methods which have the following name `create_order_*** ()` are used to plac
     - `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
     - `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
-    #### Example
     ```python
     angelone.create_order_eq(exchange = constants.ExchangeCode.NSE,
-                             symbol = "RELIANCE",
-                             quantity = 10,
-                             side = "SELL",
-                             product = constants.Product.MIS,
-                             validity = constants.Validity.DAY,
-                             variety = constants.Variety.REGULAR,
-                             unique_id = "NSEOrder",
-                             headers = {},
-                             price = 2840.0,
-                             trigger = 2845.0
-                             )
+                            symbol = "RELIANCE",
+                            quantity = 10,
+                            side = "SELL",
+                            product = constants.Product.MIS,
+                            validity = constants.Validity.DAY,
+                            variety = constants.Variety.REGULAR,
+                            unique_id = "NSEOrder",
+                            headers = {},
+                            price = 2840.0,
+                            trigger = 2845.0
+                            )
     ```
 
 - `create_order_bo ()`: This method allows the user to place Bracket Orders in the supported broker. It takes the following parameters:

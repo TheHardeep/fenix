@@ -173,10 +173,9 @@ class iifl(Broker):
                    "Name": "Index", "Symbol": "XXZ",
                    "Description": "Symbol"}, axis=1, inplace=True)
 
-
         df_bse = df[(df["Exchange"] == "BSECM")]
         df_bse = df_bse[["Token", "Index", "Symbol", "LotSize", "TickSize", "Exchange"]]
-        # df_bse["Exchange"] = ExchangeCode.BSE
+
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
         df_bse.set_index(df_bse['Index'], inplace=True)
         df_bse.drop(columns="Index", inplace=True)
@@ -206,25 +205,31 @@ class iifl(Broker):
         """
         params = {"exchangeSegment": 1}
         response = cls.fetch(method="GET", url=cls.base_urls["index_data"], params=params)
-        df = cls._json_parser(response)['result']['indexList']
+        data_nse = cls._json_parser(response)['result']['indexList']
+
+        params = {"exchangeSegment": 11}
+        response = cls.fetch(method="GET", url=cls.base_urls["index_data"], params=params)
+        data_bse = cls._json_parser(response)['result']['indexList']
+
+        data_nse.extend(data_bse)
 
         indices = {}
 
-        for i in df:
+        for i in data_nse:
             symbol, token = i.split("_")
             indices[symbol] = {"Symbol": symbol, "Token": int(token)}
 
         indices[Root.BNF] = indices["NIFTY BANK"]
         indices[Root.NF] = indices["NIFTY 50"]
         indices[Root.FNF] = indices["NIFTY FIN SERVICE"]
-        indices[Root.MIDCPNF] = indices["NIFTY MIDCAP SELECT"]
+        indices[Root.MIDCPNF] = indices["NIFTY MID SELECT"]
 
         cls.indices = indices
 
         return indices
 
     @classmethod
-    def create_nfo_tokens(cls):
+    def create_fno_tokens(cls):
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the iifl.nfo_tokens Dictionary.
@@ -245,20 +250,40 @@ class iifl(Broker):
                          "Description", "Series", "NameWithSeries", "InstrumentID", "PriceBand.High", "PriceBand.Low",
                          "FreezeQty", "TickSize", "LotSize", "Multiplier", "UnderlyingInstrumentId", "UnderlyingIndexName",
                          "ContractExpiration", "StrikePrice", "OptionType", "AA", "AWS", "AAQ", "Symbol"]
-            df = cls.data_reader(link=str_file, filetype="csv",
+            df_nfo = cls.data_reader(link=str_file, filetype="csv",
                                  sep="|", col_names=col_names)
 
-            df = df[
+            df_nfo = df_nfo[
                 (
-                    (df['Name'] == "BANKNIFTY") |
-                    (df['Name'] == "NIFTY") |
-                    (df['Name'] == "FINNIFTY") |
-                    (df['Name'] == "MIDCPNIFTY")
+                    (df_nfo['Name'] == "BANKNIFTY") |
+                    (df_nfo['Name'] == "NIFTY") |
+                    (df_nfo['Name'] == "FINNIFTY") |
+                    (df_nfo['Name'] == "MIDCPNIFTY")
                 ) &
                 (
-                    (df['Series'] == "OPTIDX")
+                    (df_nfo['Series'] == "OPTIDX")
                 )]
 
+            json_data = {"exchangeSegmentList": ["BSEFO"]}
+            headers = {"Content-Type": "application/json", "Accept": "application/json"}
+
+            req_data = cls.fetch(method="POST", url=cls.base_urls["market_data"], json=json_data, headers=headers)
+            csv_bytes = cls._json_parser(req_data)['result']
+            str_file = io.StringIO(csv_bytes, newline="\n")
+
+            df_bfo = cls.data_reader(link=str_file, filetype="csv",
+                                 sep="|", col_names=col_names)
+
+            df_bfo = df_bfo[
+                (
+                    (df_bfo['Name'] == "SENSEX") |
+                    (df_bfo['Name'] == "BANKEX")
+                ) &
+                (
+                    (df_bfo['Series'] == "IO")
+                )]
+
+            df = cls.concat_df([df_nfo, df_bfo])
             df.rename({"ExchangeInstrumentID": "Token", "Name": "Root",
                        "ContractExpiration": "Expiry", "OptionType": "Option",
                        "ExchangeSegment": "Exchange"},
@@ -266,7 +291,7 @@ class iifl(Broker):
 
             df['Option'] = df['Symbol'].str.extract(r"(CE|PE)")
             df['Token'] = df['Token'].astype(int)
-            df['StrikePrice'] = df['StrikePrice'].astype(int)
+            df['StrikePrice'] = df['StrikePrice'].astype(int).astype(str)
             df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
 
             df = df[['Token', 'Symbol', 'Expiry', 'Option',
@@ -540,73 +565,8 @@ class iifl(Broker):
 
 
     @classmethod
-    def create_eq_nfo_order(cls,
-                            quantity: int,
-                            side: str,
-                            headers: dict,
-                            token_dict: dict,
-                            price: float = 0.0,
-                            trigger: float = 0.0,
-                            product: str = Product.MIS,
-                            validity: str = Validity.DAY,
-                            variety: str = Variety.REGULAR,
-                            unique_id: str = UniqueID.DEFORDER
-                            ) -> dict[Any, Any]:
-        """
-        Place an Order in F&O and Equity Segment.
-
-        Parameters:
-            quantity (int): Order quantity.
-            side (str): Order Side: "BUY", "SELL".
-            headers (dict): headers to send order request with.
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
-            price (float): price of the order. Defaults to 0.0.
-            trigger (float): trigger price of the order. Defaults to 0.0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-
-        token = token_dict["Token"]
-        exchange = token_dict["Exchange"]
-        symbol = token_dict["Symbol"]
-
-        json_data = {
-            "exchangeInstrumentID": token,
-            "exchangeSegment":  exchange,
-            "limitPrice": price,
-            "stopPrice": trigger,
-            "orderQuantity": quantity,
-            "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
-            "orderType": cls.req_order_type[order_type],
-            "productType": cls._key_mapper(cls.req_product, product, 'product'),
-            "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "orderUniqueIdentifier": unique_id,
-            "disclosedQuantity": 0,
-        }
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
     def create_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      product: str,
@@ -655,8 +615,8 @@ class iifl(Broker):
 
         if not target:
             json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "exchangeInstrumentID": token_dict['Token'],
+                "exchangeSegment": token_dict["Exchange"],
                 "limitPrice": price,
                 "stopPrice": trigger,
                 "orderQuantity": quantity,
@@ -678,9 +638,7 @@ class iifl(Broker):
 
     @classmethod
     def market_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      unique_id: str,
@@ -715,8 +673,8 @@ class iifl(Broker):
         """
         if not target:
             json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "exchangeInstrumentID": token_dict['Token'],
+                "exchangeSegment": token_dict["Exchange"],
                 "limitPrice": "0",
                 "stopPrice": "0",
                 "orderQuantity": quantity,
@@ -738,9 +696,7 @@ class iifl(Broker):
 
     @classmethod
     def limit_order(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
+                    token_dict: dict,
                     price: float,
                     quantity: int,
                     side: str,
@@ -777,8 +733,8 @@ class iifl(Broker):
         """
         if not target:
             json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "exchangeInstrumentID": token_dict['Token'],
+                "exchangeSegment": token_dict["Exchange"],
                 "limitPrice": price,
                 "stopPrice": "0",
                 "orderQuantity": quantity,
@@ -800,9 +756,7 @@ class iifl(Broker):
 
     @classmethod
     def sl_order(cls,
-                 token: int,
-                 exchange: str,
-                 symbol: str,
+                 token_dict: dict,
                  price: float,
                  trigger: float,
                  quantity: int,
@@ -841,8 +795,8 @@ class iifl(Broker):
         """
         if not target:
             json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "exchangeInstrumentID": token_dict['Token'],
+                "exchangeSegment": token_dict["Exchange"],
                 "limitPrice": price,
                 "stopPrice": trigger,
                 "orderQuantity": quantity,
@@ -864,9 +818,7 @@ class iifl(Broker):
 
     @classmethod
     def slm_order(cls,
-                  token: int,
-                  exchange: str,
-                  symbol: str,
+                  token_dict: dict,
                   trigger: float,
                   quantity: int,
                   side: str,
@@ -903,8 +855,8 @@ class iifl(Broker):
         """
         if not target:
             json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "exchangeInstrumentID": token_dict['Token'],
+                "exchangeSegment": token_dict["Exchange"],
                 "limitPrice": "0",
                 "stopPrice": trigger,
                 "orderQuantity": quantity,
@@ -941,9 +893,6 @@ class iifl(Broker):
                         headers: dict,
                         price: float = 0,
                         trigger: float = 0,
-                        target: float = 0,
-                        stoploss: float = 0,
-                        trailing_sl: float = 0,
                         ) -> dict[Any, Any]:
         """
         Place an Order in NSE/BSE Equity Segment.
@@ -984,23 +933,19 @@ class iifl(Broker):
             order_type = OrderType.SL
 
 
-        if not target:
-            json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": exchange,
-                "limitPrice": price,
-                "stopPrice": trigger,
-                "orderQuantity": quantity,
-                "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
-                "orderType": cls.req_order_type[order_type],
-                "productType": cls._key_mapper(cls.req_product, product, 'product'),
-                "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "orderUniqueIdentifier": unique_id,
-                "disclosedQuantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "exchangeInstrumentID": token,
+            "exchangeSegment": exchange,
+            "limitPrice": price,
+            "stopPrice": trigger,
+            "orderQuantity": quantity,
+            "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
+            "orderType": cls.req_order_type[order_type],
+            "productType": cls._key_mapper(cls.req_product, product, 'product'),
+            "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "orderUniqueIdentifier": unique_id,
+            "disclosedQuantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1015,9 +960,6 @@ class iifl(Broker):
                         side: str,
                         unique_id: str,
                         headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
                         variety: str = Variety.REGULAR,
@@ -1049,23 +991,19 @@ class iifl(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": exchange,
-                "limitPrice": "0",
-                "stopPrice": "0",
-                "orderQuantity": quantity,
-                "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
-                "orderType": cls.req_order_type[OrderType.MARKET],
-                "productType": cls._key_mapper(cls.req_product, product, 'product'),
-                "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "orderUniqueIdentifier": unique_id,
-                "disclosedQuantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "exchangeInstrumentID": token,
+            "exchangeSegment": exchange,
+            "limitPrice": "0",
+            "stopPrice": "0",
+            "orderQuantity": quantity,
+            "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
+            "orderType": cls.req_order_type[OrderType.MARKET],
+            "productType": cls._key_mapper(cls.req_product, product, 'product'),
+            "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "orderUniqueIdentifier": unique_id,
+            "disclosedQuantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1081,9 +1019,6 @@ class iifl(Broker):
                        side: str,
                        unique_id: str,
                        headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
                        product: str = Product.MIS,
                        validity: str = Validity.DAY,
                        variety: str = Variety.REGULAR,
@@ -1116,23 +1051,19 @@ class iifl(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": exchange,
-                "limitPrice": price,
-                "stopPrice": "0",
-                "orderQuantity": quantity,
-                "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
-                "orderType": cls.req_order_type[OrderType.LIMIT],
-                "productType": cls._key_mapper(cls.req_product, product, 'product'),
-                "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "orderUniqueIdentifier": unique_id,
-                "disclosedQuantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "exchangeInstrumentID": token,
+            "exchangeSegment": exchange,
+            "limitPrice": price,
+            "stopPrice": "0",
+            "orderQuantity": quantity,
+            "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
+            "orderType": cls.req_order_type[OrderType.LIMIT],
+            "productType": cls._key_mapper(cls.req_product, product, 'product'),
+            "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "orderUniqueIdentifier": unique_id,
+            "disclosedQuantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1149,9 +1080,6 @@ class iifl(Broker):
                     side: str,
                     unique_id: str,
                     headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
                     product: str = Product.MIS,
                     validity: str = Validity.DAY,
                     variety: str = Variety.STOPLOSS,
@@ -1185,23 +1113,19 @@ class iifl(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": exchange,
-                "limitPrice": price,
-                "stopPrice": trigger,
-                "orderQuantity": quantity,
-                "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
-                "orderType": cls.req_order_type[OrderType.SL],
-                "productType": cls._key_mapper(cls.req_product, product, 'product'),
-                "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "orderUniqueIdentifier": unique_id,
-                "disclosedQuantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "exchangeInstrumentID": token,
+            "exchangeSegment": exchange,
+            "limitPrice": price,
+            "stopPrice": trigger,
+            "orderQuantity": quantity,
+            "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
+            "orderType": cls.req_order_type[OrderType.SL],
+            "productType": cls._key_mapper(cls.req_product, product, 'product'),
+            "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "orderUniqueIdentifier": unique_id,
+            "disclosedQuantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1217,9 +1141,6 @@ class iifl(Broker):
                      side: str,
                      unique_id: str,
                      headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
                      variety: str = Variety.STOPLOSS,
@@ -1252,23 +1173,19 @@ class iifl(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "exchangeInstrumentID": token,
-                "exchangeSegment": exchange,
-                "limitPrice": "0",
-                "stopPrice": trigger,
-                "orderQuantity": quantity,
-                "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
-                "orderType": cls.req_order_type[OrderType.SLM],
-                "productType": cls._key_mapper(cls.req_product, product, 'product'),
-                "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "orderUniqueIdentifier": unique_id,
-                "disclosedQuantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "exchangeInstrumentID": token,
+            "exchangeSegment": exchange,
+            "limitPrice": "0",
+            "stopPrice": trigger,
+            "orderQuantity": quantity,
+            "orderSide": cls._key_mapper(cls.req_side, side, 'side'),
+            "orderType": cls.req_order_type[OrderType.SLM],
+            "productType": cls._key_mapper(cls.req_product, product, 'product'),
+            "timeInForce": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "orderUniqueIdentifier": unique_id,
+            "disclosedQuantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1280,12 +1197,12 @@ class iifl(Broker):
 
 
     @classmethod
-    def create_order_nfo(cls,
+    def create_order_fno(cls,
                          exchange: str,
                          root: str,
                          expiry: str,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          product: str,
@@ -1361,9 +1278,9 @@ class iifl(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_nfo(cls,
+    def market_order_fno(cls,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          headers: dict,
@@ -1429,9 +1346,9 @@ class iifl(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_nfo(cls,
+    def limit_order_fno(cls,
                         option: str,
-                        strike_price: int,
+                        strike_price: str,
                         price: float,
                         quantity: int,
                         side: str,
@@ -1499,9 +1416,9 @@ class iifl(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_nfo(cls,
+    def sl_order_fno(cls,
                      option: str,
-                     strike_price: int,
+                     strike_price: str,
                      price: float,
                      trigger: float,
                      quantity: int,
@@ -1571,9 +1488,9 @@ class iifl(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_nfo(cls,
+    def slm_order_fno(cls,
                       option: str,
-                      strike_price: int,
+                      strike_price: str,
                       trigger: float,
                       quantity: int,
                       side: str,
@@ -1639,11 +1556,6 @@ class iifl(Broker):
                              json=json_data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
-
-
-    # BO Order Functions
-
-    # NO BO Orders For IIFL
 
 
     # Order Details, OrderBook & TradeBook

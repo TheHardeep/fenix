@@ -206,7 +206,6 @@ class upstox(Broker):
 
         return cls.eq_tokens
 
-
     @classmethod
     def create_indices(cls) -> dict:
         """
@@ -218,7 +217,12 @@ class upstox(Broker):
         """
         df = cls.data_reader(link=cls.base_urls["market_data"], filetype="csv")
 
-        df = df[df["exchange"] == "NSE_INDEX"][["name", "instrument_key", "exchange_token"]]
+        df = df[
+            (
+                (df["exchange"] == "NSE_INDEX") |
+                (df["exchange"] == "BSE_INDEX")
+            )
+            ][["name", "instrument_key", "exchange_token"]]
 
         df.rename({"instrument_key": "Symbol", "exchange_token": "Token"}, axis=1, inplace=True)
         df.index = df["name"]
@@ -235,7 +239,7 @@ class upstox(Broker):
         return indices
 
     @classmethod
-    def create_nfo_tokens(cls) -> dict:
+    def create_fno_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the upstox.nfo_tokens Dictionary.
@@ -246,8 +250,16 @@ class upstox(Broker):
         try:
             df = cls.data_reader(link=cls.base_urls["market_data"], filetype="csv")
 
-            df = df[(df["instrument_type"] == "OPTIDX") & (df["exchange"] == "NSE_FO")]
-            df["Root"] = df["tradingsymbol"].str.extract(r"(FINNIFTY|MIDCPNIFTY|BANKNIFTY|NIFTY)\w+", expand=False)
+            df = df[
+                (
+                    (df["instrument_type"] == "OPTIDX")
+                ) &
+                (
+                    (df["exchange"] == "NSE_FO") |
+                    (df["exchange"] == "BSE_FO")
+                )
+                ]
+            df["Root"] = df["tradingsymbol"].str.extract(r"(FINNIFTY|MIDCPNIFTY|BANKNIFTY|NIFTY|SENSEX|BANKEX)\w+", expand=False)
 
             df.rename({"option_type": "Option", "instrument_key": "Token",
                        "expiry": "Expiry", "tradingsymbol": "Symbol",
@@ -259,7 +271,7 @@ class upstox(Broker):
                      "LotSize", "Root", "TickSize"
                      ]]
 
-            df["StrikePrice"] = df["StrikePrice"].astype(int)
+            df["StrikePrice"] = df["StrikePrice"].astype(int).astype(str)
             df["ExchangeToken"] = df["ExchangeToken"].astype(int)
             df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
 
@@ -508,71 +520,8 @@ class upstox(Broker):
 
 
     @classmethod
-    def create_eq_nfo_order(cls,
-                            quantity: int,
-                            side: str,
-                            headers: dict,
-                            token_dict: dict,
-                            price: float = 0.0,
-                            trigger: float = 0.0,
-                            product: str = Product.MIS,
-                            validity: str = Validity.DAY,
-                            variety: str = Variety.REGULAR,
-                            unique_id: str = UniqueID.DEFORDER
-                            ) -> dict[Any, Any]:
-        """
-        Place an Order in F&O and Equity Segment.
-
-        Parameters:
-            quantity (int): Order quantity.
-            side (str): Order Side: "BUY", "SELL".
-            headers (dict): headers to send order request with.
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
-            price (float): price of the order. Defaults to 0.0.
-            trigger (float): trigger price of the order. Defaults to 0.0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-
-        token = token_dict["Token"]
-
-        json_data = {
-            "instrument_token": token,
-            "price": price,
-            "trigger_price": trigger,
-            "quantity": quantity,
-            "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
-            "order_type": cls.req_order_type[order_type],
-            "product": cls._key_mapper(cls.req_product, product, 'product'),
-            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
-            "tag": unique_id,
-            "disclosed_quantity": 0,
-        }
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
     def create_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      product: str,
@@ -621,7 +570,7 @@ class upstox(Broker):
 
         if not target:
             json_data = {
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
                 "price": price,
                 "trigger_price": trigger,
                 "quantity": quantity,
@@ -645,9 +594,7 @@ class upstox(Broker):
 
     @classmethod
     def market_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      unique_id: str,
@@ -682,7 +629,7 @@ class upstox(Broker):
         """
         if not target:
             json_data = {
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
                 "price": 0,
                 "trigger_price": 0,
                 "quantity": quantity,
@@ -705,9 +652,7 @@ class upstox(Broker):
 
     @classmethod
     def limit_order(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
+                    token_dict: dict,
                     price: float,
                     quantity: int,
                     side: str,
@@ -744,7 +689,7 @@ class upstox(Broker):
         """
         if not target:
             json_data = {
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
                 "price": price,
                 "trigger_price": 0,
                 "quantity": quantity,
@@ -767,9 +712,7 @@ class upstox(Broker):
 
     @classmethod
     def sl_order(cls,
-                 token: int,
-                 exchange: str,
-                 symbol: str,
+                 token_dict: dict,
                  price: float,
                  trigger: float,
                  quantity: int,
@@ -808,7 +751,7 @@ class upstox(Broker):
         """
         if not target:
             json_data = {
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
                 "price": price,
                 "trigger_price": trigger,
                 "quantity": quantity,
@@ -831,9 +774,7 @@ class upstox(Broker):
 
     @classmethod
     def slm_order(cls,
-                  token: int,
-                  exchange: str,
-                  symbol: str,
+                  token_dict: dict,
                   trigger: float,
                   quantity: int,
                   side: str,
@@ -870,7 +811,7 @@ class upstox(Broker):
         """
         if not target:
             json_data = {
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
                 "price": 0,
                 "trigger_price": trigger,
                 "quantity": quantity,
@@ -908,9 +849,6 @@ class upstox(Broker):
                         headers: dict,
                         price: float = 0.0,
                         trigger: float = 0.0,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         ) -> dict[Any, Any]:
 
         """
@@ -951,24 +889,19 @@ class upstox(Broker):
         else:
             order_type = OrderType.SL
 
-        if not target:
-            json_data = {
-                "instrument_token": token,
-                "price": price,
-                "trigger_price": trigger,
-                "quantity": quantity,
-                "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[order_type],
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
-                "tag": unique_id,
-                "disclosed_quantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
-
+        json_data = {
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[order_type],
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
+            "tag": unique_id,
+            "disclosed_quantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -983,9 +916,6 @@ class upstox(Broker):
                         side: str,
                         unique_id: str,
                         headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
                         variety: str = Variety.REGULAR,
@@ -1017,23 +947,19 @@ class upstox(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "instrument_token": token,
-                "price": 0,
-                "trigger_price": 0,
-                "quantity": quantity,
-                "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.MARKET],
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
-                "tag": unique_id,
-                "disclosed_quantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "instrument_token": token,
+            "price": 0,
+            "trigger_price": 0,
+            "quantity": quantity,
+            "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.MARKET],
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
+            "tag": unique_id,
+            "disclosed_quantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1049,9 +975,6 @@ class upstox(Broker):
                        side: str,
                        unique_id: str,
                        headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
                        product: str = Product.MIS,
                        validity: str = Validity.DAY,
                        variety: str = Variety.REGULAR,
@@ -1084,23 +1007,19 @@ class upstox(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "instrument_token": token,
-                "price": price,
-                "trigger_price": 0,
-                "quantity": quantity,
-                "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.LIMIT],
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
-                "tag": unique_id,
-                "disclosed_quantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": 0,
+            "quantity": quantity,
+            "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.LIMIT],
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
+            "tag": unique_id,
+            "disclosed_quantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1117,9 +1036,6 @@ class upstox(Broker):
                     side: str,
                     unique_id: str,
                     headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
                     product: str = Product.MIS,
                     validity: str = Validity.DAY,
                     variety: str = Variety.STOPLOSS,
@@ -1153,23 +1069,19 @@ class upstox(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "instrument_token": token,
-                "price": price,
-                "trigger_price": trigger,
-                "quantity": quantity,
-                "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.SL],
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
-                "tag": unique_id,
-                "disclosed_quantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.SL],
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
+            "tag": unique_id,
+            "disclosed_quantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1185,9 +1097,6 @@ class upstox(Broker):
                      side: str,
                      unique_id: str,
                      headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
                      variety: str = Variety.STOPLOSS,
@@ -1220,23 +1129,19 @@ class upstox(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "instrument_token": token,
-                "price": 0,
-                "trigger_price": trigger,
-                "quantity": quantity,
-                "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.SLM],
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
-                "tag": unique_id,
-                "disclosed_quantity": 0,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "instrument_token": token,
+            "price": 0,
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "transaction_type": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.SLM],
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "is_amo": False if cls._key_mapper(cls.req_variety, variety, 'variety') != Variety.AMO else True,
+            "tag": unique_id,
+            "disclosed_quantity": 0,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1248,12 +1153,12 @@ class upstox(Broker):
 
 
     @classmethod
-    def create_order_nfo(cls,
+    def create_order_fno(cls,
                          exchange: str,
                          root: str,
                          expiry: str,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          product: str,
@@ -1330,9 +1235,9 @@ class upstox(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_nfo(cls,
+    def market_order_fno(cls,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          headers: dict,
@@ -1398,9 +1303,9 @@ class upstox(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_nfo(cls,
+    def limit_order_fno(cls,
                         option: str,
-                        strike_price: int,
+                        strike_price: str,
                         price: float,
                         quantity: int,
                         side: str,
@@ -1468,9 +1373,9 @@ class upstox(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_nfo(cls,
+    def sl_order_fno(cls,
                      option: str,
-                     strike_price: int,
+                     strike_price: str,
                      price: float,
                      trigger: float,
                      quantity: int,
@@ -1540,9 +1445,9 @@ class upstox(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_nfo(cls,
+    def slm_order_fno(cls,
                       option: str,
-                      strike_price: int,
+                      strike_price: str,
                       trigger: float,
                       quantity: int,
                       side: str,
@@ -1608,11 +1513,6 @@ class upstox(Broker):
                              json=json_data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
-
-
-    # BO Order Functions
-
-    # NO BO Orders For Upstox
 
 
     # Order Details, OrderBook & TradeBook

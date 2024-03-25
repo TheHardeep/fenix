@@ -237,12 +237,9 @@ class choice(Broker):
             todaysdate = cls.current_datetime().date().strftime("%d%b%Y")
             link = f"{cls.base_urls['market_data']}/SCRIP_MASTER_{todaysdate}.csv"
             df = cls.data_reader(link, filetype='csv', dtype={"ISIN": str, "SecName": str, 'Instrument': str, "PriceUnit": str, "QtyUnit": str, "DeliveryUnit": str})
+            df = df[df["PriceTick"] == 0][["Symbol", "Token"]]
 
-            df = df[
-                (
-                    (df["Segment"] == 1) &
-                    (df["PriceTick"] == 0)
-                )][["Symbol", "Token"]]
+            df = df.drop_duplicates(['Symbol'])
             df.index = df['Symbol']
 
             indices = df.to_dict(orient='index')
@@ -261,7 +258,7 @@ class choice(Broker):
             raise TokenDownloadError({"Error": exc.args}) from exc
 
     @classmethod
-    def create_nfo_tokens(cls) -> dict:
+    def create_fno_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the choice.nfo_tokens Dictionary.
@@ -280,7 +277,9 @@ class choice(Broker):
                     (df["Symbol"] == "BANKNIFTY") |
                     (df["Symbol"] == "NIFTY") |
                     (df["Symbol"] == "FINNIFTY") |
-                    (df["Symbol"] == "MIDCPNIFTY")
+                    (df["Symbol"] == "MIDCPNIFTY") |
+                    (df["Symbol"] == "SENSEX") |
+                    (df["Symbol"] == "BANKEX")
                 ) &
                 (
                     (df["Instrument"] == "OPTIDX")
@@ -297,7 +296,7 @@ class choice(Broker):
                       axis=1, inplace=True)
 
             df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
-            df["StrikePrice"] = (df["StrikePrice"] / df["PriceDivisor"]).astype(int)
+            df["StrikePrice"] = (df["StrikePrice"] / df["PriceDivisor"]).astype(int).astype(str)
             df["TickSize"] = df["TickSize"] / df["PriceDivisor"]
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
@@ -529,79 +528,9 @@ class choice(Broker):
     # Order Functions
 
 
-    def create_eq_nfo_order(cls,
-                            quantity: int,
-                            side: str,
-                            headers: dict,
-                            token_dict: dict,
-                            price: float = 0.0,
-                            trigger: float = 0.0,
-                            product: str = Product.MIS,
-                            validity: str = Validity.DAY,
-                            variety: str = Variety.REGULAR,
-                            unique_id: str = UniqueID.DEFORDER
-                            ) -> dict[Any, Any]:
-        """
-        Place an Order in F&O and Equity Segment.
-
-        Parameters:
-            quantity (int): Order quantity.
-            side (str): Order Side: "BUY", "SELL".
-            headers (dict): headers to send order request with.
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
-            price (float): price of the order. Defaults to 0.0.
-            trigger (float): trigger price of the order. Defaults to 0.0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-
-        token = token_dict["Token"]
-        exchange = token_dict["Exchange"]
-        symbol = token_dict["Symbol"]
-
-        json_data = [
-            {
-                "symbol_id": token,
-                "exch": exchange,
-                "trading_symbol": symbol,
-                "price": price,
-                "trigPrice": trigger,
-                "qty": quantity,
-                "transtype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[order_type],
-                "pCode": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "complexty": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "orderTag": unique_id,
-                "discqty": 0,
-            }
-        ]
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
-
-
     @classmethod
     def create_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      product: str,
@@ -650,8 +579,8 @@ class choice(Broker):
 
         if not target:
             json_data = {
-                "Token": token,
-                "SegmentId": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "Token": token_dict['Token'],
+                "SegmentId": token_dict["Exchange"],
                 "Price": price,
                 "TriggerPrice": trigger,
                 "Qty": quantity,
@@ -674,9 +603,7 @@ class choice(Broker):
 
     @classmethod
     def market_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      unique_id: str,
@@ -711,8 +638,8 @@ class choice(Broker):
         """
         if not target:
             json_data = {
-                "Token": token,
-                "SegmentId": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "Token": token_dict['Token'],
+                "SegmentId": token_dict["Exchange"],
                 "Price": 0,
                 "TriggerPrice": 0,
                 "Qty": quantity,
@@ -734,9 +661,7 @@ class choice(Broker):
 
     @classmethod
     def limit_order(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
+                    token_dict: dict,
                     price: float,
                     quantity: int,
                     side: str,
@@ -773,8 +698,8 @@ class choice(Broker):
         """
         if not target:
             json_data = {
-                "Token": token,
-                "SegmentId": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "Token": token_dict['Token'],
+                "SegmentId": token_dict["Exchange"],
                 "Price": price,
                 "TriggerPrice": 0,
                 "Qty": quantity,
@@ -796,9 +721,7 @@ class choice(Broker):
 
     @classmethod
     def sl_order(cls,
-                 token: int,
-                 exchange: str,
-                 symbol: str,
+                 token_dict: dict,
                  price: float,
                  trigger: float,
                  quantity: int,
@@ -837,8 +760,8 @@ class choice(Broker):
         """
         if not target:
             json_data = {
-                "Token": token,
-                "SegmentId": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "Token": token_dict['Token'],
+                "SegmentId": token_dict["Exchange"],
                 "Price": price,
                 "TriggerPrice": trigger,
                 "Qty": quantity,
@@ -860,9 +783,7 @@ class choice(Broker):
 
     @classmethod
     def slm_order(cls,
-                  token: int,
-                  exchange: str,
-                  symbol: str,
+                  token_dict: dict,
                   trigger: float,
                   quantity: int,
                   side: str,
@@ -899,8 +820,8 @@ class choice(Broker):
         """
         if not target:
             json_data = {
-                "Token": token,
-                "SegmentId": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+                "Token": token_dict['Token'],
+                "SegmentId": token_dict["Exchange"],
                 "Price": 0,
                 "TriggerPrice": trigger,
                 "Qty": quantity,
@@ -937,9 +858,6 @@ class choice(Broker):
                         headers: dict,
                         price: float = 0,
                         trigger: float = 0,
-                        target: float = 0,
-                        stoploss: float = 0,
-                        trailing_sl: float = 0,
                         ) -> dict[Any, Any]:
 
         """
@@ -980,23 +898,19 @@ class choice(Broker):
         else:
             order_type = OrderType.SL
 
-        if not target:
-            json_data = {
-                "Token": token,
-                "SegmentId": exchange,
-                "Price": price,
-                "TriggerPrice": trigger,
-                "Qty": quantity,
-                "BS": cls._key_mapper(cls.req_side, side, 'side'),
-                "OrderType": cls.req_order_type[order_type],
-                "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
-                "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "DisclosedQty": 0,
-                "IsEdisReq": False,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "Token": token,
+            "SegmentId": exchange,
+            "Price": price,
+            "TriggerPrice": trigger,
+            "Qty": quantity,
+            "BS": cls._key_mapper(cls.req_side, side, 'side'),
+            "OrderType": cls.req_order_type[order_type],
+            "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
+            "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "DisclosedQty": 0,
+            "IsEdisReq": False,
+        }
 
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
@@ -1012,9 +926,6 @@ class choice(Broker):
                         side: str,
                         unique_id: str,
                         headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
                         variety: str = Variety.REGULAR,
@@ -1046,23 +957,20 @@ class choice(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "Token": token,
-                "SegmentId": exchange,
-                "Price": 0,
-                "TriggerPrice": 0,
-                "Qty": quantity,
-                "BS": cls._key_mapper(cls.req_side, side, 'side'),
-                "OrderType": cls.req_order_type[OrderType.MARKET],
-                "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
-                "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "DisclosedQty": 0,
-                "IsEdisReq": False,
-            }
+        json_data = {
+            "Token": token,
+            "SegmentId": exchange,
+            "Price": 0,
+            "TriggerPrice": 0,
+            "Qty": quantity,
+            "BS": cls._key_mapper(cls.req_side, side, 'side'),
+            "OrderType": cls.req_order_type[OrderType.MARKET],
+            "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
+            "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "DisclosedQty": 0,
+            "IsEdisReq": False,
+        }
 
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers)
@@ -1078,9 +986,6 @@ class choice(Broker):
                        side: str,
                        unique_id: str,
                        headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
                        product: str = Product.MIS,
                        validity: str = Validity.DAY,
                        variety: str = Variety.REGULAR,
@@ -1113,23 +1018,20 @@ class choice(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "Token": token,
-                "SegmentId": exchange,
-                "Price": price,
-                "TriggerPrice": 0,
-                "Qty": quantity,
-                "BS": cls._key_mapper(cls.req_side, side, 'side'),
-                "OrderType": cls.req_order_type[OrderType.LIMIT],
-                "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
-                "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "DisclosedQty": 0,
-                "IsEdisReq": False,
-            }
+        json_data = {
+            "Token": token,
+            "SegmentId": exchange,
+            "Price": price,
+            "TriggerPrice": 0,
+            "Qty": quantity,
+            "BS": cls._key_mapper(cls.req_side, side, 'side'),
+            "OrderType": cls.req_order_type[OrderType.LIMIT],
+            "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
+            "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "DisclosedQty": 0,
+            "IsEdisReq": False,
+        }
 
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers)
@@ -1146,9 +1048,6 @@ class choice(Broker):
                     side: str,
                     unique_id: str,
                     headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
                     product: str = Product.MIS,
                     validity: str = Validity.DAY,
                     variety: str = Variety.STOPLOSS,
@@ -1182,23 +1081,19 @@ class choice(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "Token": token,
-                "SegmentId": exchange,
-                "Price": price,
-                "TriggerPrice": trigger,
-                "Qty": quantity,
-                "BS": cls._key_mapper(cls.req_side, side, 'side'),
-                "OrderType": cls.req_order_type[OrderType.SL],
-                "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
-                "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "DisclosedQty": 0,
-                "IsEdisReq": False,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "Token": token,
+            "SegmentId": exchange,
+            "Price": price,
+            "TriggerPrice": trigger,
+            "Qty": quantity,
+            "BS": cls._key_mapper(cls.req_side, side, 'side'),
+            "OrderType": cls.req_order_type[OrderType.SL],
+            "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
+            "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "DisclosedQty": 0,
+            "IsEdisReq": False,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers)
@@ -1214,9 +1109,6 @@ class choice(Broker):
                      side: str,
                      unique_id: str,
                      headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
                      variety: str = Variety.STOPLOSS,
@@ -1249,23 +1141,19 @@ class choice(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            json_data = {
-                "Token": token,
-                "SegmentId": exchange,
-                "Price": 0,
-                "TriggerPrice": trigger,
-                "Qty": quantity,
-                "BS": cls._key_mapper(cls.req_side, side, 'side'),
-                "OrderType": cls.req_order_type[OrderType.SLM],
-                "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
-                "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "DisclosedQty": 0,
-                "IsEdisReq": False,
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        json_data = {
+            "Token": token,
+            "SegmentId": exchange,
+            "Price": 0,
+            "TriggerPrice": trigger,
+            "Qty": quantity,
+            "BS": cls._key_mapper(cls.req_side, side, 'side'),
+            "OrderType": cls.req_order_type[OrderType.SLM],
+            "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
+            "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "DisclosedQty": 0,
+            "IsEdisReq": False,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers)
@@ -1277,12 +1165,12 @@ class choice(Broker):
 
 
     @classmethod
-    def create_order_nfo(cls,
+    def create_order_fno(cls,
                          exchange: str,
                          root: str,
                          expiry: str,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          product: str,
@@ -1328,7 +1216,6 @@ class choice(Broker):
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
-        symbol = detail['Symbol']
 
         if not price and trigger:
             order_type = OrderType.SLM
@@ -1339,34 +1226,29 @@ class choice(Broker):
         else:
             order_type = OrderType.SL
 
-        json_data = [
-            {
-                "symbol_id": token,
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "trading_symbol": symbol,
-                "price": price,
-                "trigPrice": trigger,
-                "qty": quantity,
-                "transtype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[order_type],
-                "pCode": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "complexty": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "orderTag": unique_id,
-                "discqty": 0,
-            }
-        ]
+        json_data = {
+            "Token": token,
+            "SegmentId": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "Price": price,
+            "TriggerPrice": trigger,
+            "Qty": quantity,
+            "BS": cls._key_mapper(cls.req_side, side, 'side'),
+            "OrderType": cls.req_order_type[order_type],
+            "ProductType": cls._key_mapper(cls.req_product, product, 'product'),
+            "Validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "DisclosedQty": 0,
+            "IsEdisReq": False,
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
+                             json=json_data, headers=headers)
 
-        return cls._create_order_parser(response=response,
-                                        key_to_check="NOrdNo", headers=headers)
+        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_nfo(cls,
+    def market_order_fno(cls,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          headers: dict,
@@ -1432,9 +1314,9 @@ class choice(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_nfo(cls,
+    def limit_order_fno(cls,
                         option: str,
-                        strike_price: int,
+                        strike_price: str,
                         price: float,
                         quantity: int,
                         side: str,
@@ -1502,9 +1384,9 @@ class choice(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_nfo(cls,
+    def sl_order_fno(cls,
                      option: str,
-                     strike_price: int,
+                     strike_price: str,
                      price: float,
                      trigger: float,
                      quantity: int,
@@ -1574,9 +1456,9 @@ class choice(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_nfo(cls,
+    def slm_order_fno(cls,
                       option: str,
-                      strike_price: int,
+                      strike_price: str,
                       trigger: float,
                       quantity: int,
                       side: str,
@@ -1642,11 +1524,6 @@ class choice(Broker):
                              json=json_data, headers=headers)
 
         return cls._create_order_parser(response=response, headers=headers)
-
-
-    # BO Order Functions
-
-    # NO BO Orders For Choice
 
 
     # Order Details, OrderBook & TradeBook
@@ -1944,7 +1821,6 @@ class choice(Broker):
             dict[Any, Any]: fenix Unified Position Response.
         """
         return cls.fetch_day_positions(headers=headers)
-
 
     @classmethod
     def fetch_holdings(cls,

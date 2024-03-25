@@ -181,6 +181,7 @@ class angelone(Broker):
                        "tick_size": "TickSize", "lotsize": "LotSize",
                        "exch_seg": "Exchange"}, axis=1, inplace=True)
 
+        df_bse['Token'] = df_bse['Token'].astype(int)
         df_bse.set_index(df_bse['Symbol'], inplace=True)
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
 
@@ -190,6 +191,7 @@ class angelone(Broker):
                        "tick_size": "TickSize", "lotsize": "LotSize",
                        "exch_seg": "Exchange"}, axis=1, inplace=True)
 
+        df_nse['Token'] = df_nse['Token'].astype(int)
         df_nse.set_index(df_nse['Index'], inplace=True)
         df_nse.drop(columns="Index", inplace=True)
 
@@ -198,7 +200,6 @@ class angelone(Broker):
         cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
 
         return cls.eq_tokens
-
 
     @classmethod
     def create_indices(cls) -> dict:
@@ -210,10 +211,11 @@ class angelone(Broker):
             dict: Unified fenix indices format.
         """
         df = cls.data_reader(cls.base_urls["market_data"], filetype='json')
-        df = df[(df['exch_seg'] == 'NSE') & (df['instrumenttype'] == "AMXIDX")][["symbol", "token"]]
+        df = df[df['instrumenttype'] == "AMXIDX"][["symbol", "token", "exch_seg"]]
 
-        df.rename({"symbol": "Symbol", "token": "Token"}, axis=1, inplace=True)
+        df.rename({"symbol": "Symbol", "token": "Token", "exch_seg": "Exchange"}, axis=1, inplace=True)
         df.index = df['Symbol']
+        df['Token'] = df['Token'].astype(int)
 
         indices = df.to_dict(orient='index')
 
@@ -227,7 +229,7 @@ class angelone(Broker):
         return indices
 
     @classmethod
-    def create_nfo_tokens(cls) -> dict:
+    def create_fno_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the angelone.nfo_tokens Dictionary.
@@ -238,24 +240,37 @@ class angelone(Broker):
         try:
             df = cls.data_reader(cls.base_urls["market_data"], filetype='json')
 
-            df = df[
-                (
-                    (df['name'] == 'BANKNIFTY') |
-                    (df['name'] == 'NIFTY') |
-                    (df['name'] == 'FINNIFTY') |
-                    (df['name'] == "MIDCPNIFTY")
-                ) &
-                (df['exch_seg'] == ExchangeCode.NFO) &
-                (df['instrumenttype'] == "OPTIDX")
-            ]
-
             df.rename({"token": "Token", "name": "Root", "expiry": "Expiry", "symbol": "Symbol",
-                       "instrument_type": "Option", "tick_size": "TickSize", "lotsize": "LotSize",
+                        "tick_size": "TickSize", "lotsize": "LotSize",
                        "strike": "StrikePrice", "exch_seg": "Exchange"},
                       axis=1, inplace=True)
 
+            df_nfo = df[
+                (
+                    (df['Root'] == 'BANKNIFTY') |
+                    (df['Root'] == 'NIFTY') |
+                    (df['Root'] == 'FINNIFTY') |
+                    (df['Root'] == "MIDCPNIFTY")
+                ) &
+                (df['Exchange'] == ExchangeCode.NFO) &
+                (df['instrumenttype'] == "OPTIDX")
+            ]
+
+            df_bfo = df[
+                (
+                    (df['Root'] == 'SENSEX') |
+                    (df['Root'] == 'BANKEX')
+
+                ) &
+                (df['Exchange'] == ExchangeCode.BFO) &
+                (df['instrumenttype'] == "OPTIDX")
+            ]
+
+            df = cls.concat_df([df_nfo, df_bfo])
+
+
             df['Option'] = df['Symbol'].str.extract(r"(CE|PE)")
-            df['StrikePrice'] = df['StrikePrice'] // 100
+            df['StrikePrice'] = (df['StrikePrice'] // 100).astype(str)
             df['TickSize'] = df['TickSize'] / 100
             df['Token'] = df['Token'].astype(int)
 
@@ -387,7 +402,7 @@ class angelone(Broker):
             Order.USERID: order["ordertag"],
             Order.TIMESTAMP: cls.datetime_strp(order["updatetime"], "%d-%b-%Y %H:%M:%S"),
             Order.SYMBOL: order["tradingsymbol"],
-            Order.TOKEN: order["symboltoken"],
+            Order.TOKEN: int(order["symboltoken"]),
             Order.SIDE: cls.req_side.get(order["transactiontype"], order["transactiontype"]),
             Order.TYPE: cls.resp_order_type.get(order["ordertype"], order["ordertype"]),
             Order.AVGPRICE: order["averageprice"],
@@ -431,7 +446,7 @@ class angelone(Broker):
             Order.USERID: "",
             Order.TIMESTAMP: cls.datetime_strp(order["updatetime"], "%d-%b-%Y %H:%M:%S"),
             Order.SYMBOL: order["tradingsymbol"],
-            Order.TOKEN: order["symboltoken"],
+            Order.TOKEN: int(order["symboltoken"]),
             Order.SIDE: cls.req_side.get(order["transactiontype"], order["transactiontype"]),
             Order.TYPE: cls.resp_order_type.get(order["ordertype"], order["ordertype"]),
             Order.AVGPRICE: order["averageprice"],
@@ -472,7 +487,7 @@ class angelone(Broker):
         """
         parsed_position = {
             Position.SYMBOL: position["tradingsymbol"],
-            Position.TOKEN: position["symboltoken"],
+            Position.TOKEN: int(position["symboltoken"]),
             Position.NETQTY: int(position["netqty"]),
             Position.AVGPRICE: float(position["netprice"]),
             Position.MTM: None,
@@ -545,82 +560,9 @@ class angelone(Broker):
 
     # Order Functions
 
-
-    @classmethod
-    def create_eq_nfo_order(cls,
-                            quantity: int,
-                            side: str,
-                            headers: dict,
-                            token_dict: dict,
-                            price: float = 0.0,
-                            trigger: float = 0.0,
-                            product: str = Product.MIS,
-                            validity: str = Validity.DAY,
-                            variety: str = Variety.REGULAR,
-                            unique_id: str = UniqueID.DEFORDER
-                            ) -> dict[Any, Any]:
-        """
-        Place an Order in F&O and Equity Segment.
-
-        Parameters:
-            quantity (int): Order quantity.
-            side (str): Order Side: "BUY", "SELL".
-            headers (dict): headers to send order request with.
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
-            price (float): price of the order. Defaults to 0.0.
-            trigger (float): trigger price of the order. Defaults to 0.0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        variety = cls._key_mapper(cls.req_variety, variety, 'variety')
-
-        if not price and trigger:
-            order_type = OrderType.SLM
-            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
-
-        token = token_dict["Token"]
-        exchange = token_dict["Exchange"]
-        symbol = token_dict["Symbol"]
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": exchange,
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": trigger,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-            "ordertype": cls.req_order_type[order_type],
-            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "variety": variety,
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-
     @classmethod
     def create_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      product: str,
@@ -660,18 +602,20 @@ class angelone(Broker):
         """
         if not price and trigger:
             order_type = OrderType.SLM
+            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
         elif not price:
             order_type = OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
         else:
             order_type = OrderType.SL
+            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
 
         if not target:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": price,
                 "triggerprice": trigger,
                 "quantity": quantity,
@@ -686,9 +630,9 @@ class angelone(Broker):
 
         else:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": price,
                 "triggerprice": trigger,
                 "squareoff": target,
@@ -699,7 +643,7 @@ class angelone(Broker):
                 "ordertype": cls.req_order_type[order_type],
                 "producttype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "variety": cls.req_variety[Variety.BO],
                 "ordertag": unique_id,
                 "disclosedquantity": "0",
             }
@@ -711,9 +655,7 @@ class angelone(Broker):
 
     @classmethod
     def market_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      unique_id: str,
@@ -748,9 +690,9 @@ class angelone(Broker):
         """
         if not target:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": "0",
                 "triggerprice": "0",
                 "quantity": quantity,
@@ -764,9 +706,9 @@ class angelone(Broker):
             }
         else:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": "0",
                 "triggerprice": "0",
                 "squareoff": target,
@@ -777,7 +719,7 @@ class angelone(Broker):
                 "ordertype": cls.req_order_type[OrderType.MARKET],
                 "producttype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "variety": cls.req_variety[Variety.BO],
                 "ordertag": unique_id,
                 "disclosedquantity": "0",
             }
@@ -788,9 +730,7 @@ class angelone(Broker):
 
     @classmethod
     def limit_order(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
+                    token_dict: dict,
                     price: float,
                     quantity: int,
                     side: str,
@@ -827,9 +767,9 @@ class angelone(Broker):
         """
         if not target:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": price,
                 "triggerprice": "0",
                 "quantity": quantity,
@@ -844,9 +784,9 @@ class angelone(Broker):
 
         else:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": price,
                 "triggerprice": "0",
                 "squareoff": target,
@@ -857,7 +797,7 @@ class angelone(Broker):
                 "ordertype": cls.req_order_type[OrderType.LIMIT],
                 "producttype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "variety": cls.req_variety[Variety.BO],
                 "ordertag": unique_id,
                 "disclosedquantity": "0",
             }
@@ -869,9 +809,7 @@ class angelone(Broker):
 
     @classmethod
     def sl_order(cls,
-                 token: int,
-                 exchange: str,
-                 symbol: str,
+                 token_dict: dict,
                  price: float,
                  trigger: float,
                  quantity: int,
@@ -910,9 +848,9 @@ class angelone(Broker):
         """
         if not target:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": price,
                 "triggerprice": trigger,
                 "quantity": quantity,
@@ -927,9 +865,9 @@ class angelone(Broker):
 
         else:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": price,
                 "triggerprice": trigger,
                 "squareoff": target,
@@ -940,7 +878,7 @@ class angelone(Broker):
                 "ordertype": cls.req_order_type[OrderType.SL],
                 "producttype": cls._key_mapper(cls.req_product, product, 'product'),
                 "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+                "variety": cls.req_variety[Variety.BO],
                 "ordertag": unique_id,
                 "disclosedquantity": "0",
             }
@@ -952,9 +890,7 @@ class angelone(Broker):
 
     @classmethod
     def slm_order(cls,
-                  token: int,
-                  exchange: str,
-                  symbol: str,
+                  token_dict: dict,
                   trigger: float,
                   quantity: int,
                   side: str,
@@ -991,9 +927,9 @@ class angelone(Broker):
         """
         if not target:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": "0",
                 "triggerprice": trigger,
                 "quantity": quantity,
@@ -1008,9 +944,9 @@ class angelone(Broker):
 
         else:
             json_data = {
-                "symboltoken": token,
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tradingsymbol": symbol,
+                "symboltoken": token_dict["Token"],
+                "exchange": token_dict["Exchange"],
+                "tradingsymbol": token_dict["Symbol"],
                 "price": "0",
                 "triggerprice": trigger,
                 "squareoff": target,
@@ -1048,9 +984,6 @@ class angelone(Broker):
                         headers: dict,
                         price: float = 0,
                         trigger: float = 0,
-                        target: float = 0,
-                        stoploss: float = 0,
-                        trailing_sl: float = 0,
                         ) -> dict[Any, Any]:
 
         """
@@ -1081,52 +1014,35 @@ class angelone(Broker):
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
+        symbol = detail["Symbol"]
 
         if not price and trigger:
             order_type = OrderType.SLM
+            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
         elif not price:
             order_type = OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
         else:
             order_type = OrderType.SL
+            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
 
-        if not target:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": price,
-                "triggerprice": trigger,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[order_type],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
+        json_data = {
+            "symboltoken": token,
+            "exchange": exchange,
+            "tradingsymbol": symbol,
+            "price": price,
+            "triggerprice": trigger,
+            "quantity": quantity,
+            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+            "ordertype": cls.req_order_type[order_type],
+            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "variety": cls.req_variety[Variety.BO],
+            "ordertag": unique_id,
+            "disclosedquantity": "0",
+        }
 
-        else:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": price,
-                "triggerprice": trigger,
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[order_type],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1141,9 +1057,6 @@ class angelone(Broker):
                         side: str,
                         unique_id: str,
                         headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
                         variety: str = Variety.REGULAR,
@@ -1174,42 +1087,24 @@ class angelone(Broker):
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
+        symbol = detail["Symbol"]
 
-        if not target:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": "0",
-                "triggerprice": "0",
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[OrderType.MARKET],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-        else:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": "0",
-                "triggerprice": "0",
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[OrderType.MARKET],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
+        json_data = {
+            "symboltoken": token,
+            "exchange": exchange,
+            "tradingsymbol": symbol,
+            "price": "0",
+            "triggerprice": "0",
+            "quantity": quantity,
+            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+            "ordertype": cls.req_order_type[OrderType.MARKET],
+            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+            "ordertag": unique_id,
+            "disclosedquantity": "0",
+        }
+
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
 
@@ -1224,9 +1119,6 @@ class angelone(Broker):
                        side: str,
                        unique_id: str,
                        headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
                        product: str = Product.MIS,
                        validity: str = Validity.DAY,
                        variety: str = Variety.REGULAR,
@@ -1258,43 +1150,23 @@ class angelone(Broker):
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
+        symbol = detail["Symbol"]
 
-        if not target:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": price,
-                "triggerprice": "0",
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[OrderType.LIMIT],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        else:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": price,
-                "triggerprice": "0",
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[OrderType.LIMIT],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
+        json_data = {
+            "symboltoken": token,
+            "exchange": exchange,
+            "tradingsymbol": symbol,
+            "price": price,
+            "triggerprice": "0",
+            "quantity": quantity,
+            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+            "ordertype": cls.req_order_type[OrderType.LIMIT],
+            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+            "ordertag": unique_id,
+            "disclosedquantity": "0",
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1311,9 +1183,6 @@ class angelone(Broker):
                     side: str,
                     unique_id: str,
                     headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
                     product: str = Product.MIS,
                     validity: str = Validity.DAY,
                     variety: str = Variety.STOPLOSS,
@@ -1346,43 +1215,23 @@ class angelone(Broker):
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
+        symbol = detail["Symbol"]
 
-        if not target:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": price,
-                "triggerprice": trigger,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[OrderType.SL],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        else:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": price,
-                "triggerprice": trigger,
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[OrderType.SL],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
+        json_data = {
+            "symboltoken": token,
+            "exchange": exchange,
+            "tradingsymbol": symbol,
+            "price": price,
+            "triggerprice": trigger,
+            "quantity": quantity,
+            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+            "ordertype": cls.req_order_type[OrderType.SL],
+            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+            "ordertag": unique_id,
+            "disclosedquantity": "0",
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1398,9 +1247,6 @@ class angelone(Broker):
                      side: str,
                      unique_id: str,
                      headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
                      variety: str = Variety.STOPLOSS,
@@ -1432,43 +1278,23 @@ class angelone(Broker):
         exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
+        symbol = detail["Symbol"]
 
-        if not target:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": "0",
-                "triggerprice": trigger,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[OrderType.SLM],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        else:
-            json_data = {
-                "symboltoken": token,
-                "exchange": exchange,
-                "tradingsymbol": symbol,
-                "price": "0",
-                "triggerprice": trigger,
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-                "ordertype": cls.req_order_type[OrderType.SLM],
-                "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-                "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
+        json_data = {
+            "symboltoken": token,
+            "exchange": exchange,
+            "tradingsymbol": symbol,
+            "price": "0",
+            "triggerprice": trigger,
+            "quantity": quantity,
+            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
+            "ordertype": cls.req_order_type[OrderType.SLM],
+            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
+            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
+            "ordertag": unique_id,
+            "disclosedquantity": "0",
+        }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              json=json_data, headers=headers["headers"])
@@ -1480,12 +1306,12 @@ class angelone(Broker):
 
 
     @classmethod
-    def create_order_nfo(cls,
+    def create_order_fno(cls,
                          exchange: str,
                          root: str,
                          expiry: str,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          product: str,
@@ -1501,7 +1327,7 @@ class angelone(Broker):
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             price (float): price of the order.
             trigger (float): trigger price of the order.
             quantity (int): Order quantity.
@@ -1535,12 +1361,14 @@ class angelone(Broker):
 
         if not price and trigger:
             order_type = OrderType.SLM
+            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
         elif not price:
             order_type = OrderType.MARKET
         elif not trigger:
             order_type = OrderType.LIMIT
         else:
             order_type = OrderType.SL
+            variety =  cls.req_variety[Variety.STOPLOSS] if variety == cls.req_variety[Variety.REGULAR] else variety
 
         json_data = {
             "symboltoken": token,
@@ -1564,9 +1392,9 @@ class angelone(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_nfo(cls,
+    def market_order_fno(cls,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          headers: dict,
@@ -1583,7 +1411,7 @@ class angelone(Broker):
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
             headers (dict): headers to send order request with.
@@ -1635,9 +1463,9 @@ class angelone(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_nfo(cls,
+    def limit_order_fno(cls,
                         option: str,
-                        strike_price: int,
+                        strike_price: str,
                         price: float,
                         quantity: int,
                         side: str,
@@ -1655,7 +1483,7 @@ class angelone(Broker):
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             price (float): price of the order.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
@@ -1709,9 +1537,9 @@ class angelone(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_nfo(cls,
+    def sl_order_fno(cls,
                      option: str,
-                     strike_price: int,
+                     strike_price: str,
                      price: float,
                      trigger: float,
                      quantity: int,
@@ -1730,7 +1558,7 @@ class angelone(Broker):
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             price (float): price of the order.
             trigger (float): trigger price of the order.
             quantity (int): Order quantity.
@@ -1785,9 +1613,9 @@ class angelone(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_nfo(cls,
+    def slm_order_fno(cls,
                       option: str,
-                      strike_price: int,
+                      strike_price: str,
                       trigger: float,
                       quantity: int,
                       side: str,
@@ -1805,7 +1633,7 @@ class angelone(Broker):
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             trigger (float): trigger price of the order.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
@@ -1857,339 +1685,6 @@ class angelone(Broker):
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
-
-    # BO Order Functions
-
-
-    @classmethod
-    def create_order_bo(cls,
-                        token: int,
-                        exchange: str,
-                        symbol: str,
-                        quantity: int,
-                        side: str,
-                        unique_id: str,
-                        headers: dict,
-                        price: float = 0,
-                        trigger: float = 0,
-                        target: float = 0,
-                        stoploss: float = 0,
-                        trailing_sl: float = 0,
-                        product: str = Product.BO,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.BO,
-                        ) -> dict[Any, Any]:
-        """
-        Place a BO Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            product (str, optional): Order product.
-            validity (str, optional): Order validity.
-            variety (str, optional): Order variety.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            price (float): Order price
-            trigger (float): order trigger price
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": trigger,
-            "squareoff": target,
-            "stoploss": stoploss,
-            "trailingStopLoss": trailing_sl,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-            "ordertype": cls.req_order_type[order_type],
-            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def market_order_bo(cls,
-                        symbol: str,
-                        token: int,
-                        side: str,
-                        quantity: int,
-                        exchange: str,
-                        unique_id: str,
-                        headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
-                        product: str = Product.BO,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.BO,
-                        ) -> dict[Any, Any]:
-        """
-        Place BO Market Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tradingsymbol": symbol,
-            "price": "0",
-            "triggerprice": "0",
-            "squareoff": target,
-            "stoploss": stoploss,
-            "trailingStopLoss": trailing_sl,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-            "ordertype": cls.req_order_type[OrderType.MARKET],
-            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def limit_order_bo(cls,
-                       token: int,
-                       exchange: str,
-                       symbol: str,
-                       price: float,
-                       quantity: int,
-                       side: str,
-                       unique_id: str,
-                       headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
-                       product: str = Product.BO,
-                       validity: str = Validity.DAY,
-                       variety: str = Variety.BO,
-                       ) -> dict[Any, Any]:
-        """
-        Place BO Limit Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            price (float): Order price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": "0",
-            "squareoff": target,
-            "stoploss": stoploss,
-            "trailingStopLoss": trailing_sl,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-            "ordertype": cls.req_order_type[OrderType.LIMIT],
-            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def sl_order_bo(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
-                    price: float,
-                    trigger: float,
-                    quantity: int,
-                    side: str,
-                    unique_id: str,
-                    headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
-                    product: str = Product.BO,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.BO,
-                    ) -> dict[Any, Any]:
-
-        """
-        Place BO Stoploss Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            price (float): Order price.
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": trigger,
-            "squareoff": target,
-            "stoploss": stoploss,
-            "trailingStopLoss": trailing_sl,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-            "ordertype": cls.req_order_type[OrderType.SL],
-            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def slm_order_bo(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
-                     trigger: float,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
-                     product: str = Product.BO,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.BO,
-                     ) -> dict[Any, Any]:
-
-        """
-        Place BO Stoploss-Market Order
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response
-        """
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tradingsymbol": symbol,
-            "price": "0",
-            "triggerprice": trigger,
-            "squareoff": target,
-            "stoploss": stoploss,
-            "trailingStopLoss": trailing_sl,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, 'side'),
-            "ordertype": cls.req_order_type[OrderType.SLM],
-            "producttype": cls._key_mapper(cls.req_product, product, 'product'),
-            "duration": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "variety": cls._key_mapper(cls.req_variety, variety, 'variety'),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
 
 
     # Order Details, OrderBook & TradeBook

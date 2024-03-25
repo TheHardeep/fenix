@@ -32,6 +32,8 @@ class Root:
     NF = "NIFTY"
     FNF = "FINNIFTY"
     MIDCPNF = "MIDCPNIFTY"
+    SENSEX = "SENSEX"
+    BANKEX = "BANKEX"
 
 
 class WeeklyExpiry:

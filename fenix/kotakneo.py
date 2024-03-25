@@ -231,12 +231,16 @@ class kotakneo(Broker):
         Returns:
             dict: Unified fenix indices format.
         """
-        final_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
+        nse_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
                                                          ).replace("<exchange>", cls.req_exchange[ExchangeCode.NSE])
-        df = cls.data_reader(final_url, filetype='csv')
+        df_nse = cls.data_reader(nse_url, filetype='csv')
 
+        bse_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
+                                                         ).replace("<exchange>", cls.req_exchange[ExchangeCode.BSE])
+        df_bse = cls.data_reader(bse_url, filetype='csv')
+
+        df = cls.concat_df([df_nse, df_bse])
         df = df[df['pGroup'].isna()][["pTrdSymbol", "pSymbol", "pSymbolName"]]
-
         df.rename({"pTrdSymbol": "Symbol", "pSymbol": "Token"}, axis=1, inplace=True)
         df.index = df['pSymbolName']
         del df["pSymbolName"]
@@ -248,7 +252,7 @@ class kotakneo(Broker):
         return indices
 
     @classmethod
-    def create_nfo_tokens(cls) -> dict:
+    def create_fno_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the kotakneo.nfo_tokens Dictionary.
@@ -257,13 +261,31 @@ class kotakneo(Broker):
             TokenDownloadError: Any Error Occured is raised through this Error Type.
         """
         try:
-            final_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
+            nfo_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
                                                              ).replace("<exchange>", cls.req_exchange[ExchangeCode.NFO])
-            df = cls.data_reader(final_url, filetype='csv')
+            df_nfo = cls.data_reader(nfo_url, filetype='csv')
+            df_nfo = df_nfo[df_nfo["pInstType"] == "OPTIDX"]
+            df_nfo["lExpiryDate "] = (cls.pd_datetime(df_nfo["lExpiryDate "], unit="s") + cls.pd_dateoffset(years=10) - cls.pd_dateoffset(days=1)).dt.date.astype(str)
 
-            df = df[df["pInstType"] == "OPTIDX"]
+
+            bfo_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
+                                                           ).replace("<exchange>", cls.req_exchange[ExchangeCode.BFO])
+            df_bfo = cls.data_reader(bfo_url, filetype='csv')
+            df_bfo = df_bfo[
+                (
+                    (df_bfo["pSymbolName"] == "BSXOPT") |
+                    (df_bfo["pSymbolName"] == "BKXOPT")
+                ) &
+                (
+                    (df_bfo["pInstType"] == "IO")
+                )
+                ]
+
+            df_bfo['pSymbolName'] = df_bfo['pSymbolName'].replace({"BKXOPT": "BANKEX", "BSXOPT": "SENSEX"})
+            df_bfo["lExpiryDate "] = (cls.pd_datetime(df_bfo["lExpiryDate "], unit="s")).dt.date.astype(str)
 
 
+            df = cls.concat_df([df_nfo, df_bfo])
             df.rename({"pOptionType": "Option", "pSymbol": "Token", "pSymbolName": "Root",
                        "lExpiryDate ": "Expiry", "pTrdSymbol": "Symbol", "pExchSeg": "Exchange",
                        "dTickSize ": 'TickSize', "lLotSize": "LotSize", "dStrikePrice;": "StrikePrice"
@@ -272,10 +294,10 @@ class kotakneo(Broker):
             df = df[['Token', 'Symbol', 'Expiry', 'Option', 'StrikePrice',
                      'LotSize', 'Root', 'TickSize', "Exchange"
                      ]]
-
+            # return df
             df["TickSize"] = df["TickSize"] / 100
-            df["StrikePrice"] = (df["StrikePrice"] / 100).astype(int)
-            df["Expiry"] = (cls.pd_datetime(df["Expiry"], unit="s") + cls.pd_dateoffset(years=10)).dt.date.astype(str)
+            df["StrikePrice"] = (df["StrikePrice"] / 100).astype(int).astype(str)
+            df["Token"] = df["Token"].astype(int)
 
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
@@ -450,7 +472,7 @@ class kotakneo(Broker):
             Order.USERID: order["GuiOrdId"],
             Order.TIMESTAMP: cls.datetime_strp(order["flDtTm"], "%d-%b-%Y %H:%M:%S"),
             Order.SYMBOL: order["trdSym"],
-            Order.TOKEN: order["tok"],
+            Order.TOKEN: int(order["tok"]),
             Order.SIDE: cls.resp_side.get(order["trnsTp"], order["trnsTp"]),
             Order.TYPE: cls.resp_order_type.get(order["prcTp"], order["prcTp"]),
             Order.AVGPRICE: float(order["avgPrc"]),
@@ -494,7 +516,7 @@ class kotakneo(Broker):
             Order.USERID: order["GuiOrdId"],
             Order.TIMESTAMP: cls.datetime_strp(order["hsUpTm"], "%Y/%m/%d %H:%M:%S"),
             Order.SYMBOL: order["trdSym"],
-            Order.TOKEN: order["tok"],
+            Order.TOKEN: int(order["tok"]),
             Order.SIDE: cls.resp_side.get(order["trnsTp"], order["trnsTp"]),
             Order.TYPE: cls.resp_order_type.get(order["prcTp"], order["prcTp"]),
             Order.AVGPRICE: float(order["avgPrc"]),
@@ -616,33 +638,28 @@ class kotakneo(Broker):
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
     @classmethod
     def create_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      product: str,
                      validity: str,
                      variety: str,
+                     unique_id: str,
                      headers: dict,
                      price: float = 0.0,
                      trigger: float = 0.0,
                      target: float = 0.0,
                      stoploss: float = 0.0,
                      trailing_sl: float = 0.0,
-                     unique_id: str | None = None,
                      ) -> dict[Any, Any]:
 
         """
         Place an Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
             product (str, optional): Order product.
@@ -670,8 +687,8 @@ class kotakneo(Broker):
 
         if not target:
             order_data = {
-                "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "ts": symbol,
+                "es": token_dict["Exchange"],
+                "ts": token_dict["Symbol"],
                 "pr": price,
                 "tp": trigger,
                 "qt": quantity,
@@ -700,11 +717,10 @@ class kotakneo(Broker):
 
     @classmethod
     def market_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
+                     unique_id: str,
                      headers: dict,
                      target: float = 0.0,
                      stoploss: float = 0.0,
@@ -712,7 +728,6 @@ class kotakneo(Broker):
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
                      variety: str = Variety.REGULAR,
-                     unique_id: str | None = None,
                      ) -> dict[Any, Any]:
         """
         Place Market Order.
@@ -737,8 +752,8 @@ class kotakneo(Broker):
         """
         if not target:
             order_data = {
-                "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "ts": symbol,
+                "es": token_dict["Exchange"],
+                "ts": token_dict["Symbol"],
                 "pr": "0",
                 "tp": "0",
                 "qt": quantity,
@@ -767,12 +782,11 @@ class kotakneo(Broker):
 
     @classmethod
     def limit_order(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
+                    token_dict: dict,
                     price: float,
                     quantity: int,
                     side: str,
+                    unique_id: str,
                     headers: dict,
                     target: float = 0.0,
                     stoploss: float = 0.0,
@@ -780,7 +794,6 @@ class kotakneo(Broker):
                     product: str = Product.MIS,
                     validity: str = Validity.DAY,
                     variety: str = Variety.REGULAR,
-                    unique_id: str | None = None,
                     ) -> dict[Any, Any]:
         """
         Place Limit Order.
@@ -806,8 +819,8 @@ class kotakneo(Broker):
         """
         if not target:
             order_data = {
-                "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "ts": symbol,
+                "es": token_dict["Exchange"],
+                "ts": token_dict["Symbol"],
                 "pr": price,
                 "tp": "0",
                 "qt": quantity,
@@ -836,13 +849,12 @@ class kotakneo(Broker):
 
     @classmethod
     def sl_order(cls,
-                 token: int,
-                 exchange: str,
-                 symbol: str,
+                 token_dict: dict,
                  price: float,
                  trigger: float,
                  quantity: int,
                  side: str,
+                 unique_id: str,
                  headers: dict,
                  target: float = 0.0,
                  stoploss: float = 0.0,
@@ -850,7 +862,6 @@ class kotakneo(Broker):
                  product: str = Product.MIS,
                  validity: str = Validity.DAY,
                  variety: str = Variety.STOPLOSS,
-                 unique_id: str | None = None,
                  ) -> dict[Any, Any]:
         """
         Place Stoploss Order.
@@ -877,8 +888,8 @@ class kotakneo(Broker):
         """
         if not target:
             order_data = {
-                "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "ts": symbol,
+                "es": token_dict["Exchange"],
+                "ts": token_dict["Symbol"],
                 "pr": price,
                 "tp": trigger,
                 "qt": quantity,
@@ -907,12 +918,11 @@ class kotakneo(Broker):
 
     @classmethod
     def slm_order(cls,
-                  token: int,
-                  exchange: str,
-                  symbol: str,
+                  token_dict: dict,
                   trigger: float,
                   quantity: int,
                   side: str,
+                  unique_id: str,
                   headers: dict,
                   target: float = 0.0,
                   stoploss: float = 0.0,
@@ -920,7 +930,6 @@ class kotakneo(Broker):
                   product: str = Product.MIS,
                   validity: str = Validity.DAY,
                   variety: str = Variety.STOPLOSS,
-                  unique_id: str | None = None,
                   ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order.
@@ -946,8 +955,8 @@ class kotakneo(Broker):
         """
         if not target:
             order_data = {
-                "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "ts": symbol,
+                "es": token_dict["Exchange"],
+                "ts": token_dict["Symbol"],
                 "pr": "0",
                 "tp": trigger,
                 "qt": quantity,
@@ -987,15 +996,11 @@ class kotakneo(Broker):
                         product: str,
                         validity: str,
                         variety: str,
+                        unique_id: str,
                         headers: dict,
                         price: float = 0.0,
                         trigger: float = 0.0,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
-                        unique_id: str | None = None,
                         ) -> dict[Any, Any]:
-
         """
         Place an Order in NSE/BSE Equity Segment.
 
@@ -1034,27 +1039,23 @@ class kotakneo(Broker):
         else:
             order_type = OrderType.SL
 
-        if not target:
-            order_data = {
-                "es": exchange,
-                "ts": symbol,
-                "pr": price,
-                "tp": trigger,
-                "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
-                "pt": cls.req_order_type[order_type],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "am": "YES" if variety == Variety.AMO else "NO",
-                "ig": unique_id,
-                "dq": "0",
-                "mp": "0",
-                "pf": "N",
-                "os": "API"
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        order_data = {
+            "es": exchange,
+            "ts": symbol,
+            "pr": price,
+            "tp": trigger,
+            "qt": quantity,
+            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "pt": cls.req_order_type[order_type],
+            "pc": cls._key_mapper(cls.req_product, product, 'product'),
+            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "am": "YES" if variety == Variety.AMO else "NO",
+            "ig": unique_id,
+            "dq": "0",
+            "mp": "0",
+            "pf": "N",
+            "os": "API"
+        }
 
         params = {'sId': headers["sId"]}
         data = {'jData': cls.json_dumps(order_data)}
@@ -1070,14 +1071,11 @@ class kotakneo(Broker):
                         symbol: str,
                         quantity: int,
                         side: str,
+                        unique_id: str,
                         headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
                         variety: str = Variety.REGULAR,
-                        unique_id: str | None = None,
                         ) -> dict[Any, Any]:
         """
         Place Market Order in NSE/BSE Equity Segment.
@@ -1106,27 +1104,23 @@ class kotakneo(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
-        if not target:
-            order_data = {
-                "es": exchange,
-                "ts": symbol,
-                "pr": "0",
-                "tp": "0",
-                "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
-                "pt": cls.req_order_type[OrderType.MARKET],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "am": "YES" if variety == Variety.AMO else "NO",
-                "ig": unique_id,
-                "dq": "0",
-                "mp": "0",
-                "pf": "N",
-                "os": "API"
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        order_data = {
+            "es": exchange,
+            "ts": symbol,
+            "pr": "0",
+            "tp": "0",
+            "qt": quantity,
+            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "pt": cls.req_order_type[OrderType.MARKET],
+            "pc": cls._key_mapper(cls.req_product, product, 'product'),
+            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "am": "YES" if variety == Variety.AMO else "NO",
+            "ig": unique_id,
+            "dq": "0",
+            "mp": "0",
+            "pf": "N",
+            "os": "API"
+        }
 
         params = {'sId': headers["sId"]}
         data = {'jData': cls.json_dumps(order_data)}
@@ -1143,14 +1137,11 @@ class kotakneo(Broker):
                        price: float,
                        quantity: int,
                        side: str,
+                       unique_id: str,
                        headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
                        product: str = Product.MIS,
                        validity: str = Validity.DAY,
                        variety: str = Variety.REGULAR,
-                       unique_id: str | None = None,
                        ) -> dict[Any, Any]:
         """
         Place Limit Order in NSE/BSE Equity Segment.
@@ -1180,27 +1171,23 @@ class kotakneo(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
-        if not target:
-            order_data = {
-                "es": exchange,
-                "ts": symbol,
-                "pr": price,
-                "tp": "0",
-                "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
-                "pt": cls.req_order_type[OrderType.LIMIT],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "am": "YES" if variety == Variety.AMO else "NO",
-                "ig": unique_id,
-                "dq": "0",
-                "mp": "0",
-                "pf": "N",
-                "os": "API"
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        order_data = {
+            "es": exchange,
+            "ts": symbol,
+            "pr": price,
+            "tp": "0",
+            "qt": quantity,
+            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "pt": cls.req_order_type[OrderType.LIMIT],
+            "pc": cls._key_mapper(cls.req_product, product, 'product'),
+            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "am": "YES" if variety == Variety.AMO else "NO",
+            "ig": unique_id,
+            "dq": "0",
+            "mp": "0",
+            "pf": "N",
+            "os": "API"
+        }
 
         params = {'sId': headers["sId"]}
         data = {'jData': cls.json_dumps(order_data)}
@@ -1218,14 +1205,11 @@ class kotakneo(Broker):
                     trigger: float,
                     quantity: int,
                     side: str,
+                    unique_id: str,
                     headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
                     product: str = Product.MIS,
                     validity: str = Validity.DAY,
                     variety: str = Variety.STOPLOSS,
-                    unique_id: str | None = None,
                     ) -> dict[Any, Any]:
         """
         Place Stoploss Order in NSE/BSE Equity Segment.
@@ -1256,27 +1240,23 @@ class kotakneo(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
-        if not target:
-            order_data = {
-                "es": exchange,
-                "ts": symbol,
-                "pr": price,
-                "tp": trigger,
-                "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
-                "pt": cls.req_order_type[OrderType.SL],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "am": "YES" if variety == Variety.AMO else "NO",
-                "ig": unique_id,
-                "dq": "0",
-                "mp": "0",
-                "pf": "N",
-                "os": "API"
-            }
-
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        order_data = {
+            "es": exchange,
+            "ts": symbol,
+            "pr": price,
+            "tp": trigger,
+            "qt": quantity,
+            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "pt": cls.req_order_type[OrderType.SL],
+            "pc": cls._key_mapper(cls.req_product, product, 'product'),
+            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "am": "YES" if variety == Variety.AMO else "NO",
+            "ig": unique_id,
+            "dq": "0",
+            "mp": "0",
+            "pf": "N",
+            "os": "API"
+        }
 
         params = {'sId': headers["sId"]}
         data = {'jData': cls.json_dumps(order_data)}
@@ -1293,14 +1273,11 @@ class kotakneo(Broker):
                      trigger: float,
                      quantity: int,
                      side: str,
+                     unique_id: str,
                      headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
                      variety: str = Variety.STOPLOSS,
-                     unique_id: str | None = None,
                      ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order in NSE/BSE Equity Segment.
@@ -1323,27 +1300,30 @@ class kotakneo(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not target:
-            order_data = {
-                "es": exchange,
-                "ts": symbol,
-                "pr": "0",
-                "tp": trigger,
-                "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
-                "pt": cls.req_order_type[OrderType.SLM],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "am": "YES" if variety == Variety.AMO else "NO",
-                "ig": unique_id,
-                "dq": "0",
-                "mp": "0",
-                "pf": "N",
-                "os": "API"
-            }
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
 
-        else:
-            raise InputError(f"BO Orders Not Available in {cls.id}.")
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        symbol = detail["Symbol"]
+
+        order_data = {
+            "es": exchange,
+            "ts": symbol,
+            "pr": "0",
+            "tp": trigger,
+            "qt": quantity,
+            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "pt": cls.req_order_type[OrderType.SLM],
+            "pc": cls._key_mapper(cls.req_product, product, 'product'),
+            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "am": "YES" if variety == Variety.AMO else "NO",
+            "ig": unique_id,
+            "dq": "0",
+            "mp": "0",
+            "pf": "N",
+            "os": "API"
+        }
 
         params = {'sId': headers["sId"]}
         data = {'jData': cls.json_dumps(order_data)}
@@ -1359,12 +1339,12 @@ class kotakneo(Broker):
 
 
     @classmethod
-    def create_order_nfo(cls,
+    def create_order_fno(cls,
                          exchange: str,
                          root: str,
                          expiry: str,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          product: str,
@@ -1449,9 +1429,9 @@ class kotakneo(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_nfo(cls,
+    def market_order_fno(cls,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          headers: dict,
@@ -1524,9 +1504,9 @@ class kotakneo(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_nfo(cls,
+    def limit_order_fno(cls,
                         option: str,
-                        strike_price: int,
+                        strike_price: str,
                         price: float,
                         quantity: int,
                         side: str,
@@ -1601,9 +1581,9 @@ class kotakneo(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_nfo(cls,
+    def sl_order_fno(cls,
                      option: str,
-                     strike_price: int,
+                     strike_price: str,
                      price: float,
                      trigger: float,
                      quantity: int,
@@ -1680,9 +1660,9 @@ class kotakneo(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_nfo(cls,
+    def slm_order_fno(cls,
                       option: str,
-                      strike_price: int,
+                      strike_price: str,
                       trigger: float,
                       quantity: int,
                       side: str,
@@ -1755,11 +1735,6 @@ class kotakneo(Broker):
                              params=params, data=data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
-
-
-    # BO Order Functions
-
-    # NO BO Orders For KotakNeo
 
 
     # Order Details, OrderBook & TradeBook

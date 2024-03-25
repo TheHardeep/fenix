@@ -53,7 +53,7 @@ class finvasia(Broker):
         "api_doc": "https://www.shoonya.com/api-documentation",
         "access_token": "https://api.shoonya.com/NorenWClientTP/QuickAuth",
         "base": "https://api.shoonya.com/NorenWClientTP",
-        "market_data": "https://api.shoonya.com/NFO_symbols.txt.zip",
+        "market_data": f"https://api.shoonya.com/{ExchangeCode.NFO}_symbols.txt.zip",
     }
 
 
@@ -161,14 +161,13 @@ class finvasia(Broker):
         Returns:
             dict: Unified fenix indices format.
         """
-        df_bse = cls.data_reader(cls.base_urls["market_data"].replace("NFO", ExchangeCode.BSE), filetype='csv')
+        df_bse = cls.data_reader(cls.base_urls["market_data"].replace(ExchangeCode.NFO, ExchangeCode.BSE), filetype='csv')
         df_bse = df_bse[['Symbol', 'Token', 'LotSize', 'TickSize', "Exchange"]]
 
         df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
         df_bse.set_index(df_bse['Symbol'], inplace=True)
 
-
-        df_nse = cls.data_reader(cls.base_urls["market_data"].replace("NFO", ExchangeCode.NSE), filetype='csv')
+        df_nse = cls.data_reader(cls.base_urls["market_data"].replace(ExchangeCode.NFO, ExchangeCode.NSE), filetype='csv')
         df_nse = df_nse[df_nse['Instrument'] == 'EQ'][['Symbol', 'TradingSymbol', 'TickSize', 'Token', 'LotSize', "Exchange"]]
         df_nse.rename({"Symbol": "Index", "TradingSymbol": "Symbol", "token": "Token"}, axis=1, inplace=True)
 
@@ -207,7 +206,7 @@ class finvasia(Broker):
         return indices
 
     @classmethod
-    def create_nfo_tokens(cls):
+    def create_fno_tokens(cls):
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the finvasia.nfo_tokens Dictionary.
@@ -216,19 +215,33 @@ class finvasia(Broker):
             TokenDownloadError: Any Error Occured is raised through this Error Type.
         """
         try:
-            df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
-            # return df
-            df = df[
+            df_nfo = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
+            df_nfo = df_nfo[
                 (
-                    (df['Symbol'] == 'BANKNIFTY') |
-                    (df['Symbol'] == 'NIFTY') |
-                    (df['Symbol'] == 'FINNIFTY') |
-                    (df['Symbol'] == 'MIDCPNIFTY')
+                    (df_nfo['Symbol'] == 'BANKNIFTY') |
+                    (df_nfo['Symbol'] == 'NIFTY') |
+                    (df_nfo['Symbol'] == 'FINNIFTY') |
+                    (df_nfo['Symbol'] == 'MIDCPNIFTY')
                 ) &
                 (
-                    (df['Instrument'] == "OPTIDX")
+                    (df_nfo['Instrument'] == "OPTIDX")
                 )]
 
+            bfo_url = cls.base_urls["market_data"].replace(ExchangeCode.NFO, ExchangeCode.BFO)
+            df_bfo = cls.data_reader(bfo_url, filetype='csv')
+            df_bfo = df_bfo[
+                (
+                    (df_bfo['Symbol'] == 'BSXOPT') |
+                    (df_bfo['Symbol'] == 'BKXOPT')
+
+                ) &
+                (
+                    (df_bfo['Instrument'] == "OPTIDX")
+                )]
+
+            df_bfo['Symbol'] = df_bfo['Symbol'].replace({"BKXOPT": "BANKEX", "BSXOPT": "SENSEX"})
+
+            df = cls.concat_df([df_nfo, df_bfo])
             df = df[['Token', 'TradingSymbol', 'Expiry', 'OptionType',
                      'StrikePrice', 'LotSize', 'Symbol', 'TickSize', 'Exchange',
                      ]]
@@ -237,7 +250,8 @@ class finvasia(Broker):
                       axis=1, inplace=True)
 
             df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
-            df['StrikePrice'] = df['StrikePrice'].astype(int)
+            df['StrikePrice'] = df['StrikePrice'].astype(int).astype(str)
+
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
 
@@ -363,7 +377,7 @@ class finvasia(Broker):
             Order.USERID: order.get("remarks", ""),
             Order.TIMESTAMP: cls.datetime_strp(order["norentm"], "%H:%M:%S %d-%m-%Y"),
             Order.SYMBOL: order["tsym"],
-            Order.TOKEN: order["token"],
+            Order.TOKEN: int(order["token"]),
             Order.SIDE: cls.resp_side[order["trantype"]],
             Order.TYPE: cls.resp_order_type.get(order["prctyp"], order["prctyp"]),
             Order.AVGPRICE: float(order.get("avgprc", 0.0)),
@@ -407,7 +421,7 @@ class finvasia(Broker):
             Order.USERID: order.get("remarks", ""),
             Order.TIMESTAMP: cls.datetime_strp(order["norentm"], "%H:%M:%S %d-%m-%Y"),
             Order.SYMBOL: order["tsym"],
-            Order.TOKEN: order["token"],
+            Order.TOKEN: int(order["token"]),
             Order.SIDE: cls.resp_side[order["trantype"]],
             Order.TYPE: cls.resp_order_type.get(order["prctyp"], order["prctyp"]),
             Order.AVGPRICE: float(order.get("flprc", 0.0)),
@@ -448,7 +462,7 @@ class finvasia(Broker):
         """
         parsed_position = {
             Position.SYMBOL: position["tsym"],
-            Position.TOKEN: position["token"],
+            Position.TOKEN: int(position["token"]),
             Position.NETQTY: int(position["netqty"]),
             Position.AVGPRICE: float(position["netavgprc"]),
             Position.MTM: float(position["urmtom"]),
@@ -522,79 +536,9 @@ class finvasia(Broker):
     # Order Functions
 
 
-
-
-    @classmethod
-    def create_eq_nfo_order(cls,
-                            quantity: int,
-                            side: str,
-                            headers: dict,
-                            token_dict: dict,
-                            price: float = 0.0,
-                            trigger: float = 0.0,
-                            product: str = Product.MIS,
-                            validity: str = Validity.DAY,
-                            variety: str = Variety.REGULAR,
-                            unique_id: str = UniqueID.DEFORDER
-                            ) -> dict[Any, Any]:
-        """
-        Place an Order in F&O and Equity Segment.
-
-        Parameters:
-            quantity (int): Order quantity.
-            side (str): Order Side: "BUY", "SELL".
-            headers (dict): headers to send order request with.
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
-            price (float): price of the order. Defaults to 0.0.
-            trigger (float): trigger price of the order. Defaults to 0.0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-
-        exchange = token_dict["Exchange"]
-        symbol = token_dict["Symbol"]
-
-        jdata = {
-            "exch": exchange,
-            "tsym": symbol,
-            "prc": str(price),
-            "trgprc": str(trigger),
-            "qty": str(quantity),
-            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-            "prctyp": cls.req_order_type[order_type],
-            "prd": cls._key_mapper(cls.req_product, product, 'product'),
-            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "remarks": unique_id,
-            "dscqty": "0",
-            "uid": headers['uid'],
-            "actid": headers['uid'],
-            "ordersource": "API",
-        }
-
-        data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], data=data)
-
-        return cls._create_order_parser(response=response, headers=headers)
-
     @classmethod
     def create_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      product: str,
@@ -643,8 +587,8 @@ class finvasia(Broker):
 
         if not target:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": str(price),
                 "trgprc": str(trigger),
                 "bpprc": str(target),
@@ -664,8 +608,8 @@ class finvasia(Broker):
 
         else:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": str(price),
                 "trgprc": str(trigger),
                 "bpprc": str(target),
@@ -691,9 +635,7 @@ class finvasia(Broker):
 
     @classmethod
     def market_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      unique_id: str,
@@ -728,8 +670,8 @@ class finvasia(Broker):
         """
         if not target:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": "0",
                 "trgprc": "0",
                 "qty": str(quantity),
@@ -746,8 +688,8 @@ class finvasia(Broker):
 
         else:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": "0",
                 "trgprc": "0",
                 "bpprc": str(target),
@@ -773,9 +715,7 @@ class finvasia(Broker):
 
     @classmethod
     def limit_order(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
+                    token_dict: dict,
                     price: float,
                     quantity: int,
                     side: str,
@@ -812,8 +752,8 @@ class finvasia(Broker):
         """
         if not target:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": str(price),
                 "trgprc": "0",
                 "qty": str(quantity),
@@ -830,8 +770,8 @@ class finvasia(Broker):
 
         else:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": str(price),
                 "trgprc": "0",
                 "bpprc": str(target),
@@ -857,9 +797,7 @@ class finvasia(Broker):
 
     @classmethod
     def sl_order(cls,
-                 token: int,
-                 exchange: str,
-                 symbol: str,
+                 token_dict: dict,
                  price: float,
                  trigger: float,
                  quantity: int,
@@ -898,8 +836,8 @@ class finvasia(Broker):
         """
         if not target:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": str(price),
                 "trgprc": str(trigger),
                 "qty": str(quantity),
@@ -916,8 +854,8 @@ class finvasia(Broker):
 
         else:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": str(price),
                 "trgprc": str(trigger),
                 "bpprc": str(target),
@@ -943,9 +881,7 @@ class finvasia(Broker):
 
     @classmethod
     def slm_order(cls,
-                  token: int,
-                  exchange: str,
-                  symbol: str,
+                  token_dict: dict,
                   trigger: float,
                   quantity: int,
                   side: str,
@@ -982,8 +918,8 @@ class finvasia(Broker):
         """
         if not target:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": "0",
                 "trgprc": str(trigger),
                 "qty": str(quantity),
@@ -1000,8 +936,8 @@ class finvasia(Broker):
 
         else:
             jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
+                "exch": token_dict["Exchange"],
+                "tsym": token_dict["Symbol"],
                 "prc": "0",
                 "trgprc": str(trigger),
                 "bpprc": str(target),
@@ -1042,9 +978,6 @@ class finvasia(Broker):
                         headers: dict,
                         price: float = 0.0,
                         trigger: float = 0.0,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         ) -> dict[Any, Any]:
 
         """
@@ -1085,47 +1018,22 @@ class finvasia(Broker):
         else:
             order_type = OrderType.SL
 
-        if not target:
-            jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
-                "prc": str(price),
-                "trgprc": str(trigger),
-                "bpprc": str(target),
-                "blprc": str(stoploss),
-                "trailprc": str(trailing_sl),
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[order_type],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
-
-        else:
-            jdata = {
-                "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "tsym": symbol,
-                "prc": str(price),
-                "trgprc": str(trigger),
-                "bpprc": str(target),
-                "blprc": str(stoploss),
-                "trailprc": str(trailing_sl),
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[order_type],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
+        jdata = {
+            "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "tsym": symbol,
+            "prc": str(price),
+            "trgprc": str(trigger),
+            "qty": str(quantity),
+            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
+            "prctyp": cls.req_order_type[order_type],
+            "prd": cls._key_mapper(cls.req_product, product, 'product'),
+            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "remarks": unique_id,
+            "dscqty": "0",
+            "uid": headers['uid'],
+            "actid": headers['uid'],
+            "ordersource": "API",
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1141,9 +1049,6 @@ class finvasia(Broker):
                         side: str,
                         unique_id: str,
                         headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
                         variety: str = Variety.REGULAR,
@@ -1175,44 +1080,22 @@ class finvasia(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
-        if not target:
-            jdata = {
-                "exch": exchange,
-                "tsym": symbol,
-                "prc": "0",
-                "trgprc": "0",
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[OrderType.MARKET],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
-
-        else:
-            jdata = {
-                "exch": exchange,
-                "tsym": symbol,
-                "prc": "0",
-                "trgprc": "0",
-                "bpprc": str(target),
-                "blprc": str(stoploss),
-                "trailprc": str(trailing_sl),
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[OrderType.MARKET],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
+        jdata = {
+            "exch": exchange,
+            "tsym": symbol,
+            "prc": "0",
+            "trgprc": "0",
+            "qty": str(quantity),
+            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
+            "prctyp": cls.req_order_type[OrderType.MARKET],
+            "prd": cls._key_mapper(cls.req_product, product, 'product'),
+            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "remarks": unique_id,
+            "dscqty": "0",
+            "uid": headers['uid'],
+            "actid": headers['uid'],
+            "ordersource": "API",
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1229,9 +1112,6 @@ class finvasia(Broker):
                        side: str,
                        unique_id: str,
                        headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
                        product: str = Product.MIS,
                        validity: str = Validity.DAY,
                        variety: str = Variety.REGULAR,
@@ -1264,44 +1144,22 @@ class finvasia(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
-        if not target:
-            jdata = {
-                "exch": exchange,
-                "tsym": symbol,
-                "prc": str(price),
-                "trgprc": "0",
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[OrderType.LIMIT],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
-
-        else:
-            jdata = {
-                "exch": exchange,
-                "tsym": symbol,
-                "prc": str(price),
-                "trgprc": "0",
-                "bpprc": str(target),
-                "blprc": str(stoploss),
-                "trailprc": str(trailing_sl),
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[OrderType.LIMIT],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
+        jdata = {
+            "exch": exchange,
+            "tsym": symbol,
+            "prc": str(price),
+            "trgprc": "0",
+            "qty": str(quantity),
+            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
+            "prctyp": cls.req_order_type[OrderType.LIMIT],
+            "prd": cls._key_mapper(cls.req_product, product, 'product'),
+            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "remarks": unique_id,
+            "dscqty": "0",
+            "uid": headers['uid'],
+            "actid": headers['uid'],
+            "ordersource": "API",
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1319,9 +1177,6 @@ class finvasia(Broker):
                     side: str,
                     unique_id: str,
                     headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
                     product: str = Product.MIS,
                     validity: str = Validity.DAY,
                     variety: str = Variety.STOPLOSS,
@@ -1355,44 +1210,22 @@ class finvasia(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
-        if not target:
-            jdata = {
-                "exch": exchange,
-                "tsym": symbol,
-                "prc": str(price),
-                "trgprc": str(trigger),
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[OrderType.SL],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
-
-        else:
-            jdata = {
-                "exch": exchange,
-                "tsym": symbol,
-                "prc": str(price),
-                "trgprc": str(trigger),
-                "bpprc": str(target),
-                "blprc": str(stoploss),
-                "trailprc": str(trailing_sl),
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[OrderType.SL],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
+        jdata = {
+            "exch": exchange,
+            "tsym": symbol,
+            "prc": str(price),
+            "trgprc": str(trigger),
+            "qty": str(quantity),
+            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
+            "prctyp": cls.req_order_type[OrderType.SL],
+            "prd": cls._key_mapper(cls.req_product, product, 'product'),
+            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "remarks": unique_id,
+            "dscqty": "0",
+            "uid": headers['uid'],
+            "actid": headers['uid'],
+            "ordersource": "API",
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1409,9 +1242,6 @@ class finvasia(Broker):
                      side: str,
                      unique_id: str,
                      headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
                      variety: str = Variety.STOPLOSS,
@@ -1444,44 +1274,22 @@ class finvasia(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
-        if not target:
-            jdata = {
-                "exch": exchange,
-                "tsym": symbol,
-                "prc": "0",
-                "trgprc": str(trigger),
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[OrderType.SLM],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
-
-        else:
-            jdata = {
-                "exch": exchange,
-                "tsym": symbol,
-                "prc": "0",
-                "trgprc": str(trigger),
-                "bpprc": str(target),
-                "blprc": str(stoploss),
-                "trailprc": str(trailing_sl),
-                "qty": str(quantity),
-                "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-                "prctyp": cls.req_order_type[OrderType.SLM],
-                "prd": cls._key_mapper(cls.req_product, product, 'product'),
-                "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "remarks": unique_id,
-                "dscqty": "0",
-                "uid": headers['uid'],
-                "actid": headers['uid'],
-                "ordersource": "API",
-            }
+        jdata = {
+            "exch": exchange,
+            "tsym": symbol,
+            "prc": "0",
+            "trgprc": str(trigger),
+            "qty": str(quantity),
+            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
+            "prctyp": cls.req_order_type[OrderType.SLM],
+            "prd": cls._key_mapper(cls.req_product, product, 'product'),
+            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "remarks": unique_id,
+            "dscqty": "0",
+            "uid": headers['uid'],
+            "actid": headers['uid'],
+            "ordersource": "API",
+        }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
 
@@ -1494,12 +1302,12 @@ class finvasia(Broker):
 
 
     @classmethod
-    def create_order_nfo(cls,
+    def create_order_fno(cls,
                          exchange: str,
                          root: str,
                          expiry: str,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          product: str,
@@ -1579,9 +1387,9 @@ class finvasia(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_nfo(cls,
+    def market_order_fno(cls,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          headers: dict,
@@ -1651,9 +1459,9 @@ class finvasia(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_nfo(cls,
+    def limit_order_fno(cls,
                         option: str,
-                        strike_price: int,
+                        strike_price: str,
                         price: float,
                         quantity: int,
                         side: str,
@@ -1725,9 +1533,9 @@ class finvasia(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_nfo(cls,
+    def sl_order_fno(cls,
                      option: str,
-                     strike_price: int,
+                     strike_price: str,
                      price: float,
                      trigger: float,
                      quantity: int,
@@ -1777,7 +1585,6 @@ class finvasia(Broker):
 
         symbol = detail['Symbol']
 
-
         jdata = {
             "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
             "tsym": symbol,
@@ -1802,9 +1609,9 @@ class finvasia(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_nfo(cls,
+    def slm_order_fno(cls,
                       option: str,
-                      strike_price: int,
+                      strike_price: str,
                       trigger: float,
                       quantity: int,
                       side: str,
@@ -1876,348 +1683,6 @@ class finvasia(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
 
-    # BO Order Functions
-
-
-    @classmethod
-    def create_order_bo(cls,
-                        token: int,
-                        exchange: str,
-                        symbol: str,
-                        price: float,
-                        trigger: float,
-                        quantity: int,
-                        side: str,
-                        unique_id: str,
-                        headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
-                        product: str = Product.BO,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.BO,
-                        ) -> dict[Any, Any]:
-        """
-        Place a BO Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            product (str, optional): Order product.
-            validity (str, optional): Order validity.
-            variety (str, optional): Order variety.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            price (float): Order price
-            trigger (float): order trigger price
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-
-        jdata = {
-            "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tsym": symbol,
-            "prc": str(price),
-            "trgprc": str(trigger),
-            "bpprc": str(target),
-            "blprc": str(stoploss),
-            "trailprc": str(trailing_sl),
-            "qty": str(quantity),
-            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-            "prctyp": cls.req_order_type[order_type],
-            "prd": cls._key_mapper(cls.req_product, product, 'product'),
-            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "remarks": unique_id,
-            "dscqty": "0",
-            "uid": headers['uid'],
-            "actid": headers['uid'],
-            "ordersource": "API",
-        }
-
-        data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], data=data)
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def market_order_bo(cls,
-                        symbol: str,
-                        token: int,
-                        side: str,
-                        quantity: int,
-                        exchange: str,
-                        unique_id: str,
-                        headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
-                        product: str = Product.BO,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.BO,
-                        ) -> dict[Any, Any]:
-        """
-        Place BO Market Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        jdata = {
-            "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tsym": symbol,
-            "prc": "0",
-            "trgprc": "0",
-            "bpprc": str(target),
-            "blprc": str(stoploss),
-            "trailprc": str(trailing_sl),
-            "qty": str(quantity),
-            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-            "prctyp": cls.req_order_type[OrderType.MARKET],
-            "prd": cls._key_mapper(cls.req_product, product, 'product'),
-            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "remarks": unique_id,
-            "dscqty": "0",
-            "uid": headers['uid'],
-            "actid": headers['uid'],
-            "ordersource": "API",
-        }
-
-        data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], data=data)
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def limit_order_bo(cls,
-                       token: int,
-                       exchange: str,
-                       symbol: str,
-                       price: float,
-                       quantity: int,
-                       side: str,
-                       unique_id: str,
-                       headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
-                       product: str = Product.BO,
-                       validity: str = Validity.DAY,
-                       variety: str = Variety.BO,
-                       ) -> dict[Any, Any]:
-        """
-        Place BO Limit Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            price (float): Order price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        jdata = {
-            "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tsym": symbol,
-            "prc": str(price),
-            "trgprc": "0",
-            "bpprc": str(target),
-            "blprc": str(stoploss),
-            "trailprc": str(trailing_sl),
-            "qty": str(quantity),
-            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-            "prctyp": cls.req_order_type[OrderType.LIMIT],
-            "prd": cls._key_mapper(cls.req_product, product, 'product'),
-            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "remarks": unique_id,
-            "dscqty": "0",
-            "uid": headers['uid'],
-            "actid": headers['uid'],
-            "ordersource": "API",
-        }
-
-        data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], data=data)
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def sl_order_bo(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
-                    price: float,
-                    trigger: float,
-                    quantity: int,
-                    side: str,
-                    unique_id: str,
-                    headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
-                    product: str = Product.BO,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.BO,
-                    ) -> dict[Any, Any]:
-
-        """
-        Place BO Stoploss Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            price (float): Order price.
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        jdata = {
-            "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tsym": symbol,
-            "prc": str(price),
-            "trgprc": str(trigger),
-            "bpprc": str(target),
-            "blprc": str(stoploss),
-            "trailprc": str(trailing_sl),
-            "qty": str(quantity),
-            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-            "prctyp": cls.req_order_type[OrderType.SL],
-            "prd": cls._key_mapper(cls.req_product, product, 'product'),
-            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "remarks": unique_id,
-            "dscqty": "0",
-            "uid": headers['uid'],
-            "actid": headers['uid'],
-            "ordersource": "API",
-        }
-
-        data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], data=data)
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def slm_order_bo(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
-                     trigger: float,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
-                     product: str = Product.BO,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.BO,
-                     ) -> dict[Any, Any]:
-
-        """
-        Place BO Stoploss-Market Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        jdata = {
-            "exch": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "tsym": symbol,
-            "prc": "0",
-            "trgprc": str(trigger),
-            "bpprc": str(target),
-            "blprc": str(stoploss),
-            "trailprc": str(trailing_sl),
-            "qty": str(quantity),
-            "trantype": cls._key_mapper(cls.req_side, side, 'side'),
-            "prctyp": cls.req_order_type[OrderType.SLM],
-            "prd": cls._key_mapper(cls.req_product, product, 'product'),
-            "ret": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "remarks": unique_id,
-            "dscqty": "0",
-            "uid": headers['uid'],
-            "actid": headers['uid'],
-            "ordersource": "API",
-        }
-
-        data = headers['payload'].replace("<data>", cls.json_dumps(jdata))
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"], data=data)
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-
     # Order Details, OrderBook & TradeBook
 
 
@@ -2264,7 +1729,7 @@ class finvasia(Broker):
         """
         jdata = {
             "uid": headers['uid'],
-            "norenordno": order_id,
+            "norenordno": str(order_id),
         }
 
         data = headers['payload'].replace("<data>", cls.json_dumps(jdata))

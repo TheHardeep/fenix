@@ -152,6 +152,20 @@ class mastertrust(Broker):
         Returns:
             dict: Unified fenix indices format.
         """
+        params = {"exchanges": ExchangeCode.NSE}
+        response = cls.fetch(method="GET", url=cls.base_urls["market_data"], params=params)
+        data = cls._json_parser(response)[ExchangeCode.NSE]
+
+        df_nse = cls.data_frame(data)
+        df_nse = df_nse[["symbol", "trading_symbol", "code", "exchange_code", "exchange"]]
+        df_nse.rename({"symbol": "Index", "trading_symbol": "Symbol",
+                       "exchange_code": "LotSize", "code": "Token",
+                       "exchange": "Exchange"}, axis=1, inplace=True)
+
+        df_nse.set_index(df_nse['Index'], inplace=True)
+        df_nse.drop(columns="Index", inplace=True)
+        df_nse['Token'] = df_nse['Token'].astype(int)
+
         params = {"exchanges": ExchangeCode.BSE}
         response = cls.fetch(method="GET", url=cls.base_urls["market_data"], params=params)
         data = cls._json_parser(response)[ExchangeCode.BSE]
@@ -167,26 +181,10 @@ class mastertrust(Broker):
         df_bse['LotSize'] = df_bse['LotSize'].astype(int)
 
 
-        params = {"exchanges": ExchangeCode.NSE}
-        response = cls.fetch(method="GET", url=cls.base_urls["market_data"], params=params)
-        data = cls._json_parser(response)[ExchangeCode.NSE]
-
-        df_nse = cls.data_frame(data)
-        df_nse = df_nse[["symbol", "trading_symbol", "code", "exchange_code", "exchange"]]
-        df_nse.rename({"symbol": "Index", "trading_symbol": "Symbol",
-                       "exchange_code": "LotSize", "code": "Token",
-                       "exchange": "Exchange"}, axis=1, inplace=True)
-
-        df_nse.set_index(df_nse['Index'], inplace=True)
-        df_nse.drop(columns="Index", inplace=True)
-        df_nse['Token'] = df_nse['Token'].astype(int)
-
-
         cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
         cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
 
         return cls.eq_tokens
-
 
     @classmethod
     def create_indices(cls) -> dict:
@@ -218,9 +216,8 @@ class mastertrust(Broker):
 
         return indices
 
-
     @classmethod
-    def create_nfo_tokens(cls) -> dict:
+    def create_fno_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the mastertrust.nfo_tokens Dictionary.
@@ -252,7 +249,7 @@ class mastertrust(Broker):
                      'StrikePrice', 'LotSize', 'Root', 'Exchange',
                      ]]
 
-            df['StrikePrice'] = df['StrikePrice'].astype(float).astype(int)
+            df['StrikePrice'] = df['StrikePrice'].astype(float).astype(int).astype(str)
             df['Expiry'] = cls.pd_datetime(df['Expiry'], unit="s").dt.date.astype(str)
             df['Token'] = df['Token'].astype(int)
             df['LotSize'] = df['LotSize'].astype(int)
@@ -589,75 +586,10 @@ class mastertrust(Broker):
 
     # Order Functions
 
-    @classmethod
-    def create_eq_nfo_order(cls,
-                            quantity: int,
-                            side: str,
-                            headers: dict,
-                            token_dict: dict,
-                            price: float = 0.0,
-                            trigger: float = 0.0,
-                            product: str = Product.MIS,
-                            validity: str = Validity.DAY,
-                            variety: str = Variety.REGULAR,
-                            unique_id: str = UniqueID.DEFORDER
-                            ) -> dict[Any, Any]:
-        """
-        Place an Order in F&O and Equity Segment.
-
-        Parameters:
-            quantity (int): Order quantity.
-            side (str): Order Side: "BUY", "SELL".
-            headers (dict): headers to send order request with.
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
-            price (float): price of the order. Defaults to 0.0.
-            trigger (float): trigger price of the order. Defaults to 0.0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-
-        token = token_dict["Token"]
-        exchange = token_dict["Exchange"]
-
-        params = {
-            "exchange": exchange,
-            "instrument_token": token,
-            "price": price,
-            "trigger_price": trigger,
-            "quantity": quantity,
-            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-            "order_type": cls.req_order_type[order_type],
-            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "product": cls._key_mapper(cls.req_product, product, 'product'),
-            "user_order_id": unique_id,
-            "disclosed_quantity": "0",
-            "market_protection_percentage": "0",
-            "client_id": headers["user_id"],
-        }
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
     def create_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      product: str,
@@ -706,8 +638,8 @@ class mastertrust(Broker):
 
         if not target:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": price,
                 "trigger_price": trigger,
                 "quantity": quantity,
@@ -725,8 +657,8 @@ class mastertrust(Broker):
 
         else:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": price,
                 "trigger_price": trigger,
                 "square_off_value": target,
@@ -754,9 +686,7 @@ class mastertrust(Broker):
 
     @classmethod
     def market_order(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
+                     token_dict: dict,
                      quantity: int,
                      side: str,
                      unique_id: str,
@@ -791,8 +721,8 @@ class mastertrust(Broker):
         """
         if not target:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": "0",
                 "trigger_price": "0",
                 "quantity": quantity,
@@ -810,8 +740,8 @@ class mastertrust(Broker):
 
         else:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": "0",
                 "trigger_price": "0",
                 "square_off_value": target,
@@ -838,9 +768,7 @@ class mastertrust(Broker):
 
     @classmethod
     def limit_order(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
+                    token_dict: dict,
                     price: float,
                     quantity: int,
                     side: str,
@@ -877,8 +805,8 @@ class mastertrust(Broker):
         """
         if not target:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": price,
                 "trigger_price": "0",
                 "quantity": quantity,
@@ -896,8 +824,8 @@ class mastertrust(Broker):
 
         else:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": price,
                 "trigger_price": "0",
                 "square_off_value": target,
@@ -924,9 +852,7 @@ class mastertrust(Broker):
 
     @classmethod
     def sl_order(cls,
-                 token: int,
-                 exchange: str,
-                 symbol: str,
+                 token_dict: dict,
                  price: float,
                  trigger: float,
                  quantity: int,
@@ -965,8 +891,8 @@ class mastertrust(Broker):
         """
         if not target:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": price,
                 "trigger_price": trigger,
                 "quantity": quantity,
@@ -984,8 +910,8 @@ class mastertrust(Broker):
 
         else:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": price,
                 "trigger_price": trigger,
                 "square_off_value": target,
@@ -1014,9 +940,7 @@ class mastertrust(Broker):
 
     @classmethod
     def slm_order(cls,
-                  token: int,
-                  exchange: str,
-                  symbol: str,
+                  token_dict: dict,
                   trigger: float,
                   quantity: int,
                   side: str,
@@ -1053,8 +977,8 @@ class mastertrust(Broker):
         """
         if not target:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": "0",
                 "trigger_price": trigger,
                 "quantity": quantity,
@@ -1072,8 +996,8 @@ class mastertrust(Broker):
 
         else:
             params = {
-                "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-                "instrument_token": token,
+                "instrument_token": token_dict['Token'],
+                "exchange": token_dict['Exchange'],
                 "price": "0",
                 "trigger_price": trigger,
                 "square_off_value": target,
@@ -1115,9 +1039,6 @@ class mastertrust(Broker):
                         headers: dict,
                         price: float = 0.0,
                         trigger: float = 0.0,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         ) -> dict[Any, Any]:
 
         """
@@ -1158,50 +1079,23 @@ class mastertrust(Broker):
         else:
             order_type = OrderType.SL
 
-        if not target:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": price,
-                "trigger_price": trigger,
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[order_type],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
+        params = {
+            "exchange": exchange,
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[order_type],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
 
-            final_url = cls.urls["place_order"]
-
-        else:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": price,
-                "trigger_price": trigger,
-                "square_off_value": target,
-                "stop_loss_value": stoploss,
-                "trailing_stop_loss": trailing_sl,
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[order_type],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "is_trailing": True if trailing_sl else False,
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
-
-            final_url = f"{cls.urls['place_order']}/bracket"
-
-
-        response = cls.fetch(method="POST", url=final_url,
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              params=params, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
@@ -1214,9 +1108,6 @@ class mastertrust(Broker):
                         side: str,
                         unique_id: str,
                         headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
                         product: str = Product.MIS,
                         validity: str = Validity.DAY,
                         variety: str = Variety.REGULAR,
@@ -1248,49 +1139,23 @@ class mastertrust(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": "0",
-                "trigger_price": "0",
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.MARKET],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
+        params = {
+            "exchange": exchange,
+            "instrument_token": token,
+            "price": "0",
+            "trigger_price": "0",
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.MARKET],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
 
-            final_url = cls.urls["place_order"]
-
-        else:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": "0",
-                "trigger_price": "0",
-                "square_off_value": target,
-                "stop_loss_value": stoploss,
-                "trailing_stop_loss": trailing_sl,
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.MARKET],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "is_trailing": True if trailing_sl else False,
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
-
-            final_url = f"{cls.urls['place_order']}/bracket"
-
-        response = cls.fetch(method="POST", url=final_url,
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              params=params, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
@@ -1304,9 +1169,6 @@ class mastertrust(Broker):
                        side: str,
                        unique_id: str,
                        headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
                        product: str = Product.MIS,
                        validity: str = Validity.DAY,
                        variety: str = Variety.REGULAR,
@@ -1339,49 +1201,23 @@ class mastertrust(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": price,
-                "trigger_price": "0",
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.LIMIT],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
+        params = {
+            "exchange": exchange,
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": "0",
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.LIMIT],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
 
-            final_url = cls.urls["place_order"]
-
-        else:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": price,
-                "trigger_price": "0",
-                "square_off_value": target,
-                "stop_loss_value": stoploss,
-                "trailing_stop_loss": trailing_sl,
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.LIMIT],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "is_trailing": True if trailing_sl else False,
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
-
-            final_url = f"{cls.urls['place_order']}/bracket"
-
-        response = cls.fetch(method="POST", url=final_url,
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              params=params, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
@@ -1396,9 +1232,6 @@ class mastertrust(Broker):
                     side: str,
                     unique_id: str,
                     headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
                     product: str = Product.MIS,
                     validity: str = Validity.DAY,
                     variety: str = Variety.STOPLOSS,
@@ -1432,51 +1265,23 @@ class mastertrust(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": price,
-                "trigger_price": trigger,
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.SL],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
+        params = {
+            "exchange": exchange,
+            "instrument_token": token,
+            "price": price,
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.SL],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
 
-            final_url = cls.urls["place_order"]
-
-        else:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": price,
-                "trigger_price": trigger,
-                "square_off_value": target,
-                "stop_loss_value": stoploss,
-                "trailing_stop_loss": trailing_sl,
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.SL],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "is_trailing": True if trailing_sl else False,
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
-
-            final_url = f"{cls.urls['place_order']}/bracket"
-
-
-
-        response = cls.fetch(method="POST", url=final_url,
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              params=params, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
@@ -1490,9 +1295,6 @@ class mastertrust(Broker):
                      side: str,
                      unique_id: str,
                      headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
                      product: str = Product.MIS,
                      validity: str = Validity.DAY,
                      variety: str = Variety.STOPLOSS,
@@ -1525,49 +1327,23 @@ class mastertrust(Broker):
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
 
-        if not target:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": "0",
-                "trigger_price": trigger,
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.SLM],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
+        params = {
+            "exchange": exchange,
+            "instrument_token": token,
+            "price": "0",
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
+            "order_type": cls.req_order_type[OrderType.SLM],
+            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "product": cls._key_mapper(cls.req_product, product, 'product'),
+            "user_order_id": unique_id,
+            "disclosed_quantity": "0",
+            "market_protection_percentage": "0",
+            "client_id": headers["user_id"],
+        }
 
-            final_url = cls.urls["place_order"]
-
-        else:
-            params = {
-                "exchange": exchange,
-                "instrument_token": token,
-                "price": "0",
-                "trigger_price": trigger,
-                "square_off_value": target,
-                "stop_loss_value": stoploss,
-                "trailing_stop_loss": trailing_sl,
-                "quantity": quantity,
-                "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-                "order_type": cls.req_order_type[OrderType.SLM],
-                "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-                "product": cls._key_mapper(cls.req_product, product, 'product'),
-                "user_order_id": unique_id,
-                "disclosed_quantity": "0",
-                "is_trailing": True if trailing_sl else False,
-                "market_protection_percentage": "0",
-                "client_id": headers["user_id"],
-            }
-
-            final_url = f"{cls.urls['place_order']}/bracket"
-
-        response = cls.fetch(method="POST", url=final_url,
+        response = cls.fetch(method="POST", url=cls.urls["place_order"],
                              params=params, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
@@ -1577,12 +1353,12 @@ class mastertrust(Broker):
 
 
     @classmethod
-    def create_order_nfo(cls,
+    def create_order_fno(cls,
                          exchange: str,
                          root: str,
                          expiry: str,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          product: str,
@@ -1660,9 +1436,9 @@ class mastertrust(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_nfo(cls,
+    def market_order_fno(cls,
                          option: str,
-                         strike_price: int,
+                         strike_price: str,
                          quantity: int,
                          side: str,
                          headers: dict,
@@ -1730,9 +1506,9 @@ class mastertrust(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_nfo(cls,
+    def limit_order_fno(cls,
                         option: str,
-                        strike_price: int,
+                        strike_price: str,
                         price: float,
                         quantity: int,
                         side: str,
@@ -1802,9 +1578,9 @@ class mastertrust(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_nfo(cls,
+    def sl_order_fno(cls,
                      option: str,
-                     strike_price: int,
+                     strike_price: str,
                      price: float,
                      trigger: float,
                      quantity: int,
@@ -1876,9 +1652,9 @@ class mastertrust(Broker):
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_nfo(cls,
+    def slm_order_fno(cls,
                       option: str,
-                      strike_price: int,
+                      strike_price: str,
                       trigger: float,
                       quantity: int,
                       side: str,
@@ -1943,353 +1719,6 @@ class mastertrust(Broker):
         }
 
         response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-
-    # BO Order Functions
-
-
-    @classmethod
-    def create_order_bo(cls,
-                        token: int,
-                        exchange: str,
-                        symbol: str,
-                        price: float,
-                        trigger: float,
-                        quantity: int,
-                        side: str,
-                        unique_id: str,
-                        headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
-                        product: str = Product.BO,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.BO,
-                        ) -> dict[Any, Any]:
-        """
-        Place a BO Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            product (str, optional): Order product.
-            validity (str, optional): Order validity.
-            variety (str, optional): Order variety.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            price (float): Order price
-            trigger (float): order trigger price
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-
-        params = {
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "instrument_token": token,
-            "price": price,
-            "trigger_price": trigger,
-            "square_off_value": target,
-            "stop_loss_value": stoploss,
-            "trailing_stop_loss": trailing_sl,
-            "quantity": quantity,
-            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-            "order_type": cls.req_order_type[order_type],
-            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "product": cls._key_mapper(cls.req_product, product, 'product'),
-            "user_order_id": unique_id,
-            "disclosed_quantity": "0",
-            "is_trailing": True if trailing_sl else False,
-            "market_protection_percentage": "0",
-            "client_id": headers["user_id"],
-        }
-
-        final_url = f"{cls.urls['place_order']}/bracket"
-
-        response = cls.fetch(method="POST", url=final_url,
-                             params=params, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def market_order_bo(cls,
-                        symbol: str,
-                        token: int,
-                        side: str,
-                        quantity: int,
-                        exchange: str,
-                        unique_id: str,
-                        headers: dict,
-                        target: float = 0.0,
-                        stoploss: float = 0.0,
-                        trailing_sl: float = 0.0,
-                        product: str = Product.BO,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.BO,
-                        ) -> dict[Any, Any]:
-        """
-        Place BO Market Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        params = {
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "instrument_token": token,
-            "price": "0",
-            "trigger_price": "0",
-            "square_off_value": target,
-            "stop_loss_value": stoploss,
-            "trailing_stop_loss": trailing_sl,
-            "quantity": quantity,
-            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-            "order_type": cls.req_order_type[OrderType.MARKET],
-            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "product": cls._key_mapper(cls.req_product, product, 'product'),
-            "user_order_id": unique_id,
-            "disclosed_quantity": "0",
-            "is_trailing": True if trailing_sl else False,
-            "market_protection_percentage": "0",
-            "client_id": headers["user_id"],
-        }
-
-        final_url = f"{cls.urls['place_order']}/bracket"
-
-        response = cls.fetch(method="POST", url=final_url,
-                             params=params, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def limit_order_bo(cls,
-                       token: int,
-                       exchange: str,
-                       symbol: str,
-                       price: float,
-                       quantity: int,
-                       side: str,
-                       unique_id: str,
-                       headers: dict,
-                       target: float = 0.0,
-                       stoploss: float = 0.0,
-                       trailing_sl: float = 0.0,
-                       product: str = Product.BO,
-                       validity: str = Validity.DAY,
-                       variety: str = Variety.BO,
-                       ) -> dict[Any, Any]:
-        """
-        Place BO Limit Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            price (float): Order price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        params = {
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "instrument_token": token,
-            "price": price,
-            "trigger_price": "0",
-            "square_off_value": target,
-            "stop_loss_value": stoploss,
-            "trailing_stop_loss": trailing_sl,
-            "quantity": quantity,
-            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-            "order_type": cls.req_order_type[OrderType.LIMIT],
-            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "product": cls._key_mapper(cls.req_product, product, 'product'),
-            "user_order_id": unique_id,
-            "disclosed_quantity": "0",
-            "is_trailing": True if trailing_sl else False,
-            "market_protection_percentage": "0",
-            "client_id": headers["user_id"],
-        }
-
-        final_url = f"{cls.urls['place_order']}/bracket"
-
-        response = cls.fetch(method="POST", url=final_url,
-                             params=params, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def sl_order_bo(cls,
-                    token: int,
-                    exchange: str,
-                    symbol: str,
-                    price: float,
-                    trigger: float,
-                    quantity: int,
-                    side: str,
-                    unique_id: str,
-                    headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
-                    product: str = Product.BO,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.BO,
-                    ) -> dict[Any, Any]:
-
-        """
-        Place BO Stoploss Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            price (float): Order price.
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        params = {
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "instrument_token": token,
-            "price": price,
-            "trigger_price": trigger,
-            "square_off_value": target,
-            "stop_loss_value": stoploss,
-            "trailing_stop_loss": trailing_sl,
-            "quantity": quantity,
-            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-            "order_type": cls.req_order_type[OrderType.SL],
-            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "product": cls._key_mapper(cls.req_product, product, 'product'),
-            "user_order_id": unique_id,
-            "disclosed_quantity": "0",
-            "is_trailing": True if trailing_sl else False,
-            "market_protection_percentage": "0",
-            "client_id": headers["user_id"],
-        }
-
-        final_url = f"{cls.urls['place_order']}/bracket"
-
-        response = cls.fetch(method="POST", url=final_url,
-                             params=params, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def slm_order_bo(cls,
-                     token: int,
-                     exchange: str,
-                     symbol: str,
-                     trigger: float,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
-                     product: str = Product.BO,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.BO,
-                     ) -> dict[Any, Any]:
-
-        """
-        Place BO Stoploss-Market Order.
-
-        Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.BO.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.BO.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        params = {
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            "instrument_token": token,
-            "price": "0",
-            "trigger_price": trigger,
-            "square_off_value": target,
-            "stop_loss_value": stoploss,
-            "trailing_stop_loss": trailing_sl,
-            "quantity": quantity,
-            "order_side": cls._key_mapper(cls.req_side, side, 'side'),
-            "order_type": cls.req_order_type[OrderType.SLM],
-            "validity": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "product": cls._key_mapper(cls.req_product, product, 'product'),
-            "user_order_id": unique_id,
-            "disclosed_quantity": "0",
-            "is_trailing": True if trailing_sl else False,
-            "market_protection_percentage": "0",
-            "client_id": headers["user_id"],
-        }
-
-        final_url = f"{cls.urls['place_order']}/bracket"
-
-        response = cls.fetch(method="POST", url=final_url,
                              params=params, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)

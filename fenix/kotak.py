@@ -109,6 +109,7 @@ class kotak(Broker):
 
     req_variety = {
         Variety.REGULAR: "REGULAR",
+        Variety.STOPLOSS: "REGULAR",
         Variety.AMO: "AMO",
         "SQUAREOFF": "SQUAREOFF"
     }
@@ -187,7 +188,6 @@ class kotak(Broker):
 
         return cls.eq_tokens
 
-
     @classmethod
     def create_indices(cls) -> dict:
         """
@@ -218,7 +218,7 @@ class kotak(Broker):
         return indices
 
     @classmethod
-    def create_nfo_tokens(cls) -> dict:
+    def create_fno_tokens(cls) -> dict:
         """
         Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
         Stores them in the kotak.nfo_tokens Dictionary.
@@ -255,8 +255,7 @@ class kotak(Broker):
                      'Root', 'LastPrice', 'TickSize', "Exchange"
                      ]]
 
-            # df["Exchange"] = ExchangeCode.NFO  # Is NSE in Script Master but not Needed amywhere .
-            df['StrikePrice'] = df['StrikePrice'].astype(int)
+            df['StrikePrice'] = df['StrikePrice'].astype(int).astype(str)
             df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
@@ -557,303 +556,873 @@ class kotak(Broker):
     # Order Functions
 
 
-    def create_order(cls, token: int, side: str, price: float, triggerprice: float, uniqueid: int, quantity: int,
-                     variety: str, product: str, validity: str, headers: dict, orderType: str = "", exchange: str = ""):
+    def create_order(cls,
+                     token_dict: dict,
+                     quantity: int,
+                     side: str,
+                     product: str,
+                     validity: str,
+                     variety: str,
+                     unique_id: str,
+                     headers: dict,
+                     price: float = 0.0,
+                     trigger: float = 0.0,
+                     target: float = 0.0,
+                     stoploss: float = 0.0,
+                     trailing_sl: float = 0.0,
+                     ) -> dict[Any, Any]:
 
         """
-        create a trade order
+        Place an Order.
 
-        :param int token: token of the script of the market to create an order in
-        :param str side: 'BUY' or 'SELL'
-        :param float price: price of the order
-        :param float triggerprice: 0 for market order, non-zero for limit
-        :param str uniqueid: a unique id to denote your order
-        :param int quantity: quantity of shares
-        :param str ordertype: Not Needed for this Exchange
-        :param str exchange: Not Needed for this Exchange
-        :param str product: 'NRML', 'SM', 'SOR', 'MTF', 'MIS'
-        :param str validity: 'DAY' or 'IOC'
-        :param str variety: "REGULAR" or "AMO"
-        :returns json: a json response of order
+        Parameters:
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            product (str, optional): Order product.
+            validity (str, optional): Order validity.
+            variety (str, optional): Order variety.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            price (float): Order price
+            trigger (float): order trigger price
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+
+        Returns:
+            dict: fenix Unified Order Response.
         """
+        if not target:
+            json_data = {
+                "instrumentToken": token_dict['Token'],
+                "price": price,
+                "triggerPrice": trigger,
+                "quantity": quantity,
+                "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+                "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+                "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+                "tag": unique_id,
+                "disclosedQuantity": 0,
+            }
 
-        json_data = {
-            'instrumentToken': token,
-            'transactionType': side,
-            'quantity': quantity,
-            'price': price,
-            'validity': cls.key_mapper(cls.req_validity, validity, "validity"),
-            'variety': cls.key_mapper(cls.req_variety, variety, "variety"),
-            'disclosedQuantity': 0,
-            'triggerPrice': triggerprice,
-            'tag': uniqueid
-        }
+        else:
+            raise InputError(f"BO Orders Not Available in {cls.id}.")
+
 
         url = cls.key_mapper(cls.place_order_urls, product, "product")
-
         response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
 
-    def market_order(cls, token: int, side: str, uniqueid: int, quantity: int, headers: dict,
-                     product: str = Product.MIS, validity: str = Validity.DAY, variety: str = Variety.REGULAR, exchange: str = ""):
-
+    @classmethod
+    def market_order(cls,
+                     token_dict: dict,
+                     quantity: int,
+                     side: str,
+                     unique_id: str,
+                     headers: dict,
+                     target: float = 0.0,
+                     stoploss: float = 0.0,
+                     trailing_sl: float = 0.0,
+                     product: str = Product.MIS,
+                     validity: str = Validity.DAY,
+                     variety: str = Variety.REGULAR,
+                     ) -> dict[Any, Any]:
         """
-        create a market order
-        :param int token: token of the script of the market to create an order in
-        :param str side: 'BUY' or 'SELL'
-        :param str uniqueid: a unique id to denote your order
-        :param int quantity: quantity of shares
-        :param str exchange: Not Needed for this Exchange
-        :param str product: 'NRML', 'SM', 'SOR', 'MTF', 'MIS'
-        :param str validity: 'DAY' or 'IOC'
-        :param str variety: "REGULAR" or "AMO"
-        :returns json: a json response of order
+        Place Market Order.
+
+        Parameters:
+            token (int): Exchange token.
+            exchange (str): Exchange to place the order in.
+            symbol (str): Trading symbol.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: fenix Unified Order Response.
         """
+        if not target:
+            json_data = {
+                "instrumentToken": token_dict['Token'],
+                "price": 0,
+                "triggerPrice": 0,
+                "quantity": quantity,
+                "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+                "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+                "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+                "tag": unique_id,
+                "disclosedQuantity": 0,
+            }
 
-        json_data = {
-            'instrumentToken': token,
-            'transactionType': side,
-            'quantity': quantity,
-            'price': 0,
-            'validity': cls.key_mapper(cls.req_validity, validity, "validity"),
-            'variety': cls.key_mapper(cls.req_variety, variety, "variety"),
-            'disclosedQuantity': 0,
-            'triggerPrice': 0,
-            'tag': uniqueid
-        }
+        else:
+            raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        final_url = cls.key_mapper(cls.order_place_urls, product, "product")
-
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
+        url = cls.key_mapper(cls.order_place_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, json=json_data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
 
-    def limit_order(cls, price: float, quantity: int,
-                    token: int, side: str, uniqueid: int, headers: dict,
-                    product: str = Product.MIS, validity: str = Validity.DAY, variety: str = Variety.REGULAR, exchange: str = ""):
-
+    @classmethod
+    def limit_order(cls,
+                    token_dict: dict,
+                    price: float,
+                    quantity: int,
+                    side: str,
+                    unique_id: str,
+                    headers: dict,
+                    target: float = 0.0,
+                    stoploss: float = 0.0,
+                    trailing_sl: float = 0.0,
+                    product: str = Product.MIS,
+                    validity: str = Validity.DAY,
+                    variety: str = Variety.REGULAR,
+                    ) -> dict[Any, Any]:
         """
-        create a market order
-        :param int token: token of the script of the market to create an order in
-        :param str side: 'BUY' or 'SELL'
-        :param str uniqueid: a unique id to denote your order
-        :param int quantity: quantity of shares
-        :param str exchange: Not Needed for this Exchange
-        :param str product: 'NRML', 'SM', 'SOR', 'MTF', 'MIS'
-        :param str validity: 'DAY' or 'IOC'
-        :param str variety: "REGULAR" or "AMO"
-        :returns json: a json response of order
+        Place Limit Order.
+
+        Parameters:
+            token (int): Exchange token.
+            exchange (str): Exchange to place the order in.
+            symbol (str): Trading symbol.
+            price (float): Order price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: fenix Unified Order Response.
         """
+        if not target:
+            json_data = {
+                "instrumentToken": token_dict['Token'],
+                "price": price,
+                "triggerPrice": 0,
+                "quantity": quantity,
+                "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+                "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+                "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+                "tag": unique_id,
+                "disclosedQuantity": 0,
+            }
 
-        json_data = {
-            'instrumentToken': token,
-            'transactionType': side,
-            'quantity': quantity,
-            'price': price,
-            'validity': cls.key_mapper(cls.req_validity, validity, "validity"),
-            'variety': cls.key_mapper(cls.req_variety, variety, "variety"),
-            'disclosedQuantity': 0,
-            'triggerPrice': 0,
-            'tag': uniqueid
-        }
+        else:
+            raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        final_url = cls.key_mapper(cls.order_place_urls, product, "product")
 
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
+        url = cls.key_mapper(cls.order_place_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, json=json_data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
 
-    def sl_order(cls, price: float, triggerprice: float, quantity: int,
-                 token: int, side: str, uniqueid: int, headers: dict,
-                 product: str = Product.MIS, validity: str = Validity.DAY, variety: str = Variety.REGULAR, exchange: str = ""):
-
+    @classmethod
+    def sl_order(cls,
+                 token_dict: dict,
+                 price: float,
+                 trigger: float,
+                 quantity: int,
+                 side: str,
+                 unique_id: str,
+                 headers: dict,
+                 target: float = 0.0,
+                 stoploss: float = 0.0,
+                 trailing_sl: float = 0.0,
+                 product: str = Product.MIS,
+                 validity: str = Validity.DAY,
+                 variety: str = Variety.STOPLOSS,
+                 ) -> dict[Any, Any]:
         """
-        create a market order
-        :param int token: token of the script of the market to create an order in
-        :param str side: 'BUY' or 'SELL'
-        :param str uniqueid: a unique id to denote your order
-        :param int quantity: quantity of shares
-        :param str exchange: Not Needed for this Exchange
-        :param str product: 'NRML', 'SM', 'SOR', 'MTF', 'MIS'
-        :param str validity: 'DAY' or 'IOC'
-        :param str variety: "REGULAR" or "AMO"
-        :returns json: a json response of order
+        Place Stoploss Order.
+
+        Parameters:
+            token (int): Exchange token.
+            exchange (str): Exchange to place the order in.
+            symbol (str): Trading symbol.
+            price (float): Order price.
+            trigger (float): order trigger price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: fenix Unified Order Response.
         """
+        if not target:
+            json_data = {
+                "instrumentToken": token_dict['Token'],
+                "price": price,
+                "triggerPrice": trigger,
+                "quantity": quantity,
+                "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+                "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+                "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+                "tag": unique_id,
+                "disclosedQuantity": 0,
+            }
 
-        json_data = {
-            'instrumentToken': token,
-            'transactionType': side,
-            'quantity': quantity,
-            'price': price,
-            'validity': cls.key_mapper(cls.req_validity, validity, "validity"),
-            'variety': cls.key_mapper(cls.req_variety, variety, "variety"),
-            'disclosedQuantity': 0,
-            'triggerPrice': triggerprice,
-            'tag': uniqueid
-        }
+        else:
+            raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        final_url = cls.key_mapper(cls.order_place_urls, product, "product")
 
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
+        url = cls.key_mapper(cls.order_place_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, json=json_data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def slm_order(cls,
+                  token_dict: dict,
+                  trigger: float,
+                  quantity: int,
+                  side: str,
+                  unique_id: str,
+                  headers: dict,
+                  target: float = 0.0,
+                  stoploss: float = 0.0,
+                  trailing_sl: float = 0.0,
+                  product: str = Product.MIS,
+                  validity: str = Validity.DAY,
+                  variety: str = Variety.STOPLOSS,
+                  ) -> dict[Any, Any]:
+        """
+        Place Stoploss-Market Order.
+
+        Parameters:
+            token (int): Exchange token.
+            exchange (str): Exchange to place the order in.
+            symbol (str): Trading symbol.
+            trigger (float): order trigger price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        raise InputError(f"SLM Orders Not Available in {cls.id}.")
+
+
+    # Equity Order Functions
+
+
+    @classmethod
+    def create_order_eq(cls,
+                        exchange: str,
+                        symbol: str,
+                        quantity: int,
+                        side: str,
+                        product: str,
+                        validity: str,
+                        variety: str,
+                        unique_id: str,
+                        headers: dict,
+                        price: float = 0.0,
+                        trigger: float = 0.0,
+                        ) -> dict[Any, Any]:
+        """
+        Place an Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            product (str, optional): Order product.
+            validity (str, optional): Order validity.
+            variety (str, optional): Order variety.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            price (float): Order price
+            trigger (float): order trigger price
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
+
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        token = detail["Token"]
+
+        json_data = {
+            "instrumentToken": token,
+            "price": price,
+            "triggerPrice": trigger,
+            "quantity": quantity,
+            "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+            "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+            "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+            "tag": unique_id,
+            "disclosedQuantity": 0,
+        }
+
+        url = cls.key_mapper(cls.place_order_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def market_order_eq(cls,
+                        exchange: str,
+                        symbol: str,
+                        quantity: int,
+                        side: str,
+                        unique_id: str,
+                        headers: dict,
+                        product: str = Product.MIS,
+                        validity: str = Validity.DAY,
+                        variety: str = Variety.REGULAR,
+                        ) -> dict[Any, Any]:
+        """
+        Place Market Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
+
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        token = detail["Token"]
+
+        json_data = {
+            "instrumentToken": token,
+            "price": 0,
+            "triggerPrice": 0,
+            "quantity": quantity,
+            "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+            "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+            "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+            "tag": unique_id,
+            "disclosedQuantity": 0,
+        }
+
+        url = cls.key_mapper(cls.place_order_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def limit_order_eq(cls,
+                       exchange: str,
+                       symbol: str,
+                       price: float,
+                       quantity: int,
+                       side: str,
+                       unique_id: str,
+                       headers: dict,
+                       product: str = Product.MIS,
+                       validity: str = Validity.DAY,
+                       variety: str = Variety.REGULAR,
+                       ) -> dict[Any, Any]:
+        """
+        Place Limit Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            price (float): Order price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
+
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        token = detail["Token"]
+
+        json_data = {
+            "instrumentToken": token,
+            "price": price,
+            "triggerPrice": 0,
+            "quantity": quantity,
+            "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+            "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+            "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+            "tag": unique_id,
+            "disclosedQuantity": 0,
+        }
+
+        url = cls.key_mapper(cls.place_order_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def sl_order_eq(cls,
+                    exchange: str,
+                    symbol: str,
+                    price: float,
+                    trigger: float,
+                    quantity: int,
+                    side: str,
+                    unique_id: str,
+                    headers: dict,
+                    product: str = Product.MIS,
+                    validity: str = Validity.DAY,
+                    variety: str = Variety.STOPLOSS,
+                    ) -> dict[Any, Any]:
+        """
+        Place Stoploss Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            price (float): Order price.
+            trigger (float): order trigger price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        if not cls.eq_tokens:
+            cls.create_eq_tokens()
+
+        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
+        token = detail["Token"]
+
+        json_data = {
+            "instrumentToken": token,
+            "price": price,
+            "triggerPrice": trigger,
+            "quantity": quantity,
+            "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+            "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+            "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+            "tag": unique_id,
+            "disclosedQuantity": 0,
+        }
+
+        url = cls.key_mapper(cls.place_order_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def slm_order_eq(cls,
+                     exchange: str,
+                     symbol: str,
+                     trigger: float,
+                     quantity: int,
+                     side: str,
+                     unique_id: str,
+                     headers: dict,
+                     product: str = Product.MIS,
+                     validity: str = Validity.DAY,
+                     variety: str = Variety.STOPLOSS,
+                     ) -> dict[Any, Any]:
+        """
+        Place Stoploss-Market Order in NSE/BSE Equity Segment.
+
+        Parameters:
+            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
+            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+            trigger (float): order trigger price.
+            quantity (int): Order quantity.
+            side (str): Order Side: BUY, SELL.
+            unique_id (str): Unique user order_id.
+            headers (dict): headers to send order request with.
+            target (float, optional): Order Target price. Defaults to 0.
+            stoploss (float, optional): Order Stoploss price. Defaults to 0.
+            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity. Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.REGULAR.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        raise InputError(f"SLM Orders Not Available in {cls.id}.")
 
 
     # NFO Order Functions
 
 
     @classmethod
-    def market_order_nfo(cls, option: str, strikeprice: int,
-                         side: str, quantity: int,
+    def create_order_fno(cls,
+                         exchange: str,
+                         root: str,
+                         expiry: str,
+                         option: str,
+                         strike_price: str,
+                         quantity: int,
+                         side: str,
+                         product: str,
+                         validity: str,
+                         variety: str,
+                         unique_id: str,
                          headers: dict,
-                         root: str = Root.BNF,
-                         expiry: str = WeeklyExpiry.CURRENT,
-                         uniqueid: str = UniqueID.MARKETORDER,
-                         product: str = Product.MIS, variety: str = "REGULAR",
-                         validity: str = Validity.DAY):
-
+                         price: float = 0.0,
+                         trigger: float = 0.0,
+                         ) -> dict[Any, Any]:
         """
-        create a market order
-        :param str option: 'CE' or 'PE'
-        :param str root: 'BANKNIFTY' or 'NIFTY'
-        :param int strikeprice: Strike Price of the Option
-        :param str side: 'BUY' or 'SELL'
-        :param str expiry: 'CURRENT', 'NEXT', 'FAR'
-        :param str uniqueid: a unique id to denote your order
-        :param int quantity: quantity of shares
-        :param str product: 'NRML', 'MIS', 'SM' (Super Multiple Order), 'SOR' (Smart Order Routing), 'MTF' (Margin Tading Facility)
-        :param str validity: 'DAY' or 'IOC'
-        :param str variety: "REGULAR" or "AMO"
-        :returns json: a json response of order
-        """
+        Place an Order in F&O Segment.
 
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (str): Strike Price of the Option.
+            price (float): price of the order.
+            trigger (float): trigger price of the order.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
         if not cls.nfo_tokens:
             cls.create_nfo_tokens()
 
         detail = cls.nfo_tokens[expiry][root][option]
-        detail = detail.get(strikeprice, None)
+        detail = detail.get(strike_price, None)
 
         if not detail:
-            raise KeyError(f"StrikePrice: {strikeprice} Does not Exist")
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
 
         json_data = {
-            'instrumentToken': token,
-            'transactionType': side,
-            'quantity': quantity,
-            'price': 10,
-            'validity': cls._key_mapper(cls.req_validity, validity, "validity"),
-            'variety': cls._key_mapper(cls.req_variety, variety, "variety"),
-            'disclosedQuantity': 0,
-            'triggerPrice': 0,
-            'tag': uniqueid
-        }
+                "instrumentToken": token,
+                "price": price,
+                "triggerPrice": trigger,
+                "quantity": quantity,
+                "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+                "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+                "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+                "tag": unique_id,
+                "disclosedQuantity": 0,
+            }
 
-        final_url = cls._key_mapper(cls.place_order_urls, product, "product")
-
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
-
-        return cls._create_order_parser(response, headers)
-
-    def limit_order_nfo(cls, price: float, quantity: int,
-                        option: str, root: str, strikeprice: int, side: str, headers: dict,
-                        expiry: str = WeeklyExpiry.CURRENT, uniqueid: str = UniqueID.LIMITORDER,
-                        product: str = Product.MIS, variety: str = "REGULAR", validity: str = Validity.DAY):
-
-        """
-        create a market order
-        :param str option: 'CE' or 'PE'
-        :param str root: 'BANKNIFTY' or 'NIFTY'
-        :param int strikeprice: Strike Price of the Option
-        :param str side: 'BUY' or 'SELL'
-        :param str expiry: 'CURRENT', 'NEXT', 'FAR'
-        :param str uniqueid: a unique id to denote your order
-        :param int quantity: quantity of shares
-        :param str product: 'NRML', 'MIS', 'SM' (Super Multiple Order), 'SOR' (Smart Order Routing), 'MTF' (Margin Tading Facility)
-        :param str validity: 'DAY' or 'IOC'
-        :param str variety: "REGULAR" or "AMO"
-        :returns json: a json response of order
-        """
-
-        if not cls.Global:
-            cls.expiry_markets()
-
-        detail = cls.Global[expiry][root][option]
-        detail = detail.get(strikeprice, None)
-
-        if not detail:
-            raise KeyError(f"StrikePrice: {strikeprice} Does not Exist")
-
-        token = detail['Token']
-
-        json_data = {
-            'instrumentToken': token,
-            'transactionType': side,
-            'quantity': quantity,
-            'price': price,
-            'validity': cls.key_mapper(cls.req_validity, validity, "validity"),
-            'variety': cls.key_mapper(cls.req_variety, variety, "variety"),
-            'disclosedQuantity': 0,
-            'triggerPrice': 0.0,
-            'tag': uniqueid
-        }
-
-        final_url = cls.key_mapper(cls.place_order_urls, product, "product")
-
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
+        url = cls.key_mapper(cls.place_order_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
 
-    def sl_order_nfo(cls, price: float, triggerprice: float,
-                     option: str, root: str, strikeprice: int, side: str, quantity: int, headers: dict,
-                     expiry: str = WeeklyExpiry.CURRENT, uniqueid: str = UniqueID.SLORDER,
-                     product: str = Product.MIS, variety: str = "REGULAR", validity: str = Validity.DAY):
-
+    @classmethod
+    def market_order_fno(cls,
+                         option: str,
+                         strike_price: str,
+                         quantity: int,
+                         side: str,
+                         headers: dict,
+                         root: str = Root.BNF,
+                         expiry: str = WeeklyExpiry.CURRENT,
+                         exchange: str = ExchangeCode.NFO,
+                         product: str = Product.MIS,
+                         validity: str = Validity.DAY,
+                         variety: str = Variety.REGULAR,
+                         unique_id: str = UniqueID.MARKETORDER,
+                         ) -> dict[Any, Any]:
         """
-        create a market order
-        :param str option: 'CE' or 'PE'
-        :param str root: 'BANKNIFTY' or 'NIFTY'
-        :param int strikeprice: Strike Price of the Option
-        :param str side: 'BUY' or 'SELL'
-        :param str expiry: 'CURRENT', 'NEXT', 'FAR'
-        :param str uniqueid: a unique id to denote your order
-        :param int quantity: quantity of shares
-        :param str product: 'NRML', 'MIS', 'SM' (Super Multiple Order), 'SOR' (Smart Order Routing), 'MTF' (Margin Tading Facility)
-        :param str validity: 'DAY' or 'IOC'
-        :param str variety: "REGULAR" or "AMO"
-        :returns json: a json response of order
+        Place Market Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (str): Strike Price of the Option.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: fenix Unified Order Response.
         """
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
 
-        if not cls.Global:
-            cls.expiry_markets()
-
-        detail = cls.Global[expiry][root][option]
-        detail = detail.get(strikeprice, None)
+        detail = cls.nfo_tokens[expiry][root][option]
+        detail = detail.get(strike_price, None)
 
         if not detail:
-            raise KeyError(f"StrikePrice: {strikeprice} Does not Exist")
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
         token = detail['Token']
 
         json_data = {
-            'instrumentToken': token,
-            'transactionType': side,
-            'quantity': quantity,
-            'price': price,
-            'validity': cls.key_mapper(cls.req_validity, validity, "validity"),
-            'variety': cls.key_mapper(cls.req_variety, variety, "variety"),
-            'disclosedQuantity': 0,
-            'triggerPrice': triggerprice,
-            'tag': uniqueid
-        }
+                "instrumentToken": token,
+                "price": 0,
+                "triggerPrice": 0,
+                "quantity": quantity,
+                "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+                "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+                "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+                "tag": unique_id,
+                "disclosedQuantity": 0,
+            }
 
-        final_url = cls.key_mapper(cls.place_order_urls, product, "product")
-
-        response = cls.fetch(method="POST", url=final_url, json=json_data, headers=headers["headers"])
+        url = cls.key_mapper(cls.place_order_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
 
         return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def limit_order_fno(cls,
+                        option: str,
+                        strike_price: str,
+                        price: float,
+                        quantity: int,
+                        side: str,
+                        headers: dict,
+                        root: str = Root.BNF,
+                        expiry: str = WeeklyExpiry.CURRENT,
+                        exchange: str = ExchangeCode.NFO,
+                        product: str = Product.MIS,
+                        validity: str = Validity.DAY,
+                        variety: str = Variety.REGULAR,
+                        unique_id: str = UniqueID.LIMITORDER,
+                        ) -> dict[Any, Any]:
+        """
+        Place Limit Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (str): Strike Price of the Option.
+            price (float): price of the order.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
+
+        detail = cls.nfo_tokens[expiry][root][option]
+        detail = detail.get(strike_price, None)
+
+        if not detail:
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+
+        token = detail['Token']
+
+        json_data = {
+                "instrumentToken": token,
+                "price": price,
+                "triggerPrice": 0,
+                "quantity": quantity,
+                "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+                "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+                "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+                "tag": unique_id,
+                "disclosedQuantity": 0,
+            }
+
+        url = cls.key_mapper(cls.place_order_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def sl_order_fno(cls,
+                     option: str,
+                     strike_price: str,
+                     price: float,
+                     trigger: float,
+                     quantity: int,
+                     side: str,
+                     headers: dict,
+                     root: str = Root.BNF,
+                     expiry: str = WeeklyExpiry.CURRENT,
+                     exchange: str = ExchangeCode.NFO,
+                     product: str = Product.MIS,
+                     validity: str = Validity.DAY,
+                     variety: str = Variety.STOPLOSS,
+                     unique_id: str = UniqueID.SLORDER,
+                     ) -> dict[Any, Any]:
+        """
+        Place Stoploss Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (str): Strike Price of the Option.
+            price (float): price of the order.
+            trigger (float): trigger price of the order.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
+
+        detail = cls.nfo_tokens[expiry][root][option]
+        detail = detail.get(strike_price, None)
+
+        if not detail:
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+
+        token = detail['Token']
+
+        json_data = {
+                "instrumentToken": token,
+                "price": price,
+                "triggerPrice": trigger,
+                "quantity": quantity,
+                "transactionType": cls._key_mapper(cls.req_side, side, 'side'),
+                "validity": cls.key_mapper(cls.req_validity, validity, "validity"),
+                "variety": cls.key_mapper(cls.req_variety, variety, "variety"),
+                "tag": unique_id,
+                "disclosedQuantity": 0,
+            }
+
+        url = cls.key_mapper(cls.place_order_urls, product, "product")
+        response = cls.fetch(method="POST", url=url, data=json_data, headers=headers["headers"])
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def slm_order_fno(cls,
+                      option: str,
+                      strike_price: str,
+                      trigger: float,
+                      quantity: int,
+                      side: str,
+                      headers: dict,
+                      root: str = Root.BNF,
+                      expiry: str = WeeklyExpiry.CURRENT,
+                      exchange: str = ExchangeCode.NFO,
+                      product: str = Product.MIS,
+                      validity: str = Validity.DAY,
+                      variety: str = Variety.STOPLOSS,
+                      unique_id: str = UniqueID.SLORDER,
+                      ) -> dict[Any, Any]:
+        """
+        Place Stoploss-Market Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (str): Strike Price of the Option.
+            trigger (float): trigger price of the order.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        raise InputError(f"SLM Orders Not Available in {cls.id}.")
 
 
     # Order Details, OrderBook & TradeBook

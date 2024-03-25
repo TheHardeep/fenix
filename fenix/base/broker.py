@@ -1,16 +1,20 @@
 from __future__ import annotations
 from datetime import datetime
 from datetime import timedelta
+from os import popen
 from json import dumps
 from json import loads
 from ssl import SSLError
+from time import sleep
 from typing import Any
 from pandas import DataFrame
 from pandas import read_csv
 from pandas import read_json
 from pandas import to_datetime
+from pandas import concat
 from pandas.tseries.offsets import DateOffset
 from pandas import options
+from numpy import nan
 from pyotp import TOTP
 
 from re import compile
@@ -49,7 +53,12 @@ class Broker:
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
+    expiry_dates = {}
+    cookies = {}
     _session = None
+
+    nfo_url = "https://www.nseindia.com/api/option-chain-indices"
+    bfo_url = "https://api.bseindia.com/BseIndiaAPI/api/ddlExpiry_IV/w"
 
     def __repr__(self):
         return f"fenix.{self.id}()"
@@ -409,10 +418,122 @@ class Broker:
         return DateOffset(*args, **kwargs)
 
 
+    @staticmethod
+    def concat_df(dfs: list[DataFrame]) -> DataFrame:
+        return concat(dfs)
 
 
     @staticmethod
-    def jsonify_expiry(data_frame: DataFrame) -> dict[Any, Any]:
+    def dates_filter(data):
+        data = to_datetime(data)
+        data = data[data >= datetime.now()]
+        data = list(data.sort_values().date.astype(str))
+        return data
+
+    @classmethod
+    def download_expiry_dates_nfo(cls, root):
+        temp_session = req_session()
+
+        for _ in range(5):
+            try:
+                headers = {
+                    'accept': '*/*',
+                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7',
+                    'dnt': '1',
+                    'referer': 'https://www.nseindia.com/option-chain',
+                    'sec-ch-ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"',
+                    'sec-fetch-dest': 'empty',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-site': 'same-origin',
+                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                }
+
+                params = {
+                    'symbol': f'{root}',
+                }
+
+                response = temp_session.request(method="GET", url=cls.nfo_url, params=params, cookies=cls.cookies, headers=headers, timeout=10)
+                data = response.json()
+                expiry_dates = data['records']['expiryDates']
+                cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
+                return None
+
+            except:
+                pass
+
+            try:
+                response = popen(f'curl "{cls.nfo_url}?symbol={root}" -H "authority: beta.nseindia.com" -H "cache-control: max-age=0" -H "dnt: 1" -H "upgrade-insecure-requests: 1" -H "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36" -H "sec-fetch-user: ?1" -H "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9" -H "sec-fetch-site: none" -H "sec-fetch-mode: navigate" -H "accept-encoding: gzip, deflate, br" -H "accept-language: en-US,en;q=0.9,hi;q=0.8" --compressed').read()
+                data = loads(response)
+                expiry_dates = data['records']['expiryDates']
+                cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
+                return None
+
+            except:
+                pass
+
+            sleep(5)
+
+    @classmethod
+    def download_expiry_dates_bfo(cls, root):
+        if root == Root.SENSEX:
+            scrip_cd = 1
+        elif root == Root.BANKEX:
+            scrip_cd = 12
+
+        temp_session = req_session()
+
+        for _ in range(5):
+            try:
+                headers = {
+                    'accept': 'application/json, text/plain, */*',
+                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7',
+                    'dnt': '1',
+                    'if-modified-since': 'Sun, 24 Mar 2024 11:21:31 GMT',
+                    'origin': 'https://www.bseindia.com',
+                    'referer': 'https://www.bseindia.com/',
+                    'sec-ch-ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"',
+                    'sec-fetch-dest': 'empty',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-site': 'same-site',
+                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                }
+
+                params = {
+                    'ProductType': 'IO',
+                    'scrip_cd': scrip_cd,
+                }
+
+                response = temp_session.request(method="GET", url=cls.bfo_url, params=params, headers=headers, timeout=10)
+                data = response.json()
+
+                expiry_dates = data['Table1']
+                expiry_dates = [i['ExpiryDate'] for i in expiry_dates]
+                cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
+                return None
+
+            except:
+                pass
+
+            try:
+                response = popen(f"curl '{cls.bfo_url}?ProductType=IO&scrip_cd=1' -H 'accept: application/json, text/plain, */*' -H 'accept-language: en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7' -H 'dnt: 1' -H 'if-modified-since: Sun, 24 Mar 2024 11:21:31 GMT' -H 'origin: https://www.bseindia.com' -H 'referer: https://www.bseindia.com/' -H 'sec-ch-ua-mobile: ?0' -H 'sec-fetch-dest: empty' -H 'sec-fetch-mode: cors' -H 'sec-fetch-site: same-site' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'").read()
+                data = loads(response)
+
+                expiry_dates = data['Table1']
+                expiry_dates = [i['ExpiryDate'] for i in expiry_dates]
+                cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
+                return None
+
+            except:
+                pass
+
+            sleep(5)
+
+    @classmethod
+    def jsonify_expiry(cls, data_frame: DataFrame) -> dict[Any, Any]:
         """
         Creates a fenix Unified Dicitonary for BankNifty & Nifty Options,
         in the following Format:
@@ -458,39 +579,48 @@ class Broker:
         """
 
         expiry_data = {
-            WeeklyExpiry.CURRENT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}},
-            WeeklyExpiry.NEXT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}},
-            WeeklyExpiry.FAR: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}},
-            WeeklyExpiry.EXPIRY: {Root.BNF: [], Root.NF: [], Root.FNF: [], Root.MIDCPNF: []},
-            WeeklyExpiry.LOTSIZE: {Root.BNF: [], Root.NF: [], Root.FNF: [], Root.MIDCPNF: []},
+            WeeklyExpiry.CURRENT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}, Root.SENSEX: {}, Root.BANKEX: {} },
+            WeeklyExpiry.NEXT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}, Root.SENSEX: {}, Root.BANKEX: {} },
+            WeeklyExpiry.FAR: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}, Root.SENSEX: {}, Root.BANKEX: {} },
+            WeeklyExpiry.EXPIRY: {Root.BNF: [], Root.NF: [], Root.FNF: [], Root.MIDCPNF: [], Root.SENSEX: [], Root.BANKEX: []},
+            WeeklyExpiry.LOTSIZE: {Root.BNF: nan, Root.NF: nan, Root.FNF: nan, Root.MIDCPNF: nan, Root.SENSEX: nan, Root.BANKEX: nan},
         }
 
         data_frame = data_frame.sort_values(by=['Expiry'])
 
-        for root in [Root.BNF, Root.NF, Root.FNF, Root.MIDCPNF]:
+        for root in [Root.BNF, Root.NF, Root.FNF, Root.MIDCPNF, Root.SENSEX, Root.BANKEX]:
 
+            if root not in cls.expiry_dates:
+                if root in [Root.SENSEX, Root.BANKEX]:
+                    cls.download_expiry_dates_bfo(root=root)
+                else:
+                    cls.download_expiry_dates_nfo(root=root)
+            small_df = data_frame[data_frame['Root'] == root]
 
-            expiries = data_frame[data_frame['Root'] == root]['Expiry'].unique()
-            expiries = expiries[expiries >= str(datetime.now().date())]
-            lotsize = data_frame[data_frame['Root'] == root]['LotSize'].unique()[0]
+            if small_df.shape[0]:
+                expiries = small_df['Expiry'].unique()
+                expiries = expiries[expiries >= str(datetime.now().date())]
+                lotsize = small_df['LotSize'].unique()[0]
 
-            dfex1 = data_frame[data_frame['Expiry'] == expiries[0]]
-            dfex2 = data_frame[data_frame['Expiry'] == expiries[1]]
-            dfex3 = data_frame[data_frame['Expiry'] == expiries[2]]
+                dfex1 = small_df[small_df['Expiry'] == cls.expiry_dates[root][0]]
+                dfex2 = small_df[small_df['Expiry'] == cls.expiry_dates[root][1]]
+                dfex3 = small_df[small_df['Expiry'] == cls.expiry_dates[root][2]]
 
-            dfexs = [("CURRENT", dfex1), ("NEXT", dfex2), ("FAR", dfex3)]
+                dfexs = [("CURRENT", dfex1), ("NEXT", dfex2), ("FAR", dfex3)]
 
-            for expiry_name, dfex in dfexs:
+                for expiry_name, dfex in dfexs:
 
-                dfex['ExpiryName'] = expiry_name
+                    dfex['ExpiryName'] = expiry_name
 
-                global_dict = {'CE': {}, "PE": {}}
+                    global_dict = {'CE': {}, "PE": {}}
 
-                for j, i in dfex.groupby(['Option', 'StrikePrice']):
-                    global_dict[j[0]][j[1]] = i.to_dict('records')[0]
-                    expiry_data[expiry_name][root] = global_dict
+                    for j, i in dfex.groupby(['Option', 'StrikePrice']):
+                        global_dict[j[0]][j[1]] = i.to_dict('records')[0]
+                        expiry_data[expiry_name][root] = global_dict
 
-                expiry_data['Expiry'][root] = list(expiries)
-                expiry_data['LotSize'][root] = lotsize
+                    expiry_data['Expiry'][root] = list(expiries)
+                    expiry_data['LotSize'][root] = lotsize
+            else:
+                pass
 
         return expiry_data

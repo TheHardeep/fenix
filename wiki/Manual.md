@@ -579,145 +579,187 @@ The `create_headers (params: dict)` method takes the user's credentials of the r
 
 The methods which have the following name `create_order_*** ()` are used to place any type of order in the respective segments:
 
-    ### create_order_nfo ()
-    This method allows the user to place any type of order in the FNO Segment. It takes the following parameters:
+### create_order_nfo ()
+This method allows the user to place any type of order in the FNO Segment. It takes the following parameters:
 
-    - `exchange` (str): Exchange to place the order in. [ExchangeCode.NFO]
-    - `root` (str): Derivative: BANKNIFTY, NIFTY, etc...
-    - `expiry` (str): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'.
-    - `option` (str): Option Type: 'CE', 'PE'.
-    - `strike_price` (int): Strike Price of the Option.
-    - `quantity` (int): Order quantity.
-    - `side` (str): Order Side: 'BUY', 'SELL'.
-    - `product` (str): Order product.
-    - `validity` (str): Order validity.
-    - `variety` (str): Order variety.
-    - `unique_id` (str): Unique user orderid
-    - `headers` (dict): headers to send order request with.
-    - `price` (float, optional): price of the order. Defaults to 0.
-    - `trigger` (float, optional): trigger price of the order. Defaults to 0.
+- `exchange` (str): Exchange to place the order in. [ExchangeCode.NFO]
+
+- `root` (str): Derivative: BANKNIFTY, NIFTY, etc...
+
+- `expiry` (str): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'.
+
+- `option` (str): Option Type: 'CE', 'PE'.
+
+- `strike_price` (int): Strike Price of the Option.
+
+- `quantity` (int): Order quantity.
+
+- `side` (str): Order Side: 'BUY', 'SELL'.
+
+- `product` (str): Order product.
+
+- `validity` (str): Order validity.
+
+- `variety` (str): Order variety.
+
+- `unique_id` (str): Unique user orderid
+
+- `headers` (dict): headers to send order request with.
+
+- `price` (float, optional): price of the order. Defaults to 0.
+
+- `trigger` (float, optional): trigger price of the order. Defaults to 0.
 
 
-        ```python
-        finvasia.create_order_nfo(exchange = constants.ExchangeCode.NFO,
-                                root = constants.Root.BNF,
-                                expiry = constants.WeeklyExpiry.CURRENT,
-                                option = "CE",
-                                strike_price = '45500',
-                                quantity = 15,
-                                side = "BUY",
-                                product = constants.Product.MIS,
-                                validity = constants.Validity.DAY,
-                                variety = constants.Variety.REGULAR,
-                                unique_id = 'CREATEOrderNFO',
-                                headers = {}, # Add your headers dict.
-                                price = 13.0,
-                                trigger = 12.0
-                                )
-        ```
+```python
+finvasia.create_order_nfo(exchange = constants.ExchangeCode.NFO,
+                         root = constants.Root.BNF,
+                         expiry = constants.WeeklyExpiry.CURRENT,
+                         option = "CE",
+                         strike_price = '45500',
+                         quantity = 15,
+                         side = "BUY",
+                         product = constants.Product.MIS,
+                         validity = constants.Validity.DAY,
+                         variety = constants.Variety.REGULAR,
+                         unique_id = 'CREATEOrderNFO',
+                         headers = {}, # Add your headers dict.
+                         price = 13.0,
+                         trigger = 12.0
+                         )
+```
 
-- `create_order_eq ()`: This method allows the user to place any type of order in the Equity Segment. It takes the following parameters:
+### create_order_eq ( )
+This method allows the user to place any type of order in the Equity Segment. It takes the following parameters:
 
-    - `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
-    - `symbol` (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL".
-    - `quantity` (int): Order quantity.
-    - `side` (str): Order Side: BUY, SELL.
-    - `product` (str, optional): Order product.
-    - `validity` (str, optional): Order validity.
-    - `variety` (str, optional): Order variety.
-    - `unique_id` (str): Unique user order_id.
-    - `headers` (dict): headers to send order request with.
-    - `price` (float): Order price.
-    - `trigger` (float): order trigger price.
-    - `target` (float, optional): Order Target price. Defaults to 0.
-    - `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
-    - `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+- `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
 
-    ```python
-    angelone.create_order_eq(exchange = constants.ExchangeCode.NSE,
-                            symbol = "RELIANCE",
-                            quantity = 10,
-                            side = "SELL",
-                            product = constants.Product.MIS,
-                            validity = constants.Validity.DAY,
-                            variety = constants.Variety.REGULAR,
-                            unique_id = "NSEOrder",
-                            headers = {},
-                            price = 2840.0,
-                            trigger = 2845.0
-                            )
-    ```
+- `symbol` (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL".
 
-- `create_order_bo ()`: This method allows the user to place Bracket Orders in the supported broker. It takes the following parameters:
+- `quantity` (int): Order quantity.
 
-    - `token` (int): Exchange token.
-    - `exchange` (str): Exchange to place the order in.
-    - `symbol` (str): Trading symbol.
-    - `price` (float): Order price
-    - `trigger` (float): order trigger price
-    - `quantity` (int): Order quantity.
-    - `side` (str): Order Side: BUY, SELL.
-    - `unique_id` (str): Unique user order_id.
-    - `headers` (dict): headers to send order request with.
-    - `target` (float, optional): Order Target price. Defaults to 0.
-    - `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
-    - `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-    - `product` (str, optional): Order product.
-    - `validity` (str, optional): Order validity.
-    - `variety` (str, optional): Order variety.
+- `side` (str): Order Side: BUY, SELL.
 
-    #### Example
-    ```python
-    symphony.create_order_bo(token=42163,
-                             exchange = constants.ExchangeCode.NFO,
-                             symbol = "BANKNIFTY22NOV23C45500",
-                             price = 10,
-                             trigger = 9,
-                             quantity = 15,
-                             side = constants.Side.BUY,
-                             unique_id ="CreateOrderBO",
-                             headers = {},
-                             target = 12,
-                             stoploss = 5,
-                             trailing_sl = 3,
-                             product = constants.Product.MIS,
-                             validity = constants.Validity.DAY,
-                             variety = constants.Variety.REGULAR
-                             )
-    ```
+- `product` (str, optional): Order product.
 
-- `create_order ()`: This method allows the user to place orders in any segment. It takes the following parameters:
+- `validity` (str, optional): Order validity.
 
-    - `token` (int): Exchange token.
-    - `exchange` (str): Exchange to place the order in.
-    - `symbol` (str): Trading symbol.
-    - `quantity` (int): Order quantity.
-    - `side` (str): Order Side: BUY, SELL.
-    - `product` (str, optional): Order product.
-    - `validity` (str, optional): Order validity.
-    - `variety` (str, optional): Order variety.
-    - `unique_id` (str): Unique user order_id.
-    - `headers` (dict): headers to send order request with.
-    - `price` (float, optional): Order price. Defaults to 0.
-    - `trigger` (float, optional): order trigger price. Defaults to 0.
-    - `target` (float, optional): Order Target price. Defaults to 0.
-    - `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
-    - `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+- `variety` (str, optional): Order variety.
 
-    #### Example
-    ```python
-    symphony.create_order(token=42163,
-                          exchange = constants.ExchangeCode.NFO,
-                          symbol = "BANKNIFTY22NOV23C45500",
-                          quantity = 15,
-                          side = "BUY",
-                          product = constants.Product.MIS,
-                          validity = constants.Validity.DAY,
-                          variety = constants.Variety.REGULAR,
-                          unique_id = 'CreateOrder',
-                          headers = {},
-                          price = 10.25,
-                          trigger = 9.25
-                          )
+- `unique_id` (str): Unique user order_id.
 
-    ```
+- `headers` (dict): headers to send order request with.
+
+- `price` (float): Order price.
+
+- `trigger` (float): order trigger price.
+
+- `target` (float, optional): Order Target price. Defaults to 0.
+
+- `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
+
+- `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+
+```python
+angelone.create_order_eq(exchange = constants.ExchangeCode.NSE,
+                         symbol = "RELIANCE",
+                         quantity = 10,
+                         side = "SELL",
+                         product = constants.Product.MIS,
+                         validity = constants.Validity.DAY,
+                         variety = constants.Variety.REGULAR,
+                         unique_id = "NSEOrder",
+                         headers = {},
+                         price = 2840.0,
+                         trigger = 2845.0
+                         )
+```
+
+### create_order_bo ( )
+
+This method allows the user to place Bracket Orders in the supported broker. It takes the following parameters:
+
+- `token` (int): Exchange token.
+
+- `exchange` (str): Exchange to place the order in.
+
+- `symbol` (str): Trading symbol.
+
+- `price` (float): Order price
+
+- `trigger` (float): order trigger price
+
+- `quantity` (int): Order quantity.
+
+- `side` (str): Order Side: BUY, SELL.
+
+- `unique_id` (str): Unique user order_id.
+
+- `headers` (dict): headers to send order request with.
+
+- `target` (float, optional): Order Target price. Defaults to 0.
+
+- `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
+
+- `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+
+- `product` (str, optional): Order product.
+
+- `validity` (str, optional): Order validity.
+
+- `variety` (str, optional): Order variety.
+
+```python
+symphony.create_order_bo(token=42163,
+                         exchange = constants.ExchangeCode.NFO,
+                         symbol = "BANKNIFTY22NOV23C45500",
+                         price = 10,
+                         trigger = 9,
+                         quantity = 15,
+                         side = constants.Side.BUY,
+                         unique_id ="CreateOrderBO",
+                         headers = {},
+                         target = 12,
+                         stoploss = 5,
+                         trailing_sl = 3,
+                         product = constants.Product.MIS,
+                         validity = constants.Validity.DAY,
+                         variety = constants.Variety.REGULAR
+                         )
+```
+
+### create_order ( )
+This method allows the user to place orders in any segment. It takes the following parameters:
+
+- `token` (int): Exchange token.
+- `exchange` (str): Exchange to place the order in.
+- `symbol` (str): Trading symbol.
+- `quantity` (int): Order quantity.
+- `side` (str): Order Side: BUY, SELL.
+- `product` (str, optional): Order product.
+- `validity` (str, optional): Order validity.
+- `variety` (str, optional): Order variety.
+- `unique_id` (str): Unique user order_id.
+- `headers` (dict): headers to send order request with.
+- `price` (float, optional): Order price. Defaults to 0.
+- `trigger` (float, optional): order trigger price. Defaults to 0.
+- `target` (float, optional): Order Target price. Defaults to 0.
+- `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
+- `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
+
+```python
+symphony.create_order(token=42163,
+                        exchange = constants.ExchangeCode.NFO,
+                        symbol = "BANKNIFTY22NOV23C45500",
+                        quantity = 15,
+                        side = "BUY",
+                        product = constants.Product.MIS,
+                        validity = constants.Validity.DAY,
+                        variety = constants.Variety.REGULAR,
+                        unique_id = 'CreateOrder',
+                        headers = {},
+                        price = 10.25,
+                        trigger = 9.25
+                        )
+
+```

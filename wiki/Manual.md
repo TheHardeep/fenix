@@ -51,7 +51,7 @@ A broker can be used as shown in the examples below:
 import fenix
 
 broker = fenix.aliceblue
-nfo_tokens = broker.create_nfo_tokens()
+nfo_tokens = broker.create_fno_tokens()
 
 # using python eval
 id = "angelone"
@@ -171,50 +171,49 @@ These dictationaries convert the Fenix Constants to their respective broker coun
 
 - `req_variety`: Map Order Variety to Unified fenix notation.
 
-```python
-req_exchange = {
-    ExchangeCode.NSE: "NSE",
-    ExchangeCode.NFO: "NFO",
-    ExchangeCode.BSE: "BSE",
-    ExchangeCode.BFO: "BFO",
-    ExchangeCode.BCD: "BCD",
-    ExchangeCode.MCX: "MCX",
-    ExchangeCode.CDS: "CDS",
-}
+    ```python
+    req_exchange = {
+        ExchangeCode.NSE: "NSE",
+        ExchangeCode.NFO: "NFO",
+        ExchangeCode.BSE: "BSE",
+        ExchangeCode.BFO: "BFO",
+        ExchangeCode.BCD: "BCD",
+        ExchangeCode.MCX: "MCX",
+        ExchangeCode.CDS: "CDS",
+    }
 
-req_order_type = {
-    OrderType.MARKET: "MKT",
-    OrderType.LIMIT: "L",
-    OrderType.SL: "SL",
-    OrderType.SLM: "SL-M"
-}
+    req_order_type = {
+        OrderType.MARKET: "MKT",
+        OrderType.LIMIT: "L",
+        OrderType.SL: "SL",
+        OrderType.SLM: "SL-M"
+    }
 
-req_product = {
-    Product.MIS: "MIS",
-    Product.NRML: "NRML",
-    Product.CNC: "CNC",
-    Product.CO: "CO",
-    Product.BO: "BO"
-}
+    req_product = {
+        Product.MIS: "MIS",
+        Product.NRML: "NRML",
+        Product.CNC: "CNC",
+        Product.CO: "CO",
+        Product.BO: "BO"
+    }
 
-req_side = {
-    Side.BUY: "BUY",
-    Side.SELL: "SELL",
-}
+    req_side = {
+        Side.BUY: "BUY",
+        Side.SELL: "SELL",
+    }
 
-req_validity = {
-    Validity.DAY: "DAY",
-    Validity.IOC: "IOC",
-}
+    req_validity = {
+        Validity.DAY: "DAY",
+        Validity.IOC: "IOC",
+    }
 
-req_variety = {
-    Variety.REGULAR: "REGULAR",
-    Variety.STOPLOSS: "REGULAR",
-    Variety.BO: "BO",
-    Variety.AMO: "AMO",
-}
-
-```
+    req_variety = {
+        Variety.REGULAR: "REGULAR",
+        Variety.STOPLOSS: "REGULAR",
+        Variety.BO: "BO",
+        Variety.AMO: "AMO",
+    }
+    ```
 
 ## Response Parameters Attributes
 
@@ -234,52 +233,52 @@ These dictationaries convert the Broker JSON Response data to Fenix Constants co
 
 - `resp_status`: Used to map an Order's current status to Unified Fenix Notation.
 
-```python
-resp_order_type = {
-    "MKT": OrderType.MARKET,
-    "L": OrderType.LIMIT,
-    "SL": OrderType.SL,
-    "SL-M": OrderType.SLM,
-}
+    ```python
+    resp_order_type = {
+        "MKT": OrderType.MARKET,
+        "L": OrderType.LIMIT,
+        "SL": OrderType.SL,
+        "SL-M": OrderType.SLM,
+    }
 
-resp_segment = {
-    "nse_cm": ExchangeCode.NSE,
-    "bse_cm": ExchangeCode.BSE,
-    "nse_fo": ExchangeCode.NFO,
-    "bse_fo": ExchangeCode.BFO,
-    "mcx_fo": ExchangeCode.MCX,
-    "cde_fo": ExchangeCode.CDS,
-    "mcx_sx": ExchangeCode.BFO,
-    "bcs_fo": ExchangeCode.BCD,
-    "nse_com": ExchangeCode.NCO,
-    "bse_com": ExchangeCode.BCO,
-}
+    resp_segment = {
+        "nse_cm": ExchangeCode.NSE,
+        "bse_cm": ExchangeCode.BSE,
+        "nse_fo": ExchangeCode.NFO,
+        "bse_fo": ExchangeCode.BFO,
+        "mcx_fo": ExchangeCode.MCX,
+        "cde_fo": ExchangeCode.CDS,
+        "mcx_sx": ExchangeCode.BFO,
+        "bcs_fo": ExchangeCode.BCD,
+        "nse_com": ExchangeCode.NCO,
+        "bse_com": ExchangeCode.BCO,
+    }
 
-resp_side = {
-    "B": Side.BUY,
-    "S": Side.SELL
-}
+    resp_side = {
+        "B": Side.BUY,
+        "S": Side.SELL
+    }
 
-resp_status = {
-    "open pending": Status.PENDING,
-    "not modified": Status.PENDING,
-    "not cancelled": Status.PENDING,
-    "modify pending": Status.PENDING,
-    "trigger pending": Status.PENDING,
-    "cancel pending": Status.PENDING,
-    "validation pending": Status.PENDING,
-    "put order req received": Status.PENDING,
-    "modify validation pending": Status.PENDING,
-    "after market order req received": Status.PENDING,
-    "modify after market order req received": Status.PENDING,
-    "cancelled": Status.CANCELLED,
-    "cancelled after market order": Status.CANCELLED,
-    "open": Status.OPEN,
-    "complete": Status.FILLED,
-    "rejected": Status.REJECTED,
-    "modified": Status.MODIFIED,
-}
-```
+    resp_status = {
+        "open pending": Status.PENDING,
+        "not modified": Status.PENDING,
+        "not cancelled": Status.PENDING,
+        "modify pending": Status.PENDING,
+        "trigger pending": Status.PENDING,
+        "cancel pending": Status.PENDING,
+        "validation pending": Status.PENDING,
+        "put order req received": Status.PENDING,
+        "modify validation pending": Status.PENDING,
+        "after market order req received": Status.PENDING,
+        "modify after market order req received": Status.PENDING,
+        "cancelled": Status.CANCELLED,
+        "cancelled after market order": Status.CANCELLED,
+        "open": Status.OPEN,
+        "complete": Status.FILLED,
+        "rejected": Status.REJECTED,
+        "modified": Status.MODIFIED,
+    }
+    ```
 
 
 # Fenix Constants
@@ -318,46 +317,46 @@ The following Enums are used across the fenix library:
 - `UniqueID`: Constants representing default unique order IDs.
 
 
-```python
-from fenix import constants, aliceblue
-from fenix import Side, Order, Option, UniqueID
+    ```python
+    from fenix import constants, aliceblue
+    from fenix import Side, Order, Option, UniqueID
 
-Side.BUY  # BUY
-Side.SELL # SELL
+    Side.BUY  # BUY
+    Side.SELL # SELL
 
-Order.ID # id
-Order.AVGPRICE # avgPrice
+    Order.ID # id
+    Order.AVGPRICE # avgPrice
 
-constants.OrderType.MARKET # MARKET
+    constants.OrderType.MARKET # MARKET
 
-# prints out all the classes for constants
-fenix.constants.__all__
+    # prints out all the classes for constants
+    fenix.constants.__all__
 
-# Using constants during Order Placing.
-headers = {
-    "ID": "Your_User_Id",
-    "AccessToken": "Your_Access_Token",
-    "Authorization": f"Bearer  Your_Access_Token",
-    "X-SAS-Version": "2.0",
-    "User-Agent": "AliceBlue_V21.0.1",
-    "Content-Type": "application/json",
-    "susertoken": "Your SuserToken",
-}
+    # Using constants during Order Placing.
+    headers = {
+        "ID": "Your_User_Id",
+        "AccessToken": "Your_Access_Token",
+        "Authorization": f"Bearer  Your_Access_Token",
+        "X-SAS-Version": "2.0",
+        "User-Agent": "AliceBlue_V21.0.1",
+        "Content-Type": "application/json",
+        "susertoken": "Your SuserToken",
+    }
 
-aliceblue.market_order_nfo(option = Option.CE, # CE
-                           side = Side.BUY, # BUY
-                           unique_id = UniqueID.MARKETORDER, # "MarketOrder"
-                           strike_price = 45500,
-                           quantity = 15,
-                           headers = headers,
-                           )
-```
+    aliceblue.market_order_nfo(option = Option.CE, # CE
+                            side = Side.BUY, # BUY
+                            unique_id = UniqueID.MARKETORDER, # "MarketOrder"
+                            strike_price = 45500,
+                            quantity = 15,
+                            headers = headers,
+                            )
+    ```
 
 # Loading Broker Master Scripts
 
 In most cases you are required to load the data of trading symbols for a particular broker prior to accessing other API methods. If you forget to load the symbol data the fenix library will do that automatically upon your first call to the unified API. It will send two HTTP requests, first for symbols and then the second one for other data, sequentially. For that reason, your first call to a unified Fenix API method like create_order, create_nfo_order, create_bo_order, etc. will take more time, than the consequent calls, since it has to do more work loading the market information from the Broker API.
 
-In order to load trading symbol data manually beforehand call the `create_nfo_tokens ()` / `create_eq_tokens ()` method on a broker class. It returns a dictionary of markets indexed by trading symbol/expiry. If you want more control over the execution of your logic, preloading markets by hand is recommended.
+In order to load trading symbol data manually beforehand call the `create_fno_tokens ()` / `create_eq_tokens ()` method on a broker class. It returns a dictionary of markets indexed by trading symbol/expiry. If you want more control over the execution of your logic, preloading markets by hand is recommended.
 
 The broker MasterScript data is formatted into a standarized way and stored in the following class variables:
 
@@ -447,6 +446,7 @@ This dictionary stores the Indices data from both *NSE & BSE* exchanges and is f
     "BANKNIFTY": {"Symbol": "NIFTY BANK", "Token": "26009"},
     "FINNIFTY": {"Symbol": "NIFTY FIN SERVICE", "Token": "26037"},
     "MIDCPNIFTY": {"Symbol": "NIFTY MIDCAP SELECT", "Token": "26074"},
+    ...
 }
 ```
 
@@ -457,7 +457,7 @@ This class variable is a dictionary sotring the data for the FNO segment in the 
 ```python
 #      Weekly Expiry: CURRENT, NEXT, FAR, Expiry (Expiry Dates), LotSize
 #      ↓
-#      ↓          Segment: BANKNIFTY, NIFTY, FININIFTY, MIDCPNIFTY, SENSEX
+#      ↓          Segment: BANKNIFTY, NIFTY, FININIFTY, MIDCPNIFTY, SENSEX, BANKEX
 #      ↓          ↓
 #      ↓          ↓           Option: CE, PE
 #      ↓          ↓           ↓
@@ -527,7 +527,8 @@ This class variable is a dictionary sotring the data for the FNO segment in the 
                 "NIFTY": {...},
                 "FINNIFTY": {...},
                 "MIDCPNIFTY": {...},
-                "SENSEX": {...}
+                "SENSEX": {...},
+                "BANKEX": {...}
                 },
     "NEXT": {...},
     "FAR": {...},
@@ -537,13 +538,15 @@ This class variable is a dictionary sotring the data for the FNO segment in the 
         "FINNIFTY": ["2024-03-19", ...],
         "MIDCPNIFTY": ["2024-03-18", ...],
         "SENSEX": ["2024-03-18", ...],
+        "BANKEX": ["2024-03-19", ...],
         },
     "LotSize": {
         "BANKNIFTY": 15,
         "NIFTY": 50,
         "FINNIFTY": 40,
         "MIDCPNIFTY": 75,
-        "SENSEX": 10
+        "SENSEX": 10,
+        "BANKEX": 15
     }
 }
 ```
@@ -567,7 +570,7 @@ These methods download the MasterScript of the broker and stores the data of the
 
 - `create_indices ()`: Fetches all the Indices data. Stores the data in the `indices` attribute of the broker.
 
-- `create_nfo_tokens ()`: Fetches all the FNO Segment data. Stores the data in the `nfo_tokens` attribute of the broker.
+- `create_fno_tokens ()`: Fetches all the FNO Segment data. Stores the data in the `nfo_tokens` attribute of the broker.
 
 
 ## Headers Method
@@ -575,14 +578,37 @@ These methods download the MasterScript of the broker and stores the data of the
 The `create_headers (params: dict)` method takes the user's credentials of the respective broker in the form of a dictionary. The keys of the `params` dictionary can be found by using the `tokens_params` attribute.
 
 
-## Order Placing Methods
+## Generalized Order Placing Methods
 
 The methods which have the following name `create_order_*** ()` are used to place any type of order in the respective segments:
 
-### create_order_nfo ()
+
+Common Parameters across all create_order_*** ():
+
+
+- `quantity` (int): Order quantity.
+
+- `side` (str): Order Side: BUY, SELL.
+
+- `unique_id` (str): Unique user order_id.
+
+- `headers` (dict): headers to send order request with.
+
+- `product` (str, optional): Order product. Defaults to Product.MIS.
+
+- `validity` (str, optional): Order validity. Defaults to Validity.DAY.
+
+- `variety` (str, optional): Order variety Defaults to Variety.REGULAR.
+
+- `price` (float, optional): price of the order. Defaults to 0.
+
+- `trigger` (float, optional): trigger price of the order. Defaults to 0.
+
+
+### create_order_fno ()
 This method allows the user to place any type of order in the FNO Segment. It takes the following parameters:
 
-- `exchange` (str): Exchange to place the order in. [ExchangeCode.NFO]
+- `exchange` (str): Exchange to place the order in.
 
 - `root` (str): Derivative: BANKNIFTY, NIFTY, etc...
 
@@ -592,42 +618,24 @@ This method allows the user to place any type of order in the FNO Segment. It ta
 
 - `strike_price` (int): Strike Price of the Option.
 
-- `quantity` (int): Order quantity.
 
-- `side` (str): Order Side: 'BUY', 'SELL'.
-
-- `product` (str): Order product.
-
-- `validity` (str): Order validity.
-
-- `variety` (str): Order variety.
-
-- `unique_id` (str): Unique user orderid
-
-- `headers` (dict): headers to send order request with.
-
-- `price` (float, optional): price of the order. Defaults to 0.
-
-- `trigger` (float, optional): trigger price of the order. Defaults to 0.
-
-
-```python
-finvasia.create_order_nfo(exchange = constants.ExchangeCode.NFO,
-                         root = constants.Root.BNF,
-                         expiry = constants.WeeklyExpiry.CURRENT,
-                         option = "CE",
-                         strike_price = '45500',
-                         quantity = 15,
-                         side = "BUY",
-                         product = constants.Product.MIS,
-                         validity = constants.Validity.DAY,
-                         variety = constants.Variety.REGULAR,
-                         unique_id = 'CREATEOrderNFO',
-                         headers = {}, # Add your headers dict.
-                         price = 13.0,
-                         trigger = 12.0
-                         )
-```
+    ```python
+    finvasia.create_order_fno(exchange = constants.ExchangeCode.NFO,
+                              root = constants.Root.BNF,
+                              expiry = constants.WeeklyExpiry.CURRENT,
+                              option = "CE",
+                              strike_price = '45500',
+                              quantity = 15,
+                              side = "BUY",
+                              product = constants.Product.MIS,
+                              validity = constants.Validity.DAY,
+                              variety = constants.Variety.REGULAR,
+                              unique_id = 'CREATEOrderNFO',
+                              headers = {}, # Add your headers dict.
+                              price = 13.0,
+                              trigger = 12.0
+                              )
+    ```
 
 ### create_order_eq ( )
 This method allows the user to place any type of order in the Equity Segment. It takes the following parameters:
@@ -636,130 +644,341 @@ This method allows the user to place any type of order in the Equity Segment. It
 
 - `symbol` (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL".
 
-- `quantity` (int): Order quantity.
-
-- `side` (str): Order Side: BUY, SELL.
-
-- `product` (str, optional): Order product.
-
-- `validity` (str, optional): Order validity.
-
-- `variety` (str, optional): Order variety.
-
-- `unique_id` (str): Unique user order_id.
-
-- `headers` (dict): headers to send order request with.
-
-- `price` (float): Order price.
-
-- `trigger` (float): order trigger price.
-
-- `target` (float, optional): Order Target price. Defaults to 0.
-
-- `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
-
-- `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-
-```python
-angelone.create_order_eq(exchange = constants.ExchangeCode.NSE,
-                         symbol = "RELIANCE",
-                         quantity = 10,
-                         side = "SELL",
-                         product = constants.Product.MIS,
-                         validity = constants.Validity.DAY,
-                         variety = constants.Variety.REGULAR,
-                         unique_id = "NSEOrder",
-                         headers = {},
-                         price = 2840.0,
-                         trigger = 2845.0
-                         )
-```
-
-### create_order_bo ( )
-
-This method allows the user to place Bracket Orders in the supported broker. It takes the following parameters:
-
-- `token` (int): Exchange token.
-
-- `exchange` (str): Exchange to place the order in.
-
-- `symbol` (str): Trading symbol.
-
-- `price` (float): Order price
-
-- `trigger` (float): order trigger price
-
-- `quantity` (int): Order quantity.
-
-- `side` (str): Order Side: BUY, SELL.
-
-- `unique_id` (str): Unique user order_id.
-
-- `headers` (dict): headers to send order request with.
-
-- `target` (float, optional): Order Target price. Defaults to 0.
-
-- `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
-
-- `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-
-- `product` (str, optional): Order product.
-
-- `validity` (str, optional): Order validity.
-
-- `variety` (str, optional): Order variety.
-
-```python
-symphony.create_order_bo(token=42163,
-                         exchange = constants.ExchangeCode.NFO,
-                         symbol = "BANKNIFTY22NOV23C45500",
-                         price = 10,
-                         trigger = 9,
-                         quantity = 15,
-                         side = constants.Side.BUY,
-                         unique_id ="CreateOrderBO",
-                         headers = {},
-                         target = 12,
-                         stoploss = 5,
-                         trailing_sl = 3,
-                         product = constants.Product.MIS,
-                         validity = constants.Validity.DAY,
-                         variety = constants.Variety.REGULAR
-                         )
-```
+    ```python
+    angelone.create_order_eq(exchange = constants.ExchangeCode.NSE,
+                             symbol = "RELIANCE",
+                             quantity = 10,
+                             side = "SELL",
+                             product = constants.Product.MIS,
+                             validity = constants.Validity.DAY,
+                             variety = constants.Variety.REGULAR,
+                             unique_id = "NSEOrder",
+                             headers = {},
+                             price = 2840.0,
+                             trigger = 2845.0
+                             )
+    ```
 
 ### create_order ( )
 This method allows the user to place orders in any segment. It takes the following parameters:
 
-- `token` (int): Exchange token.
-- `exchange` (str): Exchange to place the order in.
-- `symbol` (str): Trading symbol.
-- `quantity` (int): Order quantity.
-- `side` (str): Order Side: BUY, SELL.
-- `product` (str, optional): Order product.
-- `validity` (str, optional): Order validity.
-- `variety` (str, optional): Order variety.
-- `unique_id` (str): Unique user order_id.
-- `headers` (dict): headers to send order request with.
-- `price` (float, optional): Order price. Defaults to 0.
-- `trigger` (float, optional): order trigger price. Defaults to 0.
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+
 - `target` (float, optional): Order Target price. Defaults to 0.
+
 - `stoploss` (float, optional): Order Stoploss price. Defaults to 0.
+
 - `trailing_sl` (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
-```python
-symphony.create_order(token=42163,
-                        exchange = constants.ExchangeCode.NFO,
-                        symbol = "BANKNIFTY22NOV23C45500",
-                        quantity = 15,
-                        side = "BUY",
-                        product = constants.Product.MIS,
-                        validity = constants.Validity.DAY,
-                        variety = constants.Variety.REGULAR,
-                        unique_id = 'CreateOrder',
-                        headers = {},
-                        price = 10.25,
-                        trigger = 9.25
-                        )
+    ```python
+    headers = symphony.create_headers(params)
+    token_data = symphony.nfo_tokens["CURRENT"]["BANKNIFTY"]["CE"]["38500"]
 
-```
+    symphony.create_order(token_dict = token_data,
+                          quantity = 15,
+                          side = "BUY",
+                          product = constants.Product.MIS,
+                          validity = constants.Validity.DAY,
+                          variety = constants.Variety.REGULAR,
+                          unique_id = 'CreateOrder',
+                          headers = headers,
+                          price = 10.25,
+                          trigger = 9.25,
+                          target = 12.50,
+                          stoploss = 7.25,
+                          trailing_sl = 4.50,
+                          )
+    ```
+
+## OrderType Specific Order Placing Methods
+
+There are 4 types of different methods based on the Market, Limit, Stoploss & Stoploss-Market OrderTypes.
+
+They are also seperated by the Segments. For F&O and Equity Segments both contian these type of methods as well as Generalized methods which work the same as create_order_***( ) but for the above mentioned OrderTypes.
+
+### **Common Method Parameters**:
+
+Common Parameters across all order types:
+
+- `quantity` (int): Order quantity.
+
+- `side` (str): Order Side: BUY, SELL.
+
+- `unique_id` (str): Unique user order_id.
+
+- `headers` (dict): headers to send order request with.
+
+- `product` (str, optional): Order product. Defaults to Product.MIS.
+
+- `validity` (str, optional): Order validity. Defaults to Validity.DAY.
+
+- `variety` (str, optional): Order variety Defaults to Variety.REGULAR.
+
+
+### **Market Order**
+
+A market order does not require a *price* or *trigger* to send the order.
+
+#### **Place Market Order in NSE/BSE Equity Segment.**
+
+- `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
+
+- `symbol` (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+
+
+    ```python
+    upstox.market_order_eq(exchange = ExchangeCode.NSE,
+                           symbol = "RELIANCE",
+                           quantity =  10,
+                           side = "BUY",
+                           unique_id = "MarketOrderEQ",
+                           headers = headers
+                           )
+    ```
+
+#### ***Place Market Order in F&O Segment.***
+
+- `option` (str): Option Type: 'CE', 'PE'.
+
+- `strike_price` (str): Strike Price of the Option.
+
+- `root` (str): Derivative: BANKNIFTY, NIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX.
+
+- `expiry` (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+
+- `exchange` (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+
+
+    ```python
+    kotakneo.market_order_fno(option = "CE",
+                              strike_price = "45500",
+                              quantity = 15,
+                              side = "BUY",
+                              unique_id = 'MARKETOrderNFO',
+                              headers = headers,
+                              )
+    ```
+
+#### ***Place Market Order in any Segment.***
+
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+
+    ```python
+    from fenix import Side, fyers
+
+    token_data = symphony.nfo_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
+
+    fyers.market_order(token_dict = token_data,
+                       quantity = 100,
+                       side = Side.SELL,
+                       unique_id = 'MarketOrder',
+                       headers = headers
+                       )
+    ```
+
+
+### **Limit Order**
+
+Limit Orders require another parameter along with other [common parameters](#common-method-parameters) discussed before:
+
+- `price` (float): Order price.
+
+#### **Place Limit Order in NSE/BSE Equity Segment.**
+
+- `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
+
+- `symbol` (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+
+
+    ```python
+    upstox.limit_order_eq(exchange = ExchangeCode.NSE,
+                          symbol = "RELIANCE",
+                          price = 2890,
+                          quantity =  10,
+                          side = "BUY",
+                          unique_id = "MarketOrderEQ",
+                          headers = headers
+                          )
+    ```
+
+#### **Place Limit Order in F&O Segment.**
+
+- `option` (str): Option Type: 'CE', 'PE'.
+
+- `strike_price` (str): Strike Price of the Option.
+
+- `root` (str): Derivative: BANKNIFTY, NIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX.
+
+- `expiry` (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+
+- `exchange` (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+
+
+    ```python
+    kotakneo.limit_order_fno(option = "CE",
+                             strike_price = "45500",
+                             price = 250.50,
+                             quantity = 15,
+                             side = "BUY",
+                             unique_id = 'MARKETOrderNFO',
+                             headers = headers,
+                             )
+    ```
+
+#### ***Place Limit Order in any Segment.***
+
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+
+    ```python
+    from fenix import Side, fyers
+
+    token_data = symphony.nfo_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
+
+    fyers.limit_order(token_dict = token_data,
+                      price = 400.50,
+                      quantity = 100,
+                      side = Side.SELL,
+                      unique_id = 'MarketOrder',
+                      headers = headers
+                      )
+    ```
+
+
+### **Stoploss Order**
+
+Stoploss Orders require another parameter along with other [common parameters](#common-method-parameters) discussed before:
+
+- `price` (float): Order price.
+
+- `trigger` (float): order trigger price
+
+#### **Place Stoploss Order in NSE/BSE Equity Segment.**
+
+- `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
+
+- `symbol` (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+
+
+    ```python
+    upstox.sl_order_eq(exchange = ExchangeCode.NSE,
+                       symbol = "RELIANCE",
+                       price = 2890,
+                       trigger = 2885,
+                       quantity =  10,
+                       side = "BUY",
+                       unique_id = "MarketOrderEQ",
+                       headers = headers
+                       )
+    ```
+
+#### **Place Stoploss Order in F&O Segment.**
+
+- `option` (str): Option Type: 'CE', 'PE'.
+
+- `strike_price` (str): Strike Price of the Option.
+
+- `root` (str): Derivative: BANKNIFTY, NIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX.
+
+- `expiry` (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+
+- `exchange` (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+
+
+    ```python
+    kotakneo.sl_order_fno(option = "CE",
+                          strike_price = "45500",
+                          price = 250.50,
+                          trigger = 243.0,
+                          quantity = 15,
+                          side = "BUY",
+                          unique_id = 'MARKETOrderNFO',
+                          headers = headers,
+                          )
+    ```
+
+#### ***Place Stoploss Order in any Segment.***
+
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+
+    ```python
+    from fenix import Side, fyers
+
+    token_data = symphony.nfo_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
+
+    fyers.sl_order(token_dict = token_data,
+                   price = 400.50,
+                   trigger = 395.0,
+                   quantity = 100,
+                   side = Side.SELL,
+                   unique_id = 'MarketOrder',
+                   headers = headers
+                   )
+    ```
+
+
+
+### **Stoploss-Market Order**
+
+Stoploss-Market Orders require another parameter along with other [common parameters](#common-method-parameters) discussed before:
+
+- `trigger` (float): order trigger price
+
+#### **Place Stoploss-Market Order in NSE/BSE Equity Segment.**
+
+- `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
+
+- `symbol` (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
+
+
+    ```python
+    upstox.slm_order_eq(exchange = ExchangeCode.NSE,
+                       symbol = "RELIANCE",
+                       trigger = 2885,
+                       quantity =  10,
+                       side = "BUY",
+                       unique_id = "MarketOrderEQ",
+                       headers = headers
+                       )
+    ```
+
+#### **Place Stoploss-Market Order in F&O Segment.**
+
+- `option` (str): Option Type: 'CE', 'PE'.
+
+- `strike_price` (str): Strike Price of the Option.
+
+- `root` (str): Derivative: BANKNIFTY, NIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX.
+
+- `expiry` (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+
+- `exchange` (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+
+
+    ```python
+    kotakneo.slm_order_fno(option = "CE",
+                          strike_price = "45500",
+                          trigger = 243.0,
+                          quantity = 15,
+                          side = "BUY",
+                          unique_id = 'MARKETOrderNFO',
+                          headers = headers,
+                          )
+    ```
+
+#### ***Place Stoploss-Market Order in any Segment.***
+
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+
+    ```python
+    from fenix import Side, fyers
+
+    token_data = symphony.nfo_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
+
+    fyers.slm_order(token_dict = token_data,
+                   trigger = 395.0,
+                   quantity = 100,
+                   side = Side.SELL,
+                   unique_id = 'MarketOrder',
+                   headers = headers
+                   )
+    ```

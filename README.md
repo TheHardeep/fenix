@@ -5,7 +5,7 @@
 
 A Python library for trading in the Indian Finance Sector with support for many broker APIs.
 
-### [Install](#install) · [Usage](#usage) · [Manual](https://github.com/fenix/fenix/wiki) · [FAQ](https://github.com/fenix/fenix/wiki/FAQ) · [Examples](#examples)
+### [Install](#install) · [Usage](#usage) · [Manual](https://github.com/TheHardeep/fenix/wiki)
 
 The **Fenix** library is used to connect and trade with brokers in the Indian Financial Markets. It provides quick access to market data, order palcemement, etc. for storage, analysis, visualization, indicator development, algorithmic trading, strategy backtesting, bot programming, and related software engineering.
 
@@ -66,7 +66,7 @@ print(fenix.brokers)
 
 ## Documentation
 
-Read the [Manual](https://github.com/fenix/fenix/wiki/) for more details.
+Read the [Manual](https://github.com/TheHardeep/fenix/wiki) for more details.
 
 ## Usage
 
@@ -100,7 +100,7 @@ from fenix import constants
 
 
 # Download all the NFO Intrument Tokens, Symbols, Lot Size
-nfo_tokens = zerodha.create_nfo_tokens()
+nfo_tokens = zerodha.create_fno_tokens()
 
 
 # Create Headers which contain Access Token used to place orders, fetch orderbook, etc.
@@ -116,7 +116,7 @@ headers = zerodha.create_headers(params)
 
 
 # Place a Limit Order in the FNO Segment
-limit_order = zerodha.limit_order_nfo(
+limit_order = zerodha.limit_order_fno(
                         price = 13.0,
                         option = "CE",
                         strike_price = 45500,
@@ -152,5 +152,5 @@ cancelled_order = zerodha.cancel_order(
 orderbook = aliceblue.fetch_orders(headers=headers)
 
 
-print(aliceblue.id, aliceblue.create_nfo_tokens())
-print(angelone.id, angelone.create_nfo_tokens())
+print(aliceblue.id, aliceblue.create_fno_tokens())
+print(angelone.id, angelone.create_fno_tokens())

@@ -580,10 +580,10 @@ The `create_headers (params: dict)` method takes the user's credentials of the r
 
 ## Generalized Order Placing Methods
 
-The methods which have the following name `create_order_*** ()` are used to place any type of order in the respective segments:
+The methods which have the following name `create_order_* ()` are used to place any type of order in the respective segments:
 
 
-Common Parameters across all create_order_*** ():
+Common Parameters across all create_order_* ():
 
 
 - `quantity` (int): Order quantity.
@@ -605,7 +605,7 @@ Common Parameters across all create_order_*** ():
 - `trigger` (float, optional): trigger price of the order. Defaults to 0.
 
 
-### create_order_fno ()
+### create_order_fno ( )
 This method allows the user to place any type of order in the FNO Segment. It takes the following parameters:
 
 - `exchange` (str): Exchange to place the order in.
@@ -694,9 +694,9 @@ This method allows the user to place orders in any segment. It takes the followi
 
 There are 4 types of different methods based on the Market, Limit, Stoploss & Stoploss-Market OrderTypes.
 
-They are also seperated by the Segments. For F&O and Equity Segments both contian these type of methods as well as Generalized methods which work the same as create_order_***( ) but for the above mentioned OrderTypes.
+They are also seperated by the Segments. For F&O and Equity Segments both contian these type of methods as well as Generalized methods which work the same as create_order_*( ) but for the above mentioned OrderTypes.
 
-### **Common Method Parameters**:
+### Common Method Parameters:
 
 Common Parameters across all order types:
 
@@ -715,11 +715,11 @@ Common Parameters across all order types:
 - `variety` (str, optional): Order variety Defaults to Variety.REGULAR.
 
 
-### **Market Order**
+### Market Order
 
 A market order does not require a *price* or *trigger* to send the order.
 
-#### **Place Market Order in NSE/BSE Equity Segment.**
+#### Equity Segment
 
 - `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
 
@@ -736,7 +736,7 @@ A market order does not require a *price* or *trigger* to send the order.
                            )
     ```
 
-#### ***Place Market Order in F&O Segment.***
+#### F&O Segment
 
 - `option` (str): Option Type: 'CE', 'PE'.
 
@@ -759,7 +759,7 @@ A market order does not require a *price* or *trigger* to send the order.
                               )
     ```
 
-#### ***Place Market Order in any Segment.***
+#### Any Segment
 
 - `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
 
@@ -777,13 +777,13 @@ A market order does not require a *price* or *trigger* to send the order.
     ```
 
 
-### **Limit Order**
+### Limit Order
 
 Limit Orders require another parameter along with other [common parameters](#common-method-parameters) discussed before:
 
 - `price` (float): Order price.
 
-#### **Place Limit Order in NSE/BSE Equity Segment.**
+#### Equity Segment
 
 - `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
 
@@ -801,7 +801,7 @@ Limit Orders require another parameter along with other [common parameters](#com
                           )
     ```
 
-#### **Place Limit Order in F&O Segment.**
+#### F&O Segment
 
 - `option` (str): Option Type: 'CE', 'PE'.
 
@@ -825,7 +825,7 @@ Limit Orders require another parameter along with other [common parameters](#com
                              )
     ```
 
-#### ***Place Limit Order in any Segment.***
+#### Any Segment
 
 - `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
 
@@ -844,7 +844,7 @@ Limit Orders require another parameter along with other [common parameters](#com
     ```
 
 
-### **Stoploss Order**
+### Stoploss Order
 
 Stoploss Orders require another parameter along with other [common parameters](#common-method-parameters) discussed before:
 
@@ -852,7 +852,7 @@ Stoploss Orders require another parameter along with other [common parameters](#
 
 - `trigger` (float): order trigger price
 
-#### **Place Stoploss Order in NSE/BSE Equity Segment.**
+#### Equity Segment
 
 - `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
 
@@ -871,7 +871,7 @@ Stoploss Orders require another parameter along with other [common parameters](#
                        )
     ```
 
-#### **Place Stoploss Order in F&O Segment.**
+#### F&O Segment
 
 - `option` (str): Option Type: 'CE', 'PE'.
 
@@ -896,7 +896,7 @@ Stoploss Orders require another parameter along with other [common parameters](#
                           )
     ```
 
-#### ***Place Stoploss Order in any Segment.***
+#### Any Segment
 
 - `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
 
@@ -917,13 +917,13 @@ Stoploss Orders require another parameter along with other [common parameters](#
 
 
 
-### **Stoploss-Market Order**
+### Stoploss-Market Order
 
 Stoploss-Market Orders require another parameter along with other [common parameters](#common-method-parameters) discussed before:
 
 - `trigger` (float): order trigger price
 
-#### **Place Stoploss-Market Order in NSE/BSE Equity Segment.**
+#### Equity Segment
 
 - `exchange` (str): Exchange to place the order in. Possible Values: NSE, BSE.
 
@@ -941,7 +941,7 @@ Stoploss-Market Orders require another parameter along with other [common parame
                        )
     ```
 
-#### **Place Stoploss-Market Order in F&O Segment.**
+#### F&O Segment
 
 - `option` (str): Option Type: 'CE', 'PE'.
 
@@ -965,7 +965,7 @@ Stoploss-Market Orders require another parameter along with other [common parame
                           )
     ```
 
-#### ***Place Stoploss-Market Order in any Segment.***
+#### Any Segment
 
 - `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
 
@@ -982,3 +982,537 @@ Stoploss-Market Orders require another parameter along with other [common parame
                    headers = headers
                    )
     ```
+
+## Modify Order
+
+This method is used to modufy an open order and requires the following parameters:
+
+- `order_id` (str): id of the order to modify.
+
+- `price` (float, optional): price of the order. Defaults to None.
+
+- `trigger` (float, optional): trigger price of the order. Defaults to None.
+
+- `quantity` (int, optional): order quantity. Defaults to None.
+
+- `order_type` (str, optional): Type of Order. defaults to None.
+
+- `validity` (str, optional): Order validity Defaults to None.
+
+- `headers` (dict): headers to send modify_order request with.
+
+
+    ```python
+    motilaloswal.modify_order(order_id = '231217000002374',
+                            price = 10.0,
+                            trigger = 9.5,
+                            quantity = 15,
+                            order_type = constants.OrderType.SL,
+                            validity = constants.Validity.DAY,
+                            headers = headers
+                            )
+    ```
+
+
+## Cancel Order
+
+This method is used to cancel an open order. It requires the follwoing parameters:
+
+- `order_id` (str): id of the order.
+
+- `headers` (dict): headers to send cancel_order request with.
+
+    ```python
+    angelone.cancel_order(order_id = '231217000005603',
+                        headers=headers
+                        )
+    ```
+
+## OrderBook / TradeBook Methods
+
+### OrderBook Methods:
+
+There are 2 types of orderbook methods:
+
+1. `fetch_orderbook ()`: This method fetches the orderbook form the broker and converts each order detail into Unified Fenix Order Format.
+
+2. `fetch_orders ()`: Sometimes the data in the orderbook of a broker does not include the average price of the order if the order has been filled, to provide the average price of such orders a request for the tradebook is made form where these prices are fetched.
+
+Paramter:
+ - `headers` (dict): headers to send orderbook request with.
+
+```python
+orders = zerodha.fetch_orders(headers)
+```
+
+### TradeBook Methods:
+
+The `fetch_tradebook ()`  fetches the broker tradebook and ocnverts the data in Unified Fenix JSON Format.
+
+Paramters:
+ - `headers` (dict): headers to send tradebook request with.
+
+```python
+orders = zerodha.fetch_tradebook(headers)
+```
+
+### OrderBook / TradeBook Structure
+
+```python
+[{
+    'id': '231124401406418',
+    'userOrderId': 'MARKETOrderNFO',
+    'timestamp': datetime.datetime(2023, 11, 24, 12, 51, 30),
+    'symbol': 'BANKNIFTY23NOV43700CE',
+    'token': 14918402,
+    'side': 'BUY',
+    'type': 'MARKET',
+    'avgPrice': 256.8,
+    'price': 0,
+    'triggerPrice': 0,
+    'quantity': 15,
+    'filled': 15,
+    'remaining': 0,
+    'cancelleldQty': 0,
+    'status': 'COMPLETE',
+    'rejectReason': None,
+    'disclosedQuantity': 0,
+    'product': 'MIS',
+    'exchange': 'NFO',
+    'segment': 'NFO',
+    'validity': 'DAY',
+    'variety': 'REGULAR',
+    'info': {}
+    },
+    ...
+]
+```
+An OrderBook / TradeBook is an array of dictionaries with the following keys:
+
+- `id`: Order ID
+
+- `userOrderId`: ID provided by the user at the time of order placement.
+
+- `timestamp`: datetime object of the order Execution Time.
+
+- `symbol`: Symbol of the Ticker for which the order is placed.
+
+- `token`: Token of the Ticker.
+
+- `side`: Buy / Sell Side of the Order.
+
+- `type`: Order Type.
+
+- `avgPrice`: Executed Average Price of the Order.
+
+- `price`: Price at which the order is placed.
+
+- `triggerPrice`: Trigger Price for the Order.
+
+- `quantity`: Quantity of the Order.
+
+- `filled`: Qauntity of the order which has executed.
+
+- `remaining`: Unfilled quantity of the order.
+
+- `cancelleldQty`: If the Order is cancelled, then the remaining Quantity is mentinoed here.
+
+- `status`: Status of the Order.
+
+- `rejectReason`: Reason for Order Rejection.
+
+- `disclosedQuantity`: Disclosed Quantity.
+
+- `product`: Product of the Order. Ex: MIS, NRML, etc.
+
+- `exchange`: Exchange in which order is palced.
+
+- `segment`: Segment of the Exchange where order is placed.
+
+- `validity`: Order Validity. Ex: Day, IOC, etc..
+
+- `variety`: Order Variety. Ex: REGULAR, STOPLOSS, BO, etc.
+
+- `info`: A dictionary with the original broker json for the order.
+
+## Order & Order History Method
+
+1.  `fetch_order ()`: This method is used to fetch the current detail of an order.
+
+2. `fetch_orderhistory ()`: This method is used to fetch the history of an order.
+
+Parameters:
+
+- `order_id` (str): id of the order.
+- `headers` (dict): headers to send the request with.
+
+### Order Structure
+
+```python
+{
+    'id': '231122000383315',
+    'userOrderId': 'SLOrderNFO',
+    'timestamp': datetime.datetime(2023, 11, 22, 11, 9, 37),
+    'symbol': 'BANKNIFTY22NOV2345500CE',
+    'token': '42163',
+    'side': 'BUY',
+    'type': 'SL',
+    'avgPrice': 0.0,
+    'price': 240.0,
+    'triggerPrice': 235.0,
+    'targetPrice': 0.0,
+    'stoplossPrice': 0.0,
+    'trailingStoploss': 0.0,
+    'quantity': 15,
+    'filled': 0,
+    'remaining': 15,
+    'cancelleldQty': 0,
+    'status': 'REJECTED',
+    'rejectReason': 'Admin stopped AMO',
+    'disclosedQuantity': 0,
+    'product': 'MIS',
+    'exchange': 'NFO',
+    'segment': 'NFO',
+    'validity': 'DAY',
+    'variety': 'AMO',
+    'info': {
+        'variety': 'AMO',
+        'ordertype': 'STOPLOSS_LIMIT',
+        'producttype': 'INTRADAY',
+        'duration': 'DAY',
+        'price': 240.0,
+        'triggerprice': 235.0,
+        'quantity': '15',
+        'disclosedquantity': '0',
+        'squareoff': 0.0,
+        'stoploss': 0.0,
+        'trailingstoploss': 0.0,
+        'tradingsymbol': 'BANKNIFTY22NOV2345500CE',
+        'transactiontype': 'BUY',
+        'exchange': 'NFO',
+        'symboltoken': '42163',
+        'ordertag': 'SLOrderNFO',
+        'instrumenttype': 'OPTIDX',
+        'strikeprice': 45500.0,
+        'optiontype': 'CE',
+        'expirydate': '22NOV2023',
+        'lotsize': '15',
+        'cancelsize': '0',
+        'averageprice': 0.0,
+        'filledshares': '0',
+        'unfilledshares': '15',
+        'orderid': '231122000383315',
+        'text': 'Admin stopped AMO',
+        'status': 'rejected',
+        'orderstatus': '',
+        'updatetime': '22-Nov-2023 11:09:37',
+        'exchtime': '',
+        'exchorderupdatetime': '',
+        'fillid': '',
+        'filltime': '',
+        'parentorderid': '',
+        'uniqueorderid': '231122000383315'
+        }
+    }
+```
+
+### Order History Structure
+
+```python
+[{'id': '231217000002374',
+  'userOrderId': '1702818893-475934-HBWPK2428E-ADMINAPI',
+  'timestamp': datetime.datetime(2023, 12, 17, 18, 44, 53),
+  'symbol': 'BANKNIFTY23D2047500CE',
+  'token': '38223',
+  'side': 'BUY',
+  'type': 'SL',
+  'avgPrice': 0.0,
+  'price': 10.0,
+  'triggerPrice': 0.0,
+  'targetPrice': 0.0,
+  'stoplossPrice': 0.0,
+  'trailingStoploss': 0.0,
+  'quantity': 15,
+  'filled': 0,
+  'remaining': 15,
+  'cancelleldQty': 0,
+  'status': 'CANCELLED',
+  'rejectReason': '--',
+  'disclosedQuantity': 0,
+  'product': 'MIS',
+  'exchange': 'NFO',
+  'segment': 'NFO',
+  'validity': 'DAY',
+  'variety': '',
+  'info': {}},
+ {'id': '231217000002374',
+  'userOrderId': '1702818723-649114-HBWPK2428E-ADMINAPI',
+  'timestamp': datetime.datetime(2023, 12, 17, 18, 42, 3),
+  'symbol': 'BANKNIFTY23D2047500CE',
+  'token': '38223',
+  'side': 'BUY',
+  'type': 'SL',
+  'avgPrice': 0.0,
+  'price': 10.0,
+  'triggerPrice': 9.5,
+  'targetPrice': 0.0,
+  'stoplossPrice': 0.0,
+  'trailingStoploss': 0.0,
+  'quantity': 15,
+  'filled': 0,
+  'remaining': 15,
+  'cancelleldQty': 0,
+  'status': 'PENDING',
+  'rejectReason': '--',
+  'disclosedQuantity': 0,
+  'product': 'MIS',
+  'exchange': 'NFO',
+  'segment': 'NFO',
+  'validity': 'DAY',
+  'variety': '',
+  'info': {}},
+ {'id': '231217000002374',
+  'userOrderId': '1702818612-325437-HBWPK2428E-ADMINAPI',
+  'timestamp': datetime.datetime(2023, 12, 17, 18, 40, 12),
+  'symbol': 'BANKNIFTY23D2047500CE',
+  'token': '38223',
+  'side': 'BUY',
+  'type': 'SL',
+  'avgPrice': 0.0,
+  'price': 11.0,
+  'triggerPrice': 10.5,
+  'targetPrice': 0.0,
+  'stoplossPrice': 0.0,
+  'trailingStoploss': 0.0,
+  'quantity': 30,
+  'filled': 0,
+  'remaining': 30,
+  'cancelleldQty': 0,
+  'status': 'PENDING',
+  'rejectReason': '--',
+  'disclosedQuantity': 0,
+  'product': 'MIS',
+  'exchange': 'NFO',
+  'segment': 'NFO',
+  'validity': 'DAY',
+  'variety': '',
+  'info': {}},
+ {'id': '231217000002374',
+  'userOrderId': '1702798953-865415-HBWPK2428E-ADMINAPI',
+  'timestamp': datetime.datetime(2023, 12, 17, 13, 12, 33),
+  'symbol': 'BANKNIFTY23D2047500CE',
+  'token': '38223',
+  'side': 'BUY',
+  'type': 'SL',
+  'avgPrice': 0.0,
+  'price': 10.0,
+  'triggerPrice': 9.0,
+  'targetPrice': 0.0,
+  'stoplossPrice': 0.0,
+  'trailingStoploss': 0.0,
+  'quantity': 15,
+  'filled': 0,
+  'remaining': 15,
+  'cancelleldQty': 0,
+  'status': 'PENDING',
+  'rejectReason': '--',
+  'disclosedQuantity': 0,
+  'product': 'MIS',
+  'exchange': 'NFO',
+  'segment': 'NFO',
+  'validity': 'DAY',
+  'variety': '',
+  'info': {}}]
+```
+
+
+## PositionBook / Holdings Methods
+
+There are 3 methods for finding positions:
+
+### PostionBook Methods:
+
+1. `fetch_day_positions ()`: This method is used to fetch the Day's Account Positions.
+
+2. `fetch_net_positions ()`: This method fetches the Net Positions of an an Account meaning all the previouis positions that the user may have in their account.
+
+3. `fetch_positions ()`: This method combines the day and net positions to give all the open positions in a User's Account.
+
+### Holdings Method:
+
+- The `fetch_holdings ()` method gives an array of all the holdings of the USer's Account.
+
+
+Parameter:
+
+- `headers` (dict): headers to send the PositionBook/Holdings request with.
+
+A PositionBook is an array of dictionaries with the following keys:
+
+- `symbol`: Symbol of the Ticker for which the order is placed.
+
+- `token`: Token of the Ticker.
+
+- `product`: Product of the Order. Ex: MIS, NRML, etc.
+
+- `netQty`: Total Quantity Bought and Sold for the Ticker.
+
+- `avgPrice`: Average Price of the Position.
+
+- `mtm`: Mark to Market value of the Ticker.
+
+- `buyQty`: Total Buy Quantity,
+
+- `buyPrice`: Average Buy Price.
+
+- `sellQty`: Total Buy Quantity,
+
+- `sellPrice`: Average Sell Price.
+
+- `ltp`: Last Traded Price of the Ticker.
+
+- `info`: A dictionary with the original broker json for the position.
+
+### Position / Holding Structure
+
+```python
+{
+    'symbol': 'BANKNIFTY23D0646600PE',
+    'token': 41068,
+    'product': 'MIS',
+    'netQty': 0,
+    'avgPrice': 313.4,
+    'mtm': 129.0,
+    'buyQty': 60,
+    'buyPrice': 160.0,
+    'sellQty': 60,
+    'sellPrice': 162.15,
+    'ltp': 49.55,
+    'info': {
+        'exchange': 'NFO',
+        'cf_sell_amount': 0.0,
+        'sell_quantity': 60,
+        'average_price': 313.4,
+        'segment': None,
+        'average_buy_price': 160.0,
+        'prod_type': 'MIS',
+        'client_id': '6ANG11',
+        'average_sell_price': 162.15,
+        'actual_average_buy_price': 0.0,
+        'cf_buy_quantity': 0,
+        'trading_symbol': 'BANKNIFTY23D0646600PE',
+        'product': 'MIS',
+        'close_price': 313.4,
+        'realized_mtm': 129.0,
+        'symbol': 'BANKNIFTY',
+        'buy_amount': 9600.0,
+        'cf_sell_quantity': 0,
+        'previous_close': 313.4,
+        'token': 41068,
+        'pro_cli': 'CLIENT',
+        'sell_amount': 9729.0,
+        'actual_cf_buy_amount': 0.0,
+        'net_quantity': 0,
+        'actual_cf_sell_amount': 0.0,
+        'instrument_token': 41068,
+        'buy_quantity': 60,
+        'v_login_id': '6ANG11',
+        'cf_buy_amount': 0.0,
+        'multiplier': 1,
+        'ltp': 49.55,
+        'net_amount_mtm': 129.0,
+        'actual_average_sell_price': 0.0
+        }
+    }
+ ```
+
+
+## User Profile Method
+
+This method fetches the user's details provided by the Broker.
+
+Parameter:
+
+- `headers` (dict): headers to send the request with.
+
+A profile is a dictionary with the following keys:
+
+- `clientId`: Unique User ID of the User.
+
+- `name`:  User's Name.
+
+- `emailId`:  User's Email ID.
+
+- `mobileNo`: User's Mobile No.
+
+- `pan`: User's PAN No.
+
+- `address`:  User's Address.
+
+- `bankName`: Name of the User's Bank
+
+- `bankBranchName`: Branch of the aformentioned Bank.
+
+- `bankAccNo`: Bank Account No.
+
+- `exchangesEnabled`: Exchanges Enabled for Trading in the User's Account.
+
+- `enabled`: A `bool` denoting whether the account is active or not.
+
+- `info`: A dictionary with the original broker json for the position.
+
+### Profile Structure
+
+```python
+{
+    "clientId": "XA42X19",
+    "name": "Hardeep Singh",
+    "emailId": "hardeep.hd13@gmail.com",
+    "mobileNo": "70X74X10X3",
+    "pan": "XRXQSX6X6X",
+    "address": "",
+    "bankName": "HDFC BANK LTD",
+    "bankBranchName": None,
+    "bankAccNo": "5X1X0X5X1X9X45",
+    "exchangesEnabled": ["NSE", "NIPO", "BSE", "BSTAR"],
+    "enabled": True,
+    "info": {
+        "request_time": "17:43:01 22-11-2023",
+        "actid": "XA42X19",
+        "cliname": "Hardeep Singh",
+        "act_sts": "Activated",
+        "creatdte": "0",
+        "creattme": "0",
+        "m_num": "70X74X10X3",
+        "email": "hardeep.hd13@gmail.com",
+        "pan": "XRXQSX6X6X",
+        "dob": "04-02-1996",
+        "addr": "",
+        "addroffice": "",
+        "addrcity": "",
+        "addrstate": "",
+        "mandate_id_list": [],
+        "exarr": ["NSE", "NIPO", "BSE", "BSTAR"],
+        "bankdetails": [{
+            "bankn": "HDFC BANK LTD",
+            "acctnum": "5X1X0X5X1X9X45",
+            "ifsc_code": "HDFC0X0X5X6"
+            }],
+        "dp_acct_num": [{"dpnum": "1X0X4X0X0X9X1X5X"}],
+        "stat": "Ok"
+        }
+}
+```
+
+
+## RMS Limits Method
+
+This method is used to Fetch Risk Management System Limits of a broker.
+
+Parameter:
+
+- `headers` (dict): headers to send the request with.
+
+```python
+rms_limits = kunjee.rms_limits(headers=headers)
+```

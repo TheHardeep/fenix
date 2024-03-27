@@ -99,7 +99,7 @@ from fenix import aliceblue, angelone, zerodha, iifl
 from fenix import constants
 
 
-# Download all the NFO Intrument Tokens, Symbols, Lot Size
+# Download all the FNO Intrument Tokens, Symbols, Lot Size
 nfo_tokens = zerodha.create_fno_tokens()
 
 

@@ -562,7 +562,7 @@ Because the set of methods differs from broker to broker, the fenix library impl
 
 The following are the unified Methods / Endpoints provided by Fenix library:
 
-## Market Data Methods
+## Token Data Methods
 
 These methods download the MasterScript of the broker and stores the data of the Script in the form of a dictionary storing the following values: `Symbol`, `Token`, `LotSize`, `TickSize`, `Exchange`, `Expiry`, `Strike Price`, etc...
 

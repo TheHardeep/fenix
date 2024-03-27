@@ -22,7 +22,7 @@ Welcome to the fenix wiki!
 
     - [Paper Environment](https://github.com/TheHardeep/fenix/wiki/Manual#paper-testnet-environment)
 
-    - [Common Broker Attributes](https://github.com/TheHardeep/fenix/wiki/Manual##common-broker-attributes)
+    - [Common Broker Attributes](https://github.com/TheHardeep/fenix/wiki/Manual#common-broker-attributes)
 
     - [Request Parameters Attributes](https://github.com/TheHardeep/fenix/wiki/Manual#request-parameters-attributes)
 
@@ -32,7 +32,7 @@ Welcome to the fenix wiki!
 
     - [API Methods](https://github.com/TheHardeep/fenix/wiki/Manual#api-methods--endpoints)
 
-        - [Token Data](https://github.com/TheHardeep/fenix/wiki/Manual#market-data-methods)
+        - [Token Data](https://github.com/TheHardeep/fenix/wiki/Manual#token-data-methods)
 
         - [Headers](https://github.com/TheHardeep/fenix/wiki/Manual#headers-method)
 
@@ -104,8 +104,6 @@ Welcome to the fenix wiki!
         - [Holdings Method](https://github.com/TheHardeep/fenix/wiki/Manual#holdings-method)
 
         - [Position/Holding Structure](https://github.com/TheHardeep/fenix/wiki/Manual#holdings-method)
-
-
 
 
     - [User Profile](https://github.com/TheHardeep/fenix/wiki/Manual#user-profile-method)

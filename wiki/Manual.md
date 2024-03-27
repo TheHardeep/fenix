@@ -1061,7 +1061,7 @@ This method is used to cancel an open order. It requires the follwoing parameter
 
 ## OrderBook / TradeBook Methods
 
-### OrderBook Methods:
+### OrderBook Methods
 
 There are 2 types of orderbook methods:
 
@@ -1076,7 +1076,7 @@ Paramter:
 orders = zerodha.fetch_orders(headers)
 ```
 
-### TradeBook Method:
+### TradeBook Method
 
 The `fetch_tradebook ()`  fetches the broker tradebook and ocnverts the data in Unified Fenix JSON Format.
 
@@ -1361,7 +1361,7 @@ An OrderBook / TradeBook is an array of dictionaries with the following keys:
 
 There are 3 methods for finding positions:
 
-### PostionBook Methods:
+### PostionBook Methods
 
 1. `fetch_day_positions ()`: This method is used to fetch the Day's Account Positions.
 
@@ -1369,7 +1369,7 @@ There are 3 methods for finding positions:
 
 3. `fetch_positions ()`: This method combines the day and net positions to give all the open positions in a User's Account.
 
-### Holdings Method:
+### Holdings Method
 
 - The `fetch_holdings ()` method gives an array of all the holdings of the USer's Account.
 

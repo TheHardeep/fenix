@@ -577,13 +577,43 @@ These methods download the MasterScript of the broker and stores the data of the
 
 The `create_headers (params: dict)` method takes the user's credentials of the respective broker in the form of a dictionary. The keys of the `params` dictionary can be found by using the `tokens_params` attribute.
 
+The output of the function will giver a dictionary which will ahve the headers as well as other data used to make requests to the broker.
+
+```python
+params = {
+    "user_id": "YOUR_USER_ID"
+    "password": "YOUR_PASSWORD"
+    "birth_year": "YOUR_BIRTH_YEAR"
+    "totpstr": "YOUR_TOTP_STRING"
+    "api_key": "YOUR_API_KEY"
+    }
+
+headers = aliceblue.create_headers(params)
+```
+
+### Sample Header Structure
+```python
+# AliceBlue Headers
+{
+"headers":
+    {
+        "ID": "YOUR_USER_ID",
+        "AccessToken": "GENERATED_ACCESS_TOKEN",
+        "Authorization": f'Bearer YPIR_USER_ID GENERATED_ACCESS_TOKEN',
+        "X-SAS-Version": "2.0",
+        "User-Agent": "AliceBlue_V21.0.1",
+        "Content-Type": "application/json",
+        "susertoken": "GENERATED_SUSERTOKEN"
+    }
+}
+```
 
 ## Generalized Order Placing Methods
 
 The methods which have the following name `create_order_* ()` are used to place any type of order in the respective segments:
 
 
-Common Parameters across all create_order_* ():
+Common Function Parameters across all create_order_* ():
 
 
 - `quantity` (int): Order quantity.
@@ -604,6 +634,7 @@ Common Parameters across all create_order_* ():
 
 - `trigger` (float, optional): trigger price of the order. Defaults to 0.
 
+All the order funcitnos in the Fenix Library including the `modify_order ( )` as well as `cancel_order ( )` return a dictionary with the same keys as mentioned in the [OrderBook Structure](#orderbook--tradebook-structure).
 
 ### create_order_fno ( )
 This method allows the user to place any type of order in the FNO Segment. It takes the following parameters:
@@ -1045,7 +1076,7 @@ Paramter:
 orders = zerodha.fetch_orders(headers)
 ```
 
-### TradeBook Methods:
+### TradeBook Method:
 
 The `fetch_tradebook ()`  fetches the broker tradebook and ocnverts the data in Unified Fenix JSON Format.
 
@@ -1141,7 +1172,7 @@ An OrderBook / TradeBook is an array of dictionaries with the following keys:
 
 2. `fetch_orderhistory ()`: This method is used to fetch the history of an order.
 
-Parameters:
+**Parameters:**
 
 - `order_id` (str): id of the order.
 - `headers` (dict): headers to send the request with.
@@ -1343,7 +1374,7 @@ There are 3 methods for finding positions:
 - The `fetch_holdings ()` method gives an array of all the holdings of the USer's Account.
 
 
-Parameter:
+**Parameter:**
 
 - `headers` (dict): headers to send the PositionBook/Holdings request with.
 
@@ -1431,7 +1462,7 @@ A PositionBook is an array of dictionaries with the following keys:
 
 This method fetches the user's details provided by the Broker.
 
-Parameter:
+**Parameter:**
 
 - `headers` (dict): headers to send the request with.
 
@@ -1457,7 +1488,7 @@ A profile is a dictionary with the following keys:
 
 - `exchangesEnabled`: Exchanges Enabled for Trading in the User's Account.
 
-- `enabled`: A `bool` denoting whether the account is active or not.
+- `enabled`: A `bool` value denoting whether the account is active or not.
 
 - `info`: A dictionary with the original broker json for the position.
 
@@ -1509,7 +1540,7 @@ A profile is a dictionary with the following keys:
 
 This method is used to Fetch Risk Management System Limits of a broker.
 
-Parameter:
+**Parameter:**
 
 - `headers` (dict): headers to send the request with.
 

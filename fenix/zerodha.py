@@ -326,11 +326,11 @@ class zerodha(Broker):
         )
         sess_id = req_01.url.split("?")[1]
 
-        req_02 = cls.fetch(
+        req_02 = cls.fetch(  # noqa: F841
             method="GET",
             url=f"{cls.token_urls['session']}{sess_id}",
             timeout=10,
-        )  # noqa: F841
+        )
 
         data = {"password": params["password"], "user_id": params["user_id"]}
         req_03 = cls.fetch(
@@ -351,12 +351,12 @@ class zerodha(Broker):
             "skip_session": "false",
         }
 
-        req_04 = cls.fetch(
+        req_04 = cls.fetch(  # noqa: F841
             method="POST",
             url=cls.token_urls["twofa"],
             data=data,
             timeout=10,
-        )  # noqa: F841
+        )
 
         try:
             req_05 = cls.fetch(

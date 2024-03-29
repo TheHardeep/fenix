@@ -9,11 +9,9 @@ class motilaloswal(symphony):
         fenix.motilaloswal: fenix Motilal Oswal Broker Object
     """
 
-
     # Market Data Dictonaries
 
-    id = 'motilaloswal'
-
+    id = "motilaloswal"
 
     # Base URLs
 
@@ -21,5 +19,5 @@ class motilaloswal(symphony):
         "api_documentation_url": "https://moxtsapi.motilaloswal.com:3000/doc/interactive",
         "market_data_url": "https://moxtsapi.motilaloswal.com:3000/apimarketdata/instruments/master",
         "base_url": "https://moxtsapi.motilaloswal.com:3000/interactive",
-        "access_token": "https://moxtsapi.motilaloswal.com:3000/interactive/user/session"
+        "access_token": "https://moxtsapi.motilaloswal.com:3000/interactive/user/session",
     }

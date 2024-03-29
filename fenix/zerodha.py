@@ -38,7 +38,6 @@ class zerodha(Broker):
         fenix.zerodha: fenix Zerodha Broker Object
     """
 
-
     # Market Data Dictonaries
 
     indices = {}
@@ -48,7 +47,6 @@ class zerodha(Broker):
     id = "zerodha"
     _session = Broker._create_session()
 
-
     # Base URLs
 
     base_urls = {
@@ -57,7 +55,6 @@ class zerodha(Broker):
         "access_token_base": "https://kite.zerodha.com",
         "market_data": "https://api.kite.trade/instruments",
     }
-
 
     # Access Token Generation URLs
 
@@ -70,7 +67,6 @@ class zerodha(Broker):
         "token_url": f"{base_urls['base']}/session/token",
     }
 
-
     # Order Placing URLs
 
     urls = {
@@ -81,7 +77,6 @@ class zerodha(Broker):
         "profile": f"{base_urls['base']}/user/profile",
     }
 
-
     # Request Parameters Dictionaries
 
     req_exchange = {
@@ -90,32 +85,31 @@ class zerodha(Broker):
         ExchangeCode.NFO: "NFO",
         ExchangeCode.CDS: "CDS",
         ExchangeCode.BCD: "BCD",
-        ExchangeCode.MCX: "MCX"
+        ExchangeCode.MCX: "MCX",
     }
 
     req_side = {
         Side.BUY: "BUY",
-        Side.SELL: "SELL"
+        Side.SELL: "SELL",
     }
 
     req_product = {
         Product.MIS: "MIS",
         Product.CNC: "CNC",
         Product.NRML: "NRML",
-
     }
 
     req_order_type = {
         OrderType.MARKET: "MARKET",
         OrderType.LIMIT: "LIMIT",
         OrderType.SLM: "SL-M",
-        OrderType.SL: "SL"
+        OrderType.SL: "SL",
     }
 
     req_validity = {
         Validity.DAY: "DAY",
         Validity.IOC: "IOC",
-        Validity.TTL: "TTL"
+        Validity.TTL: "TTL",
     }
 
     req_variety = {
@@ -125,7 +119,6 @@ class zerodha(Broker):
         Variety.ICEBERG: "iceberg",
         Variety.AUCTION: "auction",
     }
-
 
     # Response Parameters Dictionaries
 
@@ -150,68 +143,77 @@ class zerodha(Broker):
         "co": Variety.CO,
         "iceberg": Variety.ICEBERG,
         "auction": Variety.AUCTION,
-
     }
 
-
     # NFO Script Fetch
-
 
     @classmethod
     def create_eq_tokens(cls) -> dict:
         """
-        Gives Indices Info for F&O Segment.
-        Stores them in the zeordha.indices Dictionary.
+        Downlaods NSE & BSE Equity Info for F&O Segment.
+        Stores them in the zerodha.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
         """
-        df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
-        df.rename({"instrument_token": "Token", "tradingsymbol": "Symbol",
-                   "tick_size": "TickSize", "lot_size": "LotSize", "exchange": "Exchange"
-                   }, axis=1, inplace=True)
+        df = cls.data_reader(cls.base_urls["market_data"], filetype="csv")
+        df.rename(
+            {
+                "instrument_token": "Token",
+                "tradingsymbol": "Symbol",
+                "tick_size": "TickSize",
+                "lot_size": "LotSize",
+                "exchange": "Exchange",
+            },
+            axis=1,
+            inplace=True,
+        )
 
-        df_bse = df[(df['Exchange'] == ExchangeCode.BSE) &
-                    (df['segment'] == ExchangeCode.BSE) &
-                    (~df['name'].isna()) &
-                    (~df['Symbol'].str.contains("-"))
-                    ]
+        df_bse = df[
+            (df["Exchange"] == ExchangeCode.BSE)
+            & (df["segment"] == ExchangeCode.BSE)
+            & (~df["name"].isna())
+            & (~df["Symbol"].str.contains("-"))
+        ]
         df_bse = df_bse[["Symbol", "Token", "TickSize", "LotSize", "Exchange"]]
-        df_bse.set_index(df_bse['Symbol'], inplace=True)
-        df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
+        df_bse.set_index(df_bse["Symbol"], inplace=True)
+        df_bse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
 
-
-        df_nse = df[(df['Exchange'] == ExchangeCode.NSE) &
-                    (df['segment'] == ExchangeCode.NSE) &
-                    (~df['name'].isna()) &
-                    (~df['Symbol'].str.contains("-"))
-                    ]
+        df_nse = df[
+            (df["Exchange"] == ExchangeCode.NSE)
+            & (df["segment"] == ExchangeCode.NSE)
+            & (~df["name"].isna())
+            & (~df["Symbol"].str.contains("-"))
+        ]
         df_nse = df_nse[["Symbol", "Token", "TickSize", "LotSize", "Exchange"]]
-        df_nse.set_index(df_nse['Symbol'], inplace=True)
-        df_nse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
+        df_nse.set_index(df_nse["Symbol"], inplace=True)
+        df_nse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
 
-
-        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
-        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
+        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient="index")
+        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient="index")
 
         return cls.eq_tokens
 
     @classmethod
     def create_indices(cls) -> dict:
         """
-        Gives Indices Info for F&O Segment.
-        Stores them in the zeordha.indices Dictionary.
+        Downloads all the Broker Indices Token data.
+        Stores them in the zerodha.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
         """
-        df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
+        df = cls.data_reader(cls.base_urls["market_data"], filetype="csv")
 
         df = df[(df["segment"] == "INDICES")][["tradingsymbol", "instrument_token"]]
-        df.rename({"tradingsymbol": "Symbol", "instrument_token": "Token"}, axis=1, inplace=True)
-        df.index = df['Symbol']
+        df.rename(
+            {"tradingsymbol": "Symbol", "instrument_token": "Token"},
+            axis=1,
+            inplace=True,
+        )
+        df.index = df["Symbol"]
 
-        indices = df.to_dict(orient='index')
+        indices = df.to_dict(orient="index")
 
         indices[Root.BNF] = indices["NIFTY BANK"]
         indices[Root.NF] = indices["NIFTY 50"]
@@ -225,40 +227,57 @@ class zerodha(Broker):
     @classmethod
     def create_fno_tokens(cls):
         """
-        Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the zerodha.nfo_tokens Dictionary.
+        Downloades Token Data for the FNO Segment for the 3 latest Weekly Expiries.
+        Stores them in the zerodha.fno_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.
         """
         try:
 
-            df = cls.data_reader(cls.base_urls["market_data"], filetype='csv')
+            df = cls.data_reader(cls.base_urls["market_data"], filetype="csv")
 
             df = df[
                 (
-                    (df["name"] == "BANKNIFTY") |
-                    (df["name"] == "NIFTY") |
-                    (df["name"] == "FINNIFTY") |
-                    (df["name"] == "MIDCPNIFTY") |
-                    (df["name"] == "SENSEX") |
-                    (df["name"] == "BANKEX")
-                ) &
-                (
-                    (df["segment"] == "NFO-OPT") |
-                    (df["segment"] == "BFO-OPT")
-                )]
+                    (df["name"] == "BANKNIFTY")
+                    | (df["name"] == "NIFTY")
+                    | (df["name"] == "FINNIFTY")
+                    | (df["name"] == "MIDCPNIFTY")
+                    | (df["name"] == "SENSEX")
+                    | (df["name"] == "BANKEX")
+                )
+                & ((df["segment"] == "NFO-OPT") | (df["segment"] == "BFO-OPT"))
+            ]
 
-            df.rename({"instrument_token": "Token", "name": "Root", "expiry": "Expiry", "tradingsymbol": "Symbol",
-                       "instrument_type": "Option", "tick_size": "TickSize", "lot_size": "LotSize",
-                       "strike": "StrikePrice", "exchange": "Exchange" # "last_price": "LastPrice",
-                       },
-                      axis=1, inplace=True)
+            df.rename(
+                {
+                    "instrument_token": "Token",
+                    "name": "Root",
+                    "expiry": "Expiry",
+                    "tradingsymbol": "Symbol",
+                    "instrument_type": "Option",
+                    "tick_size": "TickSize",
+                    "lot_size": "LotSize",
+                    "strike": "StrikePrice",
+                    "exchange": "Exchange",  # "last_price": "LastPrice",
+                },
+                axis=1,
+                inplace=True,
+            )
 
-            df = df[["Token", "Symbol", "Expiry", "Option",
-                     "StrikePrice", "LotSize",
-                     "Root", "TickSize", "Exchange"
-                     ]]
+            df = df[
+                [
+                    "Token",
+                    "Symbol",
+                    "Expiry",
+                    "Option",
+                    "StrikePrice",
+                    "LotSize",
+                    "Root",
+                    "TickSize",
+                    "Exchange",
+                ]
+            ]
 
             df["StrikePrice"] = df["StrikePrice"].astype(int).astype(str)
             df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
@@ -271,14 +290,13 @@ class zerodha(Broker):
         except Exception as exc:
             raise TokenDownloadError({"Error": exc.args}) from exc
 
-
     # Headers & Json Parsers
 
-
     @classmethod
-    def create_headers(cls,
-                       params: dict,
-                       ) -> dict[str, str]:
+    def create_headers(
+        cls,
+        params: dict,
+    ) -> dict[str, str]:
         """
         Generate Headers used to access Endpoints in Zerodha.
 
@@ -297,43 +315,85 @@ class zerodha(Broker):
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 
-        api_session_url = cls.token_urls["api_session"].replace("***", params['api_key'])
+        api_session_url = cls.token_urls["api_session"].replace(
+            "***", params["api_key"]
+        )
 
-        req_01 = cls.fetch(method="GET", url=api_session_url, timeout=10)
+        req_01 = cls.fetch(
+            method="GET",
+            url=api_session_url,
+            timeout=10,
+        )
         sess_id = req_01.url.split("?")[1]
 
-        req_02 = cls.fetch(method="GET", url=f"{cls.token_urls['session']}{sess_id}", timeout=10)  # noqa: F841
+        req_02 = cls.fetch(
+            method="GET",
+            url=f"{cls.token_urls['session']}{sess_id}",
+            timeout=10,
+        )  # noqa: F841
 
-        data = {'password': params["password"], 'user_id': params["user_id"]}
-        req_03 = cls.fetch(method="POST", url=cls.token_urls["login"], data=data, timeout=10)
+        data = {"password": params["password"], "user_id": params["user_id"]}
+        req_03 = cls.fetch(
+            method="POST",
+            url=cls.token_urls["login"],
+            data=data,
+            timeout=10,
+        )
         response = cls._json_parser(req_03)
 
-        req_id = response['data']['request_id']
+        req_id = response["data"]["request_id"]
         totp = cls.totp_creator(params["totpstr"])
-        data = {"user_id": params["user_id"], "request_id": req_id, "twofa_value": str(totp),
-                "twofa_type": "totp", "skip_session": "false"
-                }
+        data = {
+            "user_id": params["user_id"],
+            "request_id": req_id,
+            "twofa_value": str(totp),
+            "twofa_type": "totp",
+            "skip_session": "false",
+        }
 
-        req_04 = cls.fetch(method="POST", url=cls.token_urls["twofa"], data=data, timeout=10)  # noqa: F841
+        req_04 = cls.fetch(
+            method="POST",
+            url=cls.token_urls["twofa"],
+            data=data,
+            timeout=10,
+        )  # noqa: F841
 
         try:
-            req_05 = cls.fetch(method="GET", url=f"{cls.token_urls['connect']}{sess_id}")
+            req_05 = cls.fetch(
+                method="GET",
+                url=f"{cls.token_urls['connect']}{sess_id}",
+            )
             req_token_url = req_05.url
         except Exception as e:
             req_token_url = str(e)
 
-        req_token = parse_qs(urlparse(req_token_url).query).get('request_token')[0].split()[0]
+        req_token = (
+            parse_qs(urlparse(req_token_url).query).get("request_token")[0].split()[0]
+        )
 
-        encoded_str = params["api_key"].encode("utf-8") + req_token.encode("utf-8") + params["api_secret"].encode("utf-8")
+        encoded_str = (
+            params["api_key"].encode("utf-8")
+            + req_token.encode("utf-8")
+            + params["api_secret"].encode("utf-8")
+        )
         hash_obj = hashlib.sha256(encoded_str)
         checksum = hash_obj.hexdigest()
 
-        data = {"api_key": params["api_key"], "request_token": req_token, "checksum": checksum}
+        data = {
+            "api_key": params["api_key"],
+            "request_token": req_token,
+            "checksum": checksum,
+        }
 
-        req_06 = cls.fetch(method="POST", url=cls.token_urls["token_url"], data=data, timeout=10)
+        req_06 = cls.fetch(
+            method="POST",
+            url=cls.token_urls["token_url"],
+            data=data,
+            timeout=10,
+        )
         response = cls._json_parser(req_06)
 
-        accessToken = response['data']['access_token']
+        accessToken = response["data"]["access_token"]
 
         headers = {
             "headers": {
@@ -343,9 +403,7 @@ class zerodha(Broker):
                 "user_id": params["user_id"],
                 "api_key": params["api_key"],
                 "access_token": accessToken,
-
             }
-
         }
 
         cls._session = cls._create_session()
@@ -353,9 +411,10 @@ class zerodha(Broker):
         return headers
 
     @classmethod
-    def _json_parser(cls,
-                     response: Response,
-                     ) -> dict[Any, Any] | list[dict[Any, Any]]:
+    def _json_parser(
+        cls,
+        response: Response,
+    ) -> dict[Any, Any] | list[dict[Any, Any]]:
         """
         Parses the Json Repsonse Obtained from Broker.
 
@@ -370,15 +429,18 @@ class zerodha(Broker):
         """
         json_response = cls.on_json_response(response)
         # print(json_response)
-        if json_response['status']:
+        if json_response["status"]:
             return json_response
 
         else:
-            error = json_response.get('message', "No Message")
+            error = json_response.get("message", "No Message")
             raise ResponseError(cls.id + " " + error)
 
     @classmethod
-    def _orderbook_json_parser(cls, order):
+    def _orderbook_json_parser(
+        cls,
+        order,
+    ):
         """
         Parse Orderbook Order Json Response.
 
@@ -391,11 +453,17 @@ class zerodha(Broker):
         parsedOrder = {
             Order.ID: order["order_id"],
             Order.USERID: order["tag"],
-            Order.TIMESTAMP: cls.datetime_strp(order["order_timestamp"], "%Y-%m-%d %H:%M:%S"),
+            Order.TIMESTAMP: cls.datetime_strp(
+                order["order_timestamp"], "%Y-%m-%d %H:%M:%S"
+            ),
             Order.SYMBOL: order["tradingsymbol"],
             Order.TOKEN: order["instrument_token"],
-            Order.SIDE: cls.req_side.get(order["transaction_type"], order["transaction_type"]),
-            Order.TYPE: cls.req_order_type.get(order["order_type"], order["order_type"]),
+            Order.SIDE: cls.req_side.get(
+                order["transaction_type"], order["transaction_type"]
+            ),
+            Order.TYPE: cls.req_order_type.get(
+                order["order_type"], order["order_type"]
+            ),
             Order.AVGPRICE: order["average_price"],
             Order.PRICE: order["price"],
             Order.TRIGGERPRICE: order["trigger_price"],
@@ -417,10 +485,11 @@ class zerodha(Broker):
         return parsedOrder
 
     @classmethod
-    def _position_json_parser(cls,
-                              position: dict[Any, Any],
-                              day_or_net: str = "",
-                              ):
+    def _position_json_parser(
+        cls,
+        position: dict[Any, Any],
+        day_or_net: str = "",
+    ):
         """
         Parse Acoount Position Json Response.
 
@@ -444,17 +513,22 @@ class zerodha(Broker):
             Position.SELLQTY: position[f"{day_or_net}sell_quantity"],
             Position.SELLPRICE: position[f"{day_or_net}sell_value"],
             Position.LTP: position["last_price"],
-            Position.PRODUCT: cls.req_product.get(position["product"], position["product"]),
-            Position.EXCHANGE: cls.req_exchange.get(position["exchange"], position["exchange"]),
+            Position.PRODUCT: cls.req_product.get(
+                position["product"], position["product"]
+            ),
+            Position.EXCHANGE: cls.req_exchange.get(
+                position["exchange"], position["exchange"]
+            ),
             Position.INFO: position,
         }
 
         return parsed_position
 
     @classmethod
-    def _holding_json_parser(cls,
-                             holding: dict[Any, Any],
-                             ):
+    def _holding_json_parser(
+        cls,
+        holding: dict[Any, Any],
+    ):
         """
         Parse Account Holding Json Response to a fenix Unified Position Response.
 
@@ -472,17 +546,22 @@ class zerodha(Broker):
             Position.MTM: holding["day_change"],
             Position.PNL: holding["pnl"],
             Position.LTP: holding["last_price"],
-            Position.PRODUCT: cls.req_product.get(holding["product"], holding["product"]),
-            Position.EXCHANGE: cls.req_exchange.get(holding["exchange"], holding["exchange"]),
+            Position.PRODUCT: cls.req_product.get(
+                holding["product"], holding["product"]
+            ),
+            Position.EXCHANGE: cls.req_exchange.get(
+                holding["exchange"], holding["exchange"]
+            ),
             Position.INFO: holding,
         }
 
         return parsed_holding
 
     @classmethod
-    def _profile_json_parser(cls,
-                             profile: dict
-                             ) -> dict[Any, Any]:
+    def _profile_json_parser(
+        cls,
+        profile: dict,
+    ) -> dict[Any, Any]:
         """
         Parse User Profile Json Response.
 
@@ -510,10 +589,11 @@ class zerodha(Broker):
         return parsed_profile
 
     @classmethod
-    def _create_order_parser(cls,
-                             response: Response,
-                             headers: dict
-                             ) -> dict[Any, Any]:
+    def _create_order_parser(
+        cls,
+        response: Response,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Parse Json Response Obtained from Broker After Placing Order to get order_id
         and fetching the json repsone for the said order_id.
@@ -532,34 +612,30 @@ class zerodha(Broker):
 
         return order
 
-
     # Order Functions
 
-
     @classmethod
-    def create_order(cls,
-                     token_dict: dict,
-                     quantity: int,
-                     side: str,
-                     product: str,
-                     validity: str,
-                     variety: str,
-                     unique_id: str,
-                     headers: dict,
-                     price: float = 0,
-                     trigger: float = 0,
-                     target: float = 0,
-                     stoploss: float = 0,
-                     trailing_sl: float = 0,
-                     ) -> dict[Any, Any]:
-
+    def create_order(
+        cls,
+        token_dict: dict,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        unique_id: str,
+        headers: dict,
+        price: float = 0,
+        trigger: float = 0,
+        target: float = 0,
+        stoploss: float = 0,
+        trailing_sl: float = 0,
+    ) -> dict[Any, Any]:
         """
         Place an Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
             product (str, optional): Order product.
@@ -574,7 +650,7 @@ class zerodha(Broker):
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
-            dict: fenix Unified Order Response
+            dict: fenix Unified Order Response.
         """
         if not price and trigger:
             order_type = OrderType.SLM
@@ -587,7 +663,9 @@ class zerodha(Broker):
 
         if not target:
             data = {
-                "exchange": token_dict["Exchange"],
+                "exchange": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "tradingsymbol": token_dict["Symbol"],
                 "price": price,
                 "trigger_price": trigger,
@@ -603,35 +681,38 @@ class zerodha(Broker):
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order(cls,
-                     token_dict: dict,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.REGULAR,
-                     ) -> dict[Any, Any]:
+    def market_order(
+        cls,
+        token_dict: dict,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Market Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
@@ -648,7 +729,9 @@ class zerodha(Broker):
         """
         if not target:
             data = {
-                "exchange": token_dict["Exchange"],
+                "exchange": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "tradingsymbol": token_dict["Symbol"],
                 "price": "0",
                 "trigger_price": "0",
@@ -664,36 +747,39 @@ class zerodha(Broker):
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order(cls,
-                    token_dict: dict,
-                    price: float,
-                    quantity: int,
-                    side: str,
-                    unique_id: str,
-                    headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
-                    product: str = Product.MIS,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.REGULAR,
-                    ) -> dict[Any, Any]:
+    def limit_order(
+        cls,
+        token_dict: dict,
+        price: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Limit Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             price (float): Order price.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
@@ -711,7 +797,9 @@ class zerodha(Broker):
         """
         if not target:
             data = {
-                "exchange": token_dict["Exchange"],
+                "exchange": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "tradingsymbol": token_dict["Symbol"],
                 "price": price,
                 "trigger_price": "0",
@@ -727,37 +815,40 @@ class zerodha(Broker):
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order(cls,
-                 token_dict: dict,
-                 price: float,
-                 trigger: float,
-                 quantity: int,
-                 side: str,
-                 unique_id: str,
-                 headers: dict,
-                 target: float = 0.0,
-                 stoploss: float = 0.0,
-                 trailing_sl: float = 0.0,
-                 product: str = Product.MIS,
-                 validity: str = Validity.DAY,
-                 variety: str = Variety.STOPLOSS,
-                 ) -> dict[Any, Any]:
+    def sl_order(
+        cls,
+        token_dict: dict,
+        price: float,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             price (float): Order price.
             trigger (float): order trigger price.
             quantity (int): Order quantity.
@@ -776,7 +867,9 @@ class zerodha(Broker):
         """
         if not target:
             data = {
-                "exchange": token_dict["Exchange"],
+                "exchange": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "tradingsymbol": token_dict["Symbol"],
                 "price": price,
                 "trigger_price": trigger,
@@ -792,36 +885,39 @@ class zerodha(Broker):
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order(cls,
-                  token_dict: dict,
-                  trigger: float,
-                  quantity: int,
-                  side: str,
-                  unique_id: str,
-                  headers: dict,
-                  target: float = 0.0,
-                  stoploss: float = 0.0,
-                  trailing_sl: float = 0.0,
-                  product: str = Product.MIS,
-                  validity: str = Validity.DAY,
-                  variety: str = Variety.STOPLOSS,
-                  ) -> dict[Any, Any]:
+    def slm_order(
+        cls,
+        token_dict: dict,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             trigger (float): order trigger price.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
@@ -839,7 +935,9 @@ class zerodha(Broker):
         """
         if not target:
             data = {
-                "exchange": token_dict["Exchange"],
+                "exchange": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "tradingsymbol": token_dict["Symbol"],
                 "price": "0",
                 "trigger_price": trigger,
@@ -855,33 +953,35 @@ class zerodha(Broker):
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
     # Equity Order Functions
 
-
     @classmethod
-    def create_order_eq(cls,
-                        exchange: str,
-                        symbol: str,
-                        quantity: int,
-                        side: str,
-                        product: str,
-                        validity: str,
-                        variety: str,
-                        unique_id: str,
-                        headers: dict,
-                        price: float = 0,
-                        trigger: float = 0,
-                        ) -> dict[Any, Any]:
-
+    def create_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        unique_id: str,
+        headers: dict,
+        price: float = 0,
+        trigger: float = 0,
+    ) -> dict[Any, Any]:
         """
         Place an Order in NSE/BSE Equity Segment.
 
@@ -897,17 +997,14 @@ class zerodha(Broker):
             headers (dict): headers to send order request with.
             price (float): Order price
             trigger (float): order trigger price
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
-            dict: fenix Unified Order Response
+            dict: fenix Unified Order Response.
         """
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -934,26 +1031,31 @@ class zerodha(Broker):
             "disclosed_quantity": "0",
         }
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_eq(cls,
-                        exchange: str,
-                        symbol: str,
-                        quantity: int,
-                        side: str,
-                        unique_id: str,
-                        headers: dict,
-                        product: str = Product.MIS,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.REGULAR,
-                        ) -> dict[Any, Any]:
+    def market_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Market Order in NSE/BSE Equity Segment.
 
@@ -964,9 +1066,6 @@ class zerodha(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -977,7 +1076,7 @@ class zerodha(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -995,27 +1094,32 @@ class zerodha(Broker):
             "disclosed_quantity": "0",
         }
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_eq(cls,
-                       exchange: str,
-                       symbol: str,
-                       price: float,
-                       quantity: int,
-                       side: str,
-                       unique_id: str,
-                       headers: dict,
-                       product: str = Product.MIS,
-                       validity: str = Validity.DAY,
-                       variety: str = Variety.REGULAR,
-                       ) -> dict[Any, Any]:
+    def limit_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        price: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Limit Order in NSE/BSE Equity Segment.
 
@@ -1027,9 +1131,6 @@ class zerodha(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -1040,7 +1141,7 @@ class zerodha(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -1058,28 +1159,33 @@ class zerodha(Broker):
             "disclosed_quantity": "0",
         }
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_eq(cls,
-                    exchange: str,
-                    symbol: str,
-                    price: float,
-                    trigger: float,
-                    quantity: int,
-                    side: str,
-                    unique_id: str,
-                    headers: dict,
-                    product: str = Product.MIS,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.STOPLOSS,
-                    ) -> dict[Any, Any]:
+    def sl_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        price: float,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss Order in NSE/BSE Equity Segment.
 
@@ -1092,9 +1198,6 @@ class zerodha(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -1105,7 +1208,7 @@ class zerodha(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -1123,27 +1226,32 @@ class zerodha(Broker):
             "disclosed_quantity": "0",
         }
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_eq(cls,
-                     exchange: str,
-                     symbol: str,
-                     trigger: float,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.STOPLOSS,
-                     ) -> dict[Any, Any]:
+    def slm_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order in NSE/BSE Equity Segment.
 
@@ -1155,9 +1263,6 @@ class zerodha(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -1168,7 +1273,7 @@ class zerodha(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -1186,53 +1291,56 @@ class zerodha(Broker):
             "disclosed_quantity": "0",
         }
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
     # NFO Order Functions
 
-
     @classmethod
-    def create_order_fno(cls,
-                         exchange: str,
-                         root: str,
-                         expiry: str,
-                         option: str,
-                         strike_price: str,
-                         quantity: int,
-                         side: str,
-                         product: str,
-                         validity: str,
-                         variety: str,
-                         unique_id: str,
-                         headers: dict,
-                         price: float = 0.0,
-                         trigger: float = 0.0,
-                         ) -> dict[Any, Any]:
+    def create_order_fno(
+        cls,
+        exchange: str,
+        root: str,
+        expiry: str,
+        option: str,
+        strike_price: str,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        unique_id: str,
+        headers: dict,
+        price: float = 0.0,
+        trigger: float = 0.0,
+    ) -> dict[Any, Any]:
         """
         Place an Order in F&O Segment.
 
         Parameters:
+            exchange (str):  Exchange to place the order in.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'.
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
-            price (float): price of the order.
-            trigger (float): trigger price of the order.
+            strike_price (str): Strike Price of the Option.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
+            product (str): Order product.
+            validity (str): Order validity.
+            variety (str): Order variety.
+            unique_id (str): Unique user orderid.
             headers (dict): headers to send order request with.
-            root (str): Derivative: BANKNIFTY, NIFTY.
-            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.DAY.
+            price (float): price of the order.
+            trigger (float): trigger price of the order.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1249,7 +1357,7 @@ class zerodha(Broker):
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
 
         if not price and trigger:
             order_type = OrderType.SLM
@@ -1274,45 +1382,50 @@ class zerodha(Broker):
             "disclosed_quantity": "0",
         }
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_fno(cls,
-                         option: str,
-                         strike_price: str,
-                         quantity: int,
-                         side: str,
-                         headers: dict,
-                         root: str = Root.BNF,
-                         expiry: str = WeeklyExpiry.CURRENT,
-                         exchange: str = ExchangeCode.NFO,
-                         product: str = Product.MIS,
-                         validity: str = Validity.DAY,
-                         variety: str = Variety.REGULAR,
-                         unique_id: str = UniqueID.MARKETORDER,
-                         ) -> dict[Any, Any]:
+    def market_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+        unique_id: str = UniqueID.MARKETORDER,
+    ) -> dict[Any, Any]:
         """
         Place Market Order in F&O Segment.
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1329,7 +1442,7 @@ class zerodha(Broker):
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
 
         data = {
             "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
@@ -1345,47 +1458,52 @@ class zerodha(Broker):
             "disclosed_quantity": "0",
         }
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_fno(cls,
-                        option: str,
-                        strike_price: str,
-                        price: float,
-                        quantity: int,
-                        side: str,
-                        headers: dict,
-                        root: str = Root.BNF,
-                        expiry: str = WeeklyExpiry.CURRENT,
-                        exchange: str = ExchangeCode.NFO,
-                        product: str = Product.MIS,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.REGULAR,
-                        unique_id: str = UniqueID.LIMITORDER,
-                        ) -> dict[Any, Any]:
+    def limit_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        price: float,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+        unique_id: str = UniqueID.LIMITORDER,
+    ) -> dict[Any, Any]:
         """
         Place Limit Order in F&O Segment.
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             price (float): price of the order.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1402,7 +1520,7 @@ class zerodha(Broker):
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
 
         data = {
             "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
@@ -1418,37 +1536,42 @@ class zerodha(Broker):
             "disclosed_quantity": "0",
         }
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_fno(cls,
-                     option: str,
-                     strike_price: str,
-                     price: float,
-                     trigger: float,
-                     quantity: int,
-                     side: str,
-                     headers: dict,
-                     root: str = Root.BNF,
-                     expiry: str = WeeklyExpiry.CURRENT,
-                     exchange: str = ExchangeCode.NFO,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.STOPLOSS,
-                     unique_id: str = UniqueID.SLORDER,
-                     ) -> dict[Any, Any]:
+    def sl_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        price: float,
+        trigger: float,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+        unique_id: str = UniqueID.SLORDER,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss Order in F&O Segment.
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             price (float): price of the order.
             trigger (float): trigger price of the order.
             quantity (int): Order quantity.
@@ -1456,84 +1579,11 @@ class zerodha(Broker):
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
-
-        Raises:
-            KeyError: If Strike Price Does not Exist
-
-        Returns:
-            dict: fenix Unified Order Response
-        """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
-
-        detail = cls.nfo_tokens[expiry][root][option]
-        detail = detail.get(strike_price, None)
-
-        if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
-
-        symbol = detail['Symbol']
-
-        data = {
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
-            "tradingsymbol": symbol,
-            "price": price,
-            "trigger_price": trigger,
-            "quantity": quantity,
-            "transaction_type": cls._key_mapper(cls.req_side, side, "side"),
-            "order_type": cls.req_order_type[OrderType.SL],
-            "product": cls._key_mapper(cls.req_product, product, "product"),
-            "validity": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "tag": unique_id,
-            "disclosed_quantity": "0",
-        }
-
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
-        final_url = f"{cls.urls['place_order'] }/{variety}"
-
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def slm_order_fno(cls,
-                      option: str,
-                      strike_price: str,
-                      trigger: float,
-                      quantity: int,
-                      side: str,
-                      headers: dict,
-                      root: str = Root.BNF,
-                      expiry: str = WeeklyExpiry.CURRENT,
-                      exchange: str = ExchangeCode.NFO,
-                      product: str = Product.MIS,
-                      validity: str = Validity.DAY,
-                      variety: str = Variety.STOPLOSS,
-                      unique_id: str = UniqueID.SLORDER,
-                      ) -> dict[Any, Any]:
-        """
-        Place Stoploss-Market Order in F&O Segment.
-
-        Parameters:
-            option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
-            trigger (float): trigger price of the order.
-            quantity (int): Order quantity.
-            side (str): Order Side: 'BUY', 'SELL'.
-            headers (dict): headers to send order request with.
-            root (str): Derivative: BANKNIFTY, NIFTY.
-            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
             unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.DAY.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1550,7 +1600,85 @@ class zerodha(Broker):
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
+
+        data = {
+            "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+            "tradingsymbol": symbol,
+            "price": price,
+            "trigger_price": trigger,
+            "quantity": quantity,
+            "transaction_type": cls._key_mapper(cls.req_side, side, "side"),
+            "order_type": cls.req_order_type[OrderType.SL],
+            "product": cls._key_mapper(cls.req_product, product, "product"),
+            "validity": cls._key_mapper(cls.req_validity, validity, "validity"),
+            "tag": unique_id,
+            "disclosed_quantity": "0",
+        }
+
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
+        final_url = f"{cls.urls['place_order'] }/{variety}"
+
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
+
+        return cls._create_order_parser(response=response, headers=headers)
+
+    @classmethod
+    def slm_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        trigger: float,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+        unique_id: str = UniqueID.SLORDER,
+    ) -> dict[Any, Any]:
+        """
+        Place Stoploss-Market Order in F&O Segment.
+
+        Parameters:
+            option (str): Option Type: 'CE', 'PE'.
+            strike_price (str): Strike Price of the Option.
+            trigger (float): trigger price of the order.
+            quantity (int): Order quantity.
+            side (str): Order Side: 'BUY', 'SELL'.
+            headers (dict): headers to send order request with.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
+            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
+            product (str, optional): Order product. Defaults to Product.MIS.
+            validity (str, optional): Order validity Defaults to Validity.DAY.
+            variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
+
+        Raises:
+            KeyError: If Strike Price Does not Exist.
+
+        Returns:
+            dict: fenix Unified Order Response.
+        """
+        if not cls.nfo_tokens:
+            cls.create_nfo_tokens()
+
+        detail = cls.nfo_tokens[expiry][root][option]
+        detail = detail.get(strike_price, None)
+
+        if not detail:
+            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+
+        symbol = detail["Symbol"]
 
         data = {
             "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
@@ -1566,23 +1694,26 @@ class zerodha(Broker):
             "disclosed_quantity": "0",
         }
 
-        variety = cls._key_mapper(cls.req_variety, variety, "variety"),
+        variety = (cls._key_mapper(cls.req_variety, variety, "variety"),)
         final_url = f"{cls.urls['place_order'] }/{variety}"
 
-        response = cls.fetch(method="POST", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="POST",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
     # Order Details, OrderBook & TradeBook
 
-
     @classmethod
-    def fetch_raw_orderhistory(cls,
-                               order_id: str,
-                               headers: dict
-                               ) -> list[dict]:
+    def fetch_raw_orderhistory(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Raw History of an order.
 
@@ -1594,13 +1725,18 @@ class zerodha(Broker):
             list[dict]: Raw Broker Order History Response.
         """
         final_url = f"{cls.urls['place_order'] }/{order_id}"
-        response = cls.fetch(method="GET", url=final_url, headers=headers['headers'])
+        response = cls.fetch(
+            method="GET",
+            url=final_url,
+            headers=headers["headers"],
+        )
         return cls._json_parser(response)
 
     @classmethod
-    def fetch_orderbook(cls,
-                        headers: dict
-                        ) -> list[dict]:
+    def fetch_orderbook(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Orderbook Details.
 
@@ -1610,20 +1746,25 @@ class zerodha(Broker):
         Returns:
             list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
         """
-        response = cls.fetch(method="GET", url=cls.urls['place_order'], headers=headers['headers'])
+        response = cls.fetch(
+            method="GET",
+            url=cls.urls["place_order"],
+            headers=headers["headers"],
+        )
         info = cls._json_parser(response)
 
         orders = []
-        for order in info['data']:
+        for order in info["data"]:
             detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
 
     @classmethod
-    def fetch_tradebook(cls,
-                        headers: dict
-                        ) -> list[dict]:
+    def fetch_tradebook(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Tradebook Details.
 
@@ -1633,20 +1774,25 @@ class zerodha(Broker):
         Returns:
             list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
         """
-        response = cls.fetch(method="GET", url=cls.urls['tradebook'], headers=headers['headers'])
+        response = cls.fetch(
+            method="GET",
+            url=cls.urls["tradebook"],
+            headers=headers["headers"],
+        )
         info = cls._json_parser(response)
 
         orders = []
-        for order in info['data']:
+        for order in info["data"]:
             detail = cls._orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
 
     @classmethod
-    def fetch_orders(cls,
-                     headers: dict
-                     ) -> list[dict]:
+    def fetch_orders(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch OrderBook Details which is unified across all brokers.
         Use This if you want Avg price, etc. values which sometimes unavailable
@@ -1664,10 +1810,11 @@ class zerodha(Broker):
         return cls.fetch_orderbook(headers=headers)
 
     @classmethod
-    def fetch_order(cls,
-                    order_id: str,
-                    headers: dict
-                    ) -> dict[Any, Any]:
+    def fetch_order(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Order Details.
 
@@ -1681,15 +1828,16 @@ class zerodha(Broker):
             dict: fenix Unified Order Response.
         """
         info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
-        order = info['data'][-1]
+        order = info["data"][-1]
 
         return cls._orderbook_json_parser(order)
 
     @classmethod
-    def fetch_orderhistory(cls,
-                           order_id: str,
-                           headers: dict,
-                           ) -> dict[Any, Any]:
+    def fetch_orderhistory(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch History of an order.
 
@@ -1709,20 +1857,19 @@ class zerodha(Broker):
 
         return order_history
 
-
     # Order Modification & Sq Off
 
-
     @classmethod
-    def modify_order(cls,
-                     order_id: str,
-                     headers: dict,
-                     price: float | None = None,
-                     trigger: float | None = None,
-                     quantity: int | None = None,
-                     order_type: str | None = None,
-                     validity: str | None = None,
-                     ) -> dict[Any, Any]:
+    def modify_order(
+        cls,
+        order_id: str,
+        headers: dict,
+        price: float | None = None,
+        trigger: float | None = None,
+        quantity: int | None = None,
+        order_type: str | None = None,
+        validity: str | None = None,
+    ) -> dict[Any, Any]:
         """
         Modify an open order.
 
@@ -1738,7 +1885,9 @@ class zerodha(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        curr_order = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers["headers"])
+        curr_order = cls.fetch_raw_orderhistory(
+            order_id=order_id, headers=headers["headers"]
+        )
         variety = curr_order["variety"]
         final_url = f"{cls.urls['place_order'] }/{variety}/{order_id}"
 
@@ -1746,20 +1895,27 @@ class zerodha(Broker):
             "price": price or curr_order["price"],
             "trigger_price": trigger or curr_order["trigger_price"],
             "quantity": quantity or curr_order["quantity"],
-            "order_type": cls._key_mapper(cls.req_order_type, order_type, 'order_type') or curr_order["order_type"],
-            "validity": cls._key_mapper(cls.req_validity, validity, 'validity') or curr_order["validity"],
+            "order_type": cls._key_mapper(cls.req_order_type, order_type, "order_type")
+            or curr_order["order_type"],
+            "validity": cls._key_mapper(cls.req_validity, validity, "validity")
+            or curr_order["validity"],
         }
 
-        response = cls.fetch(method="PUT", url=final_url,
-                             data=data, headers=headers['headers'])
+        response = cls.fetch(
+            method="PUT",
+            url=final_url,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def cancel_order(cls,
-                     order_id: str,
-                     headers: dict
-                     ) -> dict[Any, Any]:
+    def cancel_order(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Cancel an open order.
 
@@ -1775,19 +1931,21 @@ class zerodha(Broker):
 
         final_url = f"{cls.urls['place_order'] }/{variety}/{order_id}"
 
-        response = cls.fetch(method="DELETE", url=final_url,
-                             headers=headers['headers'])
+        response = cls.fetch(
+            method="DELETE",
+            url=final_url,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
     # Positions, Account Limits & Profile
 
-
     @classmethod
-    def fetch_raw_positions(cls,
-                            headers: dict
-                            ) -> list[dict]:
+    def fetch_raw_positions(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Raw Account Positions.
 
@@ -1797,13 +1955,18 @@ class zerodha(Broker):
         Returns:
             list[dict]: Raw Account Position Response.
         """
-        response = cls.fetch(method="GET", url=cls.urls['postions'], headers=headers['headers'])
+        response = cls.fetch(
+            method="GET",
+            url=cls.urls["postions"],
+            headers=headers["headers"],
+        )
         return cls._json_parser(response)
 
     @classmethod
-    def fetch_day_positions(cls,
-                            headers: dict
-                            ) -> list[dict]:
+    def fetch_day_positions(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch the Day's Account Positions.
 
@@ -1823,9 +1986,10 @@ class zerodha(Broker):
         return positions
 
     @classmethod
-    def fetch_net_positions(cls,
-                            headers: dict
-                            ) -> list[dict]:
+    def fetch_net_positions(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Total Account Positions.
 
@@ -1845,9 +2009,10 @@ class zerodha(Broker):
         return positions
 
     @classmethod
-    def fetch_positions(cls,
-                        headers: dict,
-                        ) -> dict[Any, Any]:
+    def fetch_positions(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Day & Net Account Positions.
 
@@ -1871,9 +2036,10 @@ class zerodha(Broker):
         return positions
 
     @classmethod
-    def fetch_holdings(cls,
-                       headers: dict
-                       ) -> list[dict]:
+    def fetch_holdings(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Account Holdings.
 
@@ -1883,20 +2049,25 @@ class zerodha(Broker):
         Returns:
             dict[Any, Any]: fenix Unified Positions Response.
         """
-        response = cls.fetch(method="GET", url=cls.urls['holdings'], headers=headers['headers'])
+        response = cls.fetch(
+            method="GET",
+            url=cls.urls["holdings"],
+            headers=headers["headers"],
+        )
         info = cls._json_parser(response)
 
         holdings = []
-        for order in info['data']['net']:
+        for order in info["data"]["net"]:
             detail = cls._holding_json_parser(order)
             holdings.append(detail)
 
         return holdings
 
     @classmethod
-    def rms_limits(cls,
-                   headers: dict
-                   ) -> dict[Any, Any]:
+    def rms_limits(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Risk Management System Limits.
 
@@ -1906,13 +2077,13 @@ class zerodha(Broker):
         Returns:
             dict: fenix Unified RMS Limits Response.
         """
-        ...
+        raise InputError(f"RMS Limits Not Available in {cls.id}.")
 
     @classmethod
-    def profile(cls,
-                headers: dict
-                ) -> dict[Any, Any]:
-
+    def profile(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Profile Limits of the User.
 
@@ -1922,9 +2093,13 @@ class zerodha(Broker):
         Returns:
             dict: fenix Unified Profile Response.
         """
-        response = cls.fetch(method="GET", url=cls.urls["profile"], headers=headers["headers"])
+        response = cls.fetch(
+            method="GET",
+            url=cls.urls["profile"],
+            headers=headers["headers"],
+        )
 
         info = cls._json_parser(response)
-        profile = cls._profile_json_parser(info['data'])
+        profile = cls._profile_json_parser(info["data"])
 
         return profile

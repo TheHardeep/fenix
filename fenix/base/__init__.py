@@ -7,4 +7,4 @@ from fenix.base import errors
 from fenix.base import constants
 
 
-__all__ = broker.__all__ + errors.__all__ + constants.__all__   # noqa: F405
+__all__ = broker.__all__ + errors.__all__ + constants.__all__  # noqa: F405

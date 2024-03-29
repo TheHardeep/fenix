@@ -17,7 +17,6 @@ from fenix.base.constants import Status
 from fenix.base.constants import Order
 from fenix.base.constants import Root
 from fenix.base.constants import WeeklyExpiry
-from fenix.base.constants import UniqueID
 
 from fenix.base.errors import BrokerError
 from fenix.base.errors import InputError
@@ -28,7 +27,6 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-
 class kotakneo(Broker):
     """
     Kotak Neo fenix Broker Class.
@@ -37,18 +35,23 @@ class kotakneo(Broker):
         fenix.kotakneo: fenix Kotak Neo Broker Object.
     """
 
-
     # Market Data Dictonaries
 
     indices = {}
     eq_tokens = {}
-    nfo_tokens = {}
-    token_params = ["user_id", "client_id", "password", "mobile_no",
-                    "pin", "consumer_key", "consumer_secret", "trade_password"
-                    ]
-    id = 'kotakneo'
+    fno_tokens = {}
+    token_params = [
+        "user_id",
+        "client_id",
+        "password",
+        "mobile_no",
+        "pin",
+        "consumer_key",
+        "consumer_secret",
+        "trade_password",
+    ]
+    id = "kotakneo"
     _session = Broker._create_session()
-
 
     # Base URLs
 
@@ -58,7 +61,6 @@ class kotakneo(Broker):
         "market_data": "https://lapi.kotaksecurities.com/wso2-scripmaster/v1/prod/<date>/transformed/<exchange>.csv",
     }
 
-
     # Access Token Generation URLs
 
     token_urls = {
@@ -66,7 +68,6 @@ class kotakneo(Broker):
         "validate": f"{base_urls['base']}/login/1.0/login/v2/validate",
         "otp_generate": f"{base_urls['base']}/login/1.0/login/otp/generate",
     }
-
 
     # Order Placing URLs
 
@@ -81,7 +82,6 @@ class kotakneo(Broker):
         "holdings": f"{base_urls['base']}/Portfolio/1.0/portfolio/v1/holdings",
         "rms_limits": f"{base_urls['base']}/Orders/2.0/quick/user/limits",
     }
-
 
     # Request Parameters Dictionaries
 
@@ -99,7 +99,7 @@ class kotakneo(Broker):
         OrderType.MARKET: "MKT",
         OrderType.LIMIT: "L",
         OrderType.SL: "SL",
-        OrderType.SLM: "SL-M"
+        OrderType.SLM: "SL-M",
     }
 
     req_product = {
@@ -120,7 +120,6 @@ class kotakneo(Broker):
         Validity.IOC: "IOC",
         Validity.GTC: "GTC",
     }
-
 
     # Response Parameters Dictionaries
 
@@ -151,9 +150,8 @@ class kotakneo(Broker):
 
     resp_side = {
         "B": Side.BUY,
-        "S": Side.SELL
+        "S": Side.SELL,
     }
-
 
     resp_status = {
         "open pending": Status.PENDING,
@@ -175,77 +173,113 @@ class kotakneo(Broker):
         "modified": Status.MODIFIED,
     }
 
-
     # NFO Script Fetch
-
 
     @classmethod
     def create_eq_tokens(cls) -> dict:
         """
-        Gives Indices Info for F&O Segment.
+        Downlaods NSE & BSE Equity Info for F&O Segment.
         Stores them in the kotakneo.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
         """
-        final_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
-                                                         ).replace("<exchange>", cls.req_exchange[ExchangeCode.BSE])
-        df_bse = cls.data_reader(final_url, filetype='csv')
+        final_url = (
+            cls.base_urls["market_data"]
+            .replace("<date>", str(cls.current_datetime().date()))
+            .replace("<exchange>", cls.req_exchange[ExchangeCode.BSE])
+        )
+        df_bse = cls.data_reader(final_url, filetype="csv")
 
         df_bse = df_bse[df_bse["dTickSize "] != -1]
-        df_bse = df_bse[['pTrdSymbol', "pSymbol", "lLotSize", "dTickSize ", "pExchSeg"]]
-        df_bse.rename({"pSymbol": "Token", "pTrdSymbol": "Symbol",
-                       "dTickSize ": 'TickSize', "lLotSize": "LotSize", "pExchSeg": "Exchange"}, axis=1, inplace=True)
+        df_bse = df_bse[["pTrdSymbol", "pSymbol", "lLotSize", "dTickSize ", "pExchSeg"]]
+        df_bse.rename(
+            {
+                "pSymbol": "Token",
+                "pTrdSymbol": "Symbol",
+                "dTickSize ": "TickSize",
+                "lLotSize": "LotSize",
+                "pExchSeg": "Exchange",
+            },
+            axis=1,
+            inplace=True,
+        )
 
         df_bse["TickSize"] = df_bse["TickSize"] / 100
-        df_bse.set_index(df_bse['Symbol'], inplace=True)
-        df_bse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
+        df_bse.set_index(df_bse["Symbol"], inplace=True)
+        df_bse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
 
+        final_url = (
+            cls.base_urls["market_data"]
+            .replace("<date>", str(cls.current_datetime().date()))
+            .replace("<exchange>", cls.req_exchange[ExchangeCode.NSE])
+        )
+        df_nse = cls.data_reader(final_url, filetype="csv")
 
-        final_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
-                                                         ).replace("<exchange>", cls.req_exchange[ExchangeCode.NSE])
-        df_nse = cls.data_reader(final_url, filetype='csv')
-
-        df_nse = df_nse[df_nse['pGroup'] == "EQ"]
-        df_nse = df_nse[["pSymbolName", 'pTrdSymbol', "pSymbol", "lLotSize", "dTickSize ", "pExchSeg"]]
-        df_nse.rename({"pSymbolName": "Index", "pSymbol": "Token", "pTrdSymbol": "Symbol",
-                       "dTickSize ": 'TickSize', "lLotSize": "LotSize", "pExchSeg": "Exchange"}, axis=1, inplace=True)
+        df_nse = df_nse[df_nse["pGroup"] == "EQ"]
+        df_nse = df_nse[
+            [
+                "pSymbolName",
+                "pTrdSymbol",
+                "pSymbol",
+                "lLotSize",
+                "dTickSize ",
+                "pExchSeg",
+            ]
+        ]
+        df_nse.rename(
+            {
+                "pSymbolName": "Index",
+                "pSymbol": "Token",
+                "pTrdSymbol": "Symbol",
+                "dTickSize ": "TickSize",
+                "lLotSize": "LotSize",
+                "pExchSeg": "Exchange",
+            },
+            axis=1,
+            inplace=True,
+        )
 
         df_nse["TickSize"] = df_nse["TickSize"] / 100
-        df_nse.set_index(df_nse['Index'], inplace=True)
+        df_nse.set_index(df_nse["Index"], inplace=True)
         df_nse.drop(columns="Index", inplace=True)
-        df_nse.drop_duplicates(subset=['Symbol'], keep='first', inplace=True)
+        df_nse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
 
-
-        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
-        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
+        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient="index")
+        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient="index")
 
         return cls.eq_tokens
 
     @classmethod
     def create_indices(cls) -> dict:
         """
-        Gives Indices Info for F&O Segment.
+        Downloads all the Broker Indices Token data.
         Stores them in the kotakneo.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
         """
-        nse_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
-                                                         ).replace("<exchange>", cls.req_exchange[ExchangeCode.NSE])
-        df_nse = cls.data_reader(nse_url, filetype='csv')
+        nse_url = (
+            cls.base_urls["market_data"]
+            .replace("<date>", str(cls.current_datetime().date()))
+            .replace("<exchange>", cls.req_exchange[ExchangeCode.NSE])
+        )
+        df_nse = cls.data_reader(nse_url, filetype="csv")
 
-        bse_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
-                                                         ).replace("<exchange>", cls.req_exchange[ExchangeCode.BSE])
-        df_bse = cls.data_reader(bse_url, filetype='csv')
+        bse_url = (
+            cls.base_urls["market_data"]
+            .replace("<date>", str(cls.current_datetime().date()))
+            .replace("<exchange>", cls.req_exchange[ExchangeCode.BSE])
+        )
+        df_bse = cls.data_reader(bse_url, filetype="csv")
 
         df = cls.concat_df([df_nse, df_bse])
-        df = df[df['pGroup'].isna()][["pTrdSymbol", "pSymbol", "pSymbolName"]]
+        df = df[df["pGroup"].isna()][["pTrdSymbol", "pSymbol", "pSymbolName"]]
         df.rename({"pTrdSymbol": "Symbol", "pSymbol": "Token"}, axis=1, inplace=True)
-        df.index = df['pSymbolName']
+        df.index = df["pSymbolName"]
         del df["pSymbolName"]
 
-        indices = df.to_dict(orient='index')
+        indices = df.to_dict(orient="index")
 
         cls.indices = indices
 
@@ -254,68 +288,97 @@ class kotakneo(Broker):
     @classmethod
     def create_fno_tokens(cls) -> dict:
         """
-        Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the kotakneo.nfo_tokens Dictionary.
+        Downloades Token Data for the FNO Segment for the 3 latest Weekly Expiries.
+        Stores them in the kotakneo.fno_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.
         """
         try:
-            nfo_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
-                                                             ).replace("<exchange>", cls.req_exchange[ExchangeCode.NFO])
-            df_nfo = cls.data_reader(nfo_url, filetype='csv')
+            nfo_url = (
+                cls.base_urls["market_data"]
+                .replace("<date>", str(cls.current_datetime().date()))
+                .replace("<exchange>", cls.req_exchange[ExchangeCode.NFO])
+            )
+            df_nfo = cls.data_reader(nfo_url, filetype="csv")
             df_nfo = df_nfo[df_nfo["pInstType"] == "OPTIDX"]
-            df_nfo["lExpiryDate "] = (cls.pd_datetime(df_nfo["lExpiryDate "], unit="s") + cls.pd_dateoffset(years=10) - cls.pd_dateoffset(days=1)).dt.date.astype(str)
+            df_nfo["lExpiryDate "] = (
+                cls.pd_datetime(df_nfo["lExpiryDate "], unit="s")
+                + cls.pd_dateoffset(years=10)
+                - cls.pd_dateoffset(days=1)
+            ).dt.date.astype(str)
 
-
-            bfo_url = cls.base_urls["market_data"].replace("<date>", str(cls.current_datetime().date())
-                                                           ).replace("<exchange>", cls.req_exchange[ExchangeCode.BFO])
-            df_bfo = cls.data_reader(bfo_url, filetype='csv')
+            bfo_url = (
+                cls.base_urls["market_data"]
+                .replace("<date>", str(cls.current_datetime().date()))
+                .replace("<exchange>", cls.req_exchange[ExchangeCode.BFO])
+            )
+            df_bfo = cls.data_reader(bfo_url, filetype="csv")
             df_bfo = df_bfo[
                 (
-                    (df_bfo["pSymbolName"] == "BSXOPT") |
-                    (df_bfo["pSymbolName"] == "BKXOPT")
-                ) &
-                (
-                    (df_bfo["pInstType"] == "IO")
+                    (df_bfo["pSymbolName"] == "BSXOPT")
+                    | (df_bfo["pSymbolName"] == "BKXOPT")
                 )
-                ]
+                & ((df_bfo["pInstType"] == "IO"))
+            ]
 
-            df_bfo['pSymbolName'] = df_bfo['pSymbolName'].replace({"BKXOPT": "BANKEX", "BSXOPT": "SENSEX"})
-            df_bfo["lExpiryDate "] = (cls.pd_datetime(df_bfo["lExpiryDate "], unit="s")).dt.date.astype(str)
-
+            df_bfo["pSymbolName"] = df_bfo["pSymbolName"].replace(
+                {"BKXOPT": "BANKEX", "BSXOPT": "SENSEX"}
+            )
+            df_bfo["lExpiryDate "] = (
+                cls.pd_datetime(df_bfo["lExpiryDate "], unit="s")
+            ).dt.date.astype(str)
 
             df = cls.concat_df([df_nfo, df_bfo])
-            df.rename({"pOptionType": "Option", "pSymbol": "Token", "pSymbolName": "Root",
-                       "lExpiryDate ": "Expiry", "pTrdSymbol": "Symbol", "pExchSeg": "Exchange",
-                       "dTickSize ": 'TickSize', "lLotSize": "LotSize", "dStrikePrice;": "StrikePrice"
-                       }, axis=1, inplace=True)
+            df.rename(
+                {
+                    "pOptionType": "Option",
+                    "pSymbol": "Token",
+                    "pSymbolName": "Root",
+                    "lExpiryDate ": "Expiry",
+                    "pTrdSymbol": "Symbol",
+                    "pExchSeg": "Exchange",
+                    "dTickSize ": "TickSize",
+                    "lLotSize": "LotSize",
+                    "dStrikePrice;": "StrikePrice",
+                },
+                axis=1,
+                inplace=True,
+            )
 
-            df = df[['Token', 'Symbol', 'Expiry', 'Option', 'StrikePrice',
-                     'LotSize', 'Root', 'TickSize', "Exchange"
-                     ]]
+            df = df[
+                [
+                    "Token",
+                    "Symbol",
+                    "Expiry",
+                    "Option",
+                    "StrikePrice",
+                    "LotSize",
+                    "Root",
+                    "TickSize",
+                    "Exchange",
+                ]
+            ]
             # return df
             df["TickSize"] = df["TickSize"] / 100
             df["StrikePrice"] = (df["StrikePrice"] / 100).astype(int).astype(str)
             df["Token"] = df["Token"].astype(int)
 
-
             expiry_data = cls.jsonify_expiry(data_frame=df)
-            cls.nfo_tokens = expiry_data
+            cls.fno_tokens = expiry_data
 
             return expiry_data
 
         except Exception as exc:
             raise TokenDownloadError({"Error": exc.args}) from exc
 
-
     # Headers & Json Parsers
 
-
     @classmethod
-    def create_headers(cls,
-                       params: dict,
-                       ) -> dict[str, str]:
+    def create_headers(
+        cls,
+        params: dict,
+    ) -> dict[str, str]:
         """
         Generate Headers used to access Endpoints in Kotak Neo.
 
@@ -337,7 +400,9 @@ class kotakneo(Broker):
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 
-            base64_code = base64.b64encode(f"{params['consumer_key']}:{params['consumer_secret']}".encode()).decode()
+            base64_code = base64.b64encode(
+                f"{params['consumer_key']}:{params['consumer_secret']}".encode()
+            ).decode()
             headers = {
                 "Authorization": f"Basic {base64_code}",
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -349,69 +414,79 @@ class kotakneo(Broker):
                 "password": params["password"],
             }
 
-            response01 = cls.fetch(method="POST", url=cls.token_urls["token"],
-                                   data=data, headers=headers)
+            response01 = cls.fetch(
+                method="POST",
+                url=cls.token_urls["token"],
+                data=data,
+                headers=headers,
+            )
 
             info01 = cls._json_parser(response01)
-            access_token = info01['access_token']
+            access_token = info01["access_token"]
 
             json_data = {
-                "mobileNumber": params['mobile_no'],
+                "mobileNumber": params["mobile_no"],
                 "password": params["trade_password"],
             }
 
             headers = {
-                'accept': '*/*',
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {access_token}'
+                "accept": "*/*",
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
             }
 
-            response02 = cls.fetch(method="POST", url=cls.token_urls["validate"],
-                                   json=json_data, headers=headers, )
+            response02 = cls.fetch(
+                method="POST",
+                url=cls.token_urls["validate"],
+                json=json_data,
+                headers=headers,
+            )
 
             info02 = cls._json_parser(response02)
-            token = info02['data']['token']
-            session_id = info02['data']['sid']
-            token_decode = jwt.decode(token, algorithms=['RS256'], options={'verify_signature': False})
+            token = info02["data"]["token"]
+            session_id = info02["data"]["sid"]
+            token_decode = jwt.decode(
+                token, algorithms=["RS256"], options={"verify_signature": False}
+            )
             user_id = token_decode["sub"]
 
-            json_data = {
-                "userId": user_id,
-                "sendEmail": True,
-                "isWhitelisted": True
-            }
+            json_data = {"userId": user_id, "sendEmail": True, "isWhitelisted": True}
 
             headers = {
-                'accept': '*/*',
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {access_token}'
+                "accept": "*/*",
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
             }
 
-            response03 = cls.fetch(method="POST", url=cls.token_urls["otp_generate"],
-                                   json=json_data, headers=headers)
+            response03 = cls.fetch(
+                method="POST",
+                url=cls.token_urls["otp_generate"],
+                json=json_data,
+                headers=headers,
+            )
             _ = cls._json_parser(response03)
 
-
-            json_data = {
-                "userId": user_id,
-                "mpin": params['pin']
-            }
+            json_data = {"userId": user_id, "mpin": params["pin"]}
 
             headers = {
-                'accept': '*/*',
-                'sid': session_id,
-                'Auth': token,
-                'Content-Type': 'application/json',
-                'Authorization': f'Bearer {access_token}'
+                "accept": "*/*",
+                "sid": session_id,
+                "Auth": token,
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
             }
 
-            response04 = cls.fetch(method="POST", url=cls.token_urls["validate"],
-                                   json=json_data, headers=headers)
+            response04 = cls.fetch(
+                method="POST",
+                url=cls.token_urls["validate"],
+                json=json_data,
+                headers=headers,
+            )
 
             info04 = cls._json_parser(response04)
-            session_id_headers = info04['data']['sid']
-            token_headers = info04['data']['token']
-            hid = info04['data']['hsServerId']
+            session_id_headers = info04["data"]["sid"]
+            token_headers = info04["data"]["token"]
+            hid = info04["data"]["hsServerId"]
 
             headers = {
                 "headers": {
@@ -430,9 +505,10 @@ class kotakneo(Broker):
             return headers
 
     @classmethod
-    def _json_parser(cls,
-                     response: Response
-                     ) -> dict[Any, Any] | list[dict[Any, Any]]:
+    def _json_parser(
+        cls,
+        response: Response,
+    ) -> dict[Any, Any] | list[dict[Any, Any]]:
         """
         Parses the Json Repsonse Obtained from Broker.
 
@@ -447,17 +523,18 @@ class kotakneo(Broker):
         """
         json_response = cls.on_json_response(response)
 
-        stat = json_response.get('stat', None)
-        if stat == 'Ok' or not stat:
+        stat = json_response.get("stat", None)
+        if stat == "Ok" or not stat:
             return json_response
 
-        error = json_response.get('errMsg', None)
+        error = json_response.get("errMsg", None)
         raise ResponseError(cls.id + " " + error)
 
     @classmethod
-    def _orderhistory_json_parser(cls,
-                                  order: dict,
-                                  ) -> dict[Any, Any]:
+    def _orderhistory_json_parser(
+        cls,
+        order: dict,
+    ) -> dict[Any, Any]:
         """
         Parses Order History Json Response to a fenix Unified Order Response.
 
@@ -499,9 +576,10 @@ class kotakneo(Broker):
         return parsed_order
 
     @classmethod
-    def _orderbook_json_parser(cls,
-                               order: dict,
-                               ) -> dict[Any, Any]:
+    def _orderbook_json_parser(
+        cls,
+        order: dict,
+    ) -> dict[Any, Any]:
         """
         Parse Orderbook Order Json Response.
 
@@ -543,10 +621,11 @@ class kotakneo(Broker):
         return parsed_order
 
     @classmethod
-    def _create_order_parser(cls,
-                             response: Response,
-                             headers: dict
-                             ) -> dict[Any, Any]:
+    def _create_order_parser(
+        cls,
+        response: Response,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Parse Json Response Obtained from Broker After Placing Order to get order_id
         and fetching the json repsone for the said order_id.
@@ -565,101 +644,30 @@ class kotakneo(Broker):
 
         return order
 
-
     # Order Functions
 
-
     @classmethod
-    def create_eq_nfo_order(cls,
-                            quantity: int,
-                            side: str,
-                            headers: dict,
-                            token_dict: dict,
-                            price: float = 0.0,
-                            trigger: float = 0.0,
-                            product: str = Product.MIS,
-                            validity: str = Validity.DAY,
-                            variety: str = Variety.REGULAR,
-                            unique_id: str = UniqueID.DEFORDER
-                            ) -> dict[Any, Any]:
-        """
-        Place an Order in F&O and Equity Segment.
-
-        Parameters:
-            quantity (int): Order quantity.
-            side (str): Order Side: "BUY", "SELL".
-            headers (dict): headers to send order request with.
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
-            price (float): price of the order. Defaults to 0.0.
-            trigger (float): trigger price of the order. Defaults to 0.0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.DEFORDER.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-
-        exchange = token_dict["Exchange"]
-        symbol = token_dict["Symbol"]
-
-        order_data = {
-            "es": exchange,
-            "ts": symbol,
-            "pr": price,
-            "tp": trigger,
-            "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
-            "pt": cls.req_order_type[order_type],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
-            "am": "YES" if variety == Variety.AMO else "NO",
-            "ig": unique_id,
-            "dq": "0",
-            "mp": "0",
-            "pf": "N",
-            "os": "API"
-        }
-
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
-
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def create_order(cls,
-                     token_dict: dict,
-                     quantity: int,
-                     side: str,
-                     product: str,
-                     validity: str,
-                     variety: str,
-                     unique_id: str,
-                     headers: dict,
-                     price: float = 0.0,
-                     trigger: float = 0.0,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
-                     ) -> dict[Any, Any]:
-
+    def create_order(
+        cls,
+        token_dict: dict,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        unique_id: str,
+        headers: dict,
+        price: float = 0.0,
+        trigger: float = 0.0,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+    ) -> dict[Any, Any]:
         """
         Place an Order.
 
         Parameters:
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
             product (str, optional): Order product.
@@ -687,55 +695,61 @@ class kotakneo(Broker):
 
         if not target:
             order_data = {
-                "es": token_dict["Exchange"],
+                "es": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "ts": token_dict["Symbol"],
                 "pr": price,
                 "tp": trigger,
                 "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
+                "tt": cls._key_mapper(cls.req_side, side, "side"),
                 "pt": cls.req_order_type[order_type],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "pc": cls._key_mapper(cls.req_product, product, "product"),
+                "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
                 "am": "YES" if variety == Variety.AMO else "NO",
                 "ig": unique_id,
                 "dq": "0",
                 "mp": "0",
                 "pf": "N",
-                "os": "API"
+                "os": "API",
             }
 
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order(cls,
-                     token_dict: dict,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.REGULAR,
-                     ) -> dict[Any, Any]:
+    def market_order(
+        cls,
+        token_dict: dict,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Market Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
@@ -752,56 +766,62 @@ class kotakneo(Broker):
         """
         if not target:
             order_data = {
-                "es": token_dict["Exchange"],
+                "es": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "ts": token_dict["Symbol"],
                 "pr": "0",
                 "tp": "0",
                 "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
+                "tt": cls._key_mapper(cls.req_side, side, "side"),
                 "pt": cls.req_order_type[OrderType.MARKET],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "pc": cls._key_mapper(cls.req_product, product, "product"),
+                "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
                 "am": "YES" if variety == Variety.AMO else "NO",
                 "ig": unique_id,
                 "dq": "0",
                 "mp": "0",
                 "pf": "N",
-                "os": "API"
+                "os": "API",
             }
 
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order(cls,
-                    token_dict: dict,
-                    price: float,
-                    quantity: int,
-                    side: str,
-                    unique_id: str,
-                    headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
-                    product: str = Product.MIS,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.REGULAR,
-                    ) -> dict[Any, Any]:
+    def limit_order(
+        cls,
+        token_dict: dict,
+        price: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Limit Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             price (float): Order price.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
@@ -819,57 +839,63 @@ class kotakneo(Broker):
         """
         if not target:
             order_data = {
-                "es": token_dict["Exchange"],
+                "es": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "ts": token_dict["Symbol"],
                 "pr": price,
                 "tp": "0",
                 "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
+                "tt": cls._key_mapper(cls.req_side, side, "side"),
                 "pt": cls.req_order_type[OrderType.LIMIT],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "pc": cls._key_mapper(cls.req_product, product, "product"),
+                "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
                 "am": "YES" if variety == Variety.AMO else "NO",
                 "ig": unique_id,
                 "dq": "0",
                 "mp": "0",
                 "pf": "N",
-                "os": "API"
+                "os": "API",
             }
 
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order(cls,
-                 token_dict: dict,
-                 price: float,
-                 trigger: float,
-                 quantity: int,
-                 side: str,
-                 unique_id: str,
-                 headers: dict,
-                 target: float = 0.0,
-                 stoploss: float = 0.0,
-                 trailing_sl: float = 0.0,
-                 product: str = Product.MIS,
-                 validity: str = Validity.DAY,
-                 variety: str = Variety.STOPLOSS,
-                 ) -> dict[Any, Any]:
+    def sl_order(
+        cls,
+        token_dict: dict,
+        price: float,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             price (float): Order price.
             trigger (float): order trigger price.
             quantity (int): Order quantity.
@@ -888,56 +914,62 @@ class kotakneo(Broker):
         """
         if not target:
             order_data = {
-                "es": token_dict["Exchange"],
+                "es": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "ts": token_dict["Symbol"],
                 "pr": price,
                 "tp": trigger,
                 "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
+                "tt": cls._key_mapper(cls.req_side, side, "side"),
                 "pt": cls.req_order_type[OrderType.SL],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "pc": cls._key_mapper(cls.req_product, product, "product"),
+                "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
                 "am": "YES" if variety == Variety.AMO else "NO",
                 "ig": unique_id,
                 "dq": "0",
                 "mp": "0",
                 "pf": "N",
-                "os": "API"
+                "os": "API",
             }
 
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order(cls,
-                  token_dict: dict,
-                  trigger: float,
-                  quantity: int,
-                  side: str,
-                  unique_id: str,
-                  headers: dict,
-                  target: float = 0.0,
-                  stoploss: float = 0.0,
-                  trailing_sl: float = 0.0,
-                  product: str = Product.MIS,
-                  validity: str = Validity.DAY,
-                  variety: str = Variety.STOPLOSS,
-                  ) -> dict[Any, Any]:
+    def slm_order(
+        cls,
+        token_dict: dict,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             trigger (float): order trigger price.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
@@ -955,52 +987,58 @@ class kotakneo(Broker):
         """
         if not target:
             order_data = {
-                "es": token_dict["Exchange"],
+                "es": cls._key_mapper(
+                    cls.req_exchange, token_dict["Exchange"], "exchange"
+                ),
                 "ts": token_dict["Symbol"],
                 "pr": "0",
                 "tp": trigger,
                 "qt": quantity,
-                "tt": cls._key_mapper(cls.req_side, side, 'side'),
+                "tt": cls._key_mapper(cls.req_side, side, "side"),
                 "pt": cls.req_order_type[OrderType.SLM],
-                "pc": cls._key_mapper(cls.req_product, product, 'product'),
-                "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+                "pc": cls._key_mapper(cls.req_product, product, "product"),
+                "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
                 "am": "YES" if variety == Variety.AMO else "NO",
                 "ig": unique_id,
                 "dq": "0",
                 "mp": "0",
                 "pf": "N",
-                "os": "API"
+                "os": "API",
             }
 
         else:
             raise InputError(f"BO Orders Not Available in {cls.id}.")
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
     # Equity Order Functions
 
-
     @classmethod
-    def create_order_eq(cls,
-                        exchange: str,
-                        symbol: str,
-                        quantity: int,
-                        side: str,
-                        product: str,
-                        validity: str,
-                        variety: str,
-                        unique_id: str,
-                        headers: dict,
-                        price: float = 0.0,
-                        trigger: float = 0.0,
-                        ) -> dict[Any, Any]:
+    def create_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        unique_id: str,
+        headers: dict,
+        price: float = 0.0,
+        trigger: float = 0.0,
+    ) -> dict[Any, Any]:
         """
         Place an Order in NSE/BSE Equity Segment.
 
@@ -1016,9 +1054,6 @@ class kotakneo(Broker):
             headers (dict): headers to send order request with.
             price (float): Order price
             trigger (float): order trigger price
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
             dict: fenix Unified Order Response.
@@ -1026,7 +1061,7 @@ class kotakneo(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -1045,38 +1080,44 @@ class kotakneo(Broker):
             "pr": price,
             "tp": trigger,
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[order_type],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_eq(cls,
-                        exchange: str,
-                        symbol: str,
-                        quantity: int,
-                        side: str,
-                        unique_id: str,
-                        headers: dict,
-                        product: str = Product.MIS,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.REGULAR,
-                        ) -> dict[Any, Any]:
+    def market_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Market Order in NSE/BSE Equity Segment.
 
@@ -1087,9 +1128,6 @@ class kotakneo(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -1100,7 +1138,7 @@ class kotakneo(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -1110,39 +1148,45 @@ class kotakneo(Broker):
             "pr": "0",
             "tp": "0",
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[OrderType.MARKET],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_eq(cls,
-                       exchange: str,
-                       symbol: str,
-                       price: float,
-                       quantity: int,
-                       side: str,
-                       unique_id: str,
-                       headers: dict,
-                       product: str = Product.MIS,
-                       validity: str = Validity.DAY,
-                       variety: str = Variety.REGULAR,
-                       ) -> dict[Any, Any]:
+    def limit_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        price: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Limit Order in NSE/BSE Equity Segment.
 
@@ -1154,9 +1198,6 @@ class kotakneo(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -1167,7 +1208,7 @@ class kotakneo(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -1177,40 +1218,46 @@ class kotakneo(Broker):
             "pr": price,
             "tp": "0",
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[OrderType.LIMIT],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_eq(cls,
-                    exchange: str,
-                    symbol: str,
-                    price: float,
-                    trigger: float,
-                    quantity: int,
-                    side: str,
-                    unique_id: str,
-                    headers: dict,
-                    product: str = Product.MIS,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.STOPLOSS,
-                    ) -> dict[Any, Any]:
+    def sl_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        price: float,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss Order in NSE/BSE Equity Segment.
 
@@ -1223,9 +1270,6 @@ class kotakneo(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -1236,7 +1280,7 @@ class kotakneo(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -1246,39 +1290,45 @@ class kotakneo(Broker):
             "pr": price,
             "tp": trigger,
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[OrderType.SL],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_eq(cls,
-                     exchange: str,
-                     symbol: str,
-                     trigger: float,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.STOPLOSS,
-                     ) -> dict[Any, Any]:
+    def slm_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order in NSE/BSE Equity Segment.
 
@@ -1290,9 +1340,6 @@ class kotakneo(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -1303,7 +1350,7 @@ class kotakneo(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         symbol = detail["Symbol"]
 
@@ -1313,66 +1360,69 @@ class kotakneo(Broker):
             "pr": "0",
             "tp": trigger,
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[OrderType.SLM],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
-
     # NFO Order Functions
 
-
     @classmethod
-    def create_order_fno(cls,
-                         exchange: str,
-                         root: str,
-                         expiry: str,
-                         option: str,
-                         strike_price: str,
-                         quantity: int,
-                         side: str,
-                         product: str,
-                         validity: str,
-                         variety: str,
-                         headers: dict,
-                         price: float = 0.0,
-                         trigger: float = 0.0,
-                         unique_id: str | None = None,
-                         ) -> dict[Any, Any]:
+    def create_order_fno(
+        cls,
+        exchange: str,
+        root: str,
+        expiry: str,
+        option: str,
+        strike_price: str,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        headers: dict,
+        price: float = 0.0,
+        trigger: float = 0.0,
+        unique_id: str | None = None,
+    ) -> dict[Any, Any]:
         """
         Place an Order in F&O Segment.
 
         Parameters:
+            exchange (str):  Exchange to place the order in.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'.
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
-            price (float): price of the order.
-            trigger (float): trigger price of the order.
+            strike_price (str): Strike Price of the Option.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
+            product (str): Order product.
+            validity (str): Order validity.
+            variety (str): Order variety.
+            unique_id (str): Unique user orderid.
             headers (dict): headers to send order request with.
-            root (str): Derivative: BANKNIFTY, NIFTY.
-            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.DAY.
+            price (float): price of the order.
+            trigger (float): trigger price of the order.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1380,16 +1430,16 @@ class kotakneo(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
 
         if not price and trigger:
             order_type = OrderType.SLM
@@ -1400,65 +1450,71 @@ class kotakneo(Broker):
         else:
             order_type = OrderType.SL
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
 
         order_data = {
-            "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "es": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "ts": symbol,
             "pr": price,
             "tp": trigger,
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[order_type],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def market_order_fno(cls,
-                         option: str,
-                         strike_price: str,
-                         quantity: int,
-                         side: str,
-                         headers: dict,
-                         root: str = Root.BNF,
-                         expiry: str = WeeklyExpiry.CURRENT,
-                         exchange: str = ExchangeCode.NFO,
-                         product: str = Product.MIS,
-                         validity: str = Validity.DAY,
-                         variety: str = Variety.REGULAR,
-                         unique_id: str | None = None,
-                         ) -> dict[Any, Any]:
+    def market_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+        unique_id: str | None = None,
+    ) -> dict[Any, Any]:
         """
         Place Market Order in F&O Segment.
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1466,76 +1522,82 @@ class kotakneo(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
 
         order_data = {
-            "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "es": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "ts": symbol,
             "pr": "0",
             "tp": "0",
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[OrderType.MARKET],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def limit_order_fno(cls,
-                        option: str,
-                        strike_price: str,
-                        price: float,
-                        quantity: int,
-                        side: str,
-                        headers: dict,
-                        root: str = Root.BNF,
-                        expiry: str = WeeklyExpiry.CURRENT,
-                        exchange: str = ExchangeCode.NFO,
-                        product: str = Product.MIS,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.REGULAR,
-                        unique_id: str | None = None,
-                        ) -> dict[Any, Any]:
+    def limit_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        price: float,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+        unique_id: str | None = None,
+    ) -> dict[Any, Any]:
         """
         Place Limit Order in F&O Segment.
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             price (float): price of the order.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1543,66 +1605,72 @@ class kotakneo(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
 
         order_data = {
-            "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "es": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "ts": symbol,
             "pr": price,
             "tp": "0",
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[OrderType.LIMIT],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def sl_order_fno(cls,
-                     option: str,
-                     strike_price: str,
-                     price: float,
-                     trigger: float,
-                     quantity: int,
-                     side: str,
-                     headers: dict,
-                     root: str = Root.BNF,
-                     expiry: str = WeeklyExpiry.CURRENT,
-                     exchange: str = ExchangeCode.NFO,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.STOPLOSS,
-                     unique_id: str | None = None,
-                     ) -> dict[Any, Any]:
+    def sl_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        price: float,
+        trigger: float,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+        unique_id: str | None = None,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss Order in F&O Segment.
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             price (float): price of the order.
             trigger (float): trigger price of the order.
             quantity (int): Order quantity.
@@ -1610,11 +1678,11 @@ class kotakneo(Broker):
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1622,76 +1690,82 @@ class kotakneo(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
 
         order_data = {
-            "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "es": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "ts": symbol,
             "pr": price,
             "tp": trigger,
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[OrderType.SL],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def slm_order_fno(cls,
-                      option: str,
-                      strike_price: str,
-                      trigger: float,
-                      quantity: int,
-                      side: str,
-                      headers: dict,
-                      root: str = Root.BNF,
-                      expiry: str = WeeklyExpiry.CURRENT,
-                      exchange: str = ExchangeCode.NFO,
-                      product: str = Product.MIS,
-                      validity: str = Validity.DAY,
-                      variety: str = Variety.STOPLOSS,
-                      unique_id: str | None = None,
-                      ) -> dict[Any, Any]:
+    def slm_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        trigger: float,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+        unique_id: str | None = None,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order in F&O Segment.
 
         Parameters:
             option (str): Option Type: 'CE', 'PE'.
-            strike_price (int): Strike Price of the Option.
+            strike_price (str): Strike Price of the Option.
             trigger (float): trigger price of the order.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1699,51 +1773,55 @@ class kotakneo(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
+        symbol = detail["Symbol"]
 
         order_data = {
-            "es": cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            "es": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             "ts": symbol,
             "pr": "0",
             "tp": trigger,
             "qt": quantity,
-            "tt": cls._key_mapper(cls.req_side, side, 'side'),
+            "tt": cls._key_mapper(cls.req_side, side, "side"),
             "pt": cls.req_order_type[OrderType.SLM],
-            "pc": cls._key_mapper(cls.req_product, product, 'product'),
-            "rt": cls._key_mapper(cls.req_validity, validity, 'validity'),
+            "pc": cls._key_mapper(cls.req_product, product, "product"),
+            "rt": cls._key_mapper(cls.req_validity, validity, "validity"),
             "am": "YES" if variety == Variety.AMO else "NO",
             "ig": unique_id,
             "dq": "0",
             "mp": "0",
             "pf": "N",
-            "os": "API"
+            "os": "API",
         }
 
-        params = {'sId': headers["sId"]}
-        data = {'jData': cls.json_dumps(order_data)}
+        params = {"sId": headers["sId"]}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["place_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["place_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
-
     # Order Details, OrderBook & TradeBook
 
-
     @classmethod
-    def fetch_raw_orderbook(cls,
-                            headers: dict
-                            ) -> list[dict]:
+    def fetch_raw_orderbook(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Raw Orderbook Details, without any Standardaization.
 
@@ -1754,8 +1832,12 @@ class kotakneo(Broker):
             list[dict]: Raw Broker Orderbook Response.
         """
         params = {"sId": headers["sId"]}
-        response = cls.fetch(method="GET", url=cls.urls["orderbook"],
-                             params=params, headers=headers["headers"])
+        response = cls.fetch(
+            method="GET",
+            url=cls.urls["orderbook"],
+            params=params,
+            headers=headers["headers"],
+        )
         try:
             return cls._json_parser(response)
 
@@ -1763,10 +1845,11 @@ class kotakneo(Broker):
             return []
 
     @classmethod
-    def fetch_raw_orderhistory(cls,
-                               order_id: str,
-                               headers: dict
-                               ) -> list[dict]:
+    def fetch_raw_orderhistory(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Raw History of an order.
 
@@ -1778,14 +1861,19 @@ class kotakneo(Broker):
             list[dict]: Raw Broker Order History Response.
         """
         params = {"sId": headers["sId"]}
-        order_data = {'nOrdNo': str(order_id)}
+        order_data = {"nOrdNo": str(order_id)}
         data = {"jData": cls.json_dumps(order_data)}
 
         try:
-            response = cls.fetch(method="POST", url=cls.urls["order_history"],
-                                 params=params, data=data, headers=headers["headers"])
+            response = cls.fetch(
+                method="POST",
+                url=cls.urls["order_history"],
+                params=params,
+                data=data,
+                headers=headers["headers"],
+            )
         except BrokerError as exc:
-            if 'Cancel, Modify and OrderHistory will only' in str(exc):
+            if "Cancel, Modify and OrderHistory will only" in str(exc):
                 raise InputError({"This order_id does not exist."}) from exc
             else:
                 raise exc
@@ -1793,9 +1881,10 @@ class kotakneo(Broker):
         return cls._json_parser(response)
 
     @classmethod
-    def fetch_orderbook(cls,
-                        headers: dict
-                        ) -> list[dict]:
+    def fetch_orderbook(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Orderbook Details.
 
@@ -1815,9 +1904,10 @@ class kotakneo(Broker):
         return orders
 
     @classmethod
-    def fetch_tradebook(cls,
-                        headers: dict
-                        ) -> list[dict]:
+    def fetch_tradebook(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Tradebook Details.
 
@@ -1828,16 +1918,21 @@ class kotakneo(Broker):
             list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
         """
         params = {"sId": headers["sId"]}
-        response = cls.fetch(method="GET", url=cls.urls["tradebook"],
-                             params=params, headers=headers["headers"])
+        response = cls.fetch(
+            method="GET",
+            url=cls.urls["tradebook"],
+            params=params,
+            headers=headers["headers"],
+        )
 
         info = cls._json_parser(response)
         return info
 
     @classmethod
-    def fetch_orders(cls,
-                     headers: dict
-                     ) -> list[dict]:
+    def fetch_orders(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch OrderBook Details which is unified across all brokers.
         Use This if you want Avg price, etc. values which sometimes unavailable
@@ -1855,10 +1950,11 @@ class kotakneo(Broker):
         return cls.fetch_orderbook(headers=headers)
 
     @classmethod
-    def fetch_order(cls,
-                    order_id: str,
-                    headers: dict
-                    ) -> dict[Any, Any]:
+    def fetch_order(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Order Details.
 
@@ -1876,10 +1972,11 @@ class kotakneo(Broker):
         return cls._orderhistory_json_parser(order)
 
     @classmethod
-    def fetch_orderhistory(cls,
-                           order_id: str,
-                           headers: dict
-                           ) -> list[dict]:
+    def fetch_orderhistory(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch History of an order.
 
@@ -1899,20 +1996,19 @@ class kotakneo(Broker):
 
         return order_history
 
-
     # Order Modification & Sq Off
 
-
     @classmethod
-    def modify_order(cls,
-                     order_id: str,
-                     headers: dict,
-                     price: float | None = None,
-                     trigger: float | None = None,
-                     quantity: int | None = None,
-                     order_type: str | None = None,
-                     validity: str | None = None,
-                     ) -> dict[Any, Any]:
+    def modify_order(
+        cls,
+        order_id: str,
+        headers: dict,
+        price: float | None = None,
+        trigger: float | None = None,
+        quantity: int | None = None,
+        order_type: str | None = None,
+        validity: str | None = None,
+    ) -> dict[Any, Any]:
         """
         Modify an open order.
 
@@ -1934,7 +2030,7 @@ class kotakneo(Broker):
         params = {"sId": headers["sId"]}
         order_data = {
             "no": order_info["nOrdNo"],
-            "tk": order_info['tok'],
+            "tk": order_info["tok"],
             "es": order_info["exSeg"],
             "ts": order_info["trdSym"],
             "pr": str(price or order_info["prc"]),
@@ -1942,27 +2038,41 @@ class kotakneo(Broker):
             "qt": str(quantity or order_info["qty"]),
             "fq": str(order_info["fldQty"]),
             "tt": order_info["trnsTp"],
-            "pt": cls._key_mapper(cls.req_order_type, order_type, 'order_type') if order_type else order_info["prcTp"],
+            "pt": (
+                cls._key_mapper(cls.req_order_type, order_type, "order_type")
+                if order_type
+                else order_info["prcTp"]
+            ),
             "pc": order_info["prod"],
             "am": "YES" if order_info["ordGenTp"] == Variety.AMO else "NO",
-            "vd": cls._key_mapper(cls.req_validity, validity, 'validity') if validity else order_info['ordDur'],
+            "vd": (
+                cls._key_mapper(cls.req_validity, validity, "validity")
+                if validity
+                else order_info["ordDur"]
+            ),
             "dq": "0",
             "mp": "0",
             "dd": "NA",
         }
         # print(order_data)
-        data = {'jData': cls.json_dumps(order_data)}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["modify_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["modify_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         return cls._create_order_parser(response=response, headers=headers)
 
     @classmethod
-    def cancel_order(cls,
-                     order_id: str,
-                     headers: dict
-                     ) -> dict[Any, Any]:
+    def cancel_order(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Cancel an open order.
 
@@ -1980,12 +2090,17 @@ class kotakneo(Broker):
         order_data = {
             "on": str(order_id),
             "am": "YES" if order["ordGenTp"] == Variety.AMO else "NO",
-            "ts": order["trdSym"]
+            "ts": order["trdSym"],
         }
-        data = {'jData': cls.json_dumps(order_data)}
+        data = {"jData": cls.json_dumps(order_data)}
 
-        response = cls.fetch(method="POST", url=cls.urls["cancel_order"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["cancel_order"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
 
         info = cls._json_parser(response)
 
@@ -1994,14 +2109,13 @@ class kotakneo(Broker):
 
         return order
 
-
     # Positions, Account Limits & Profile
 
-
     @classmethod
-    def fetch_day_positions(cls,
-                            headers: dict,
-                            ) -> dict[Any, Any]:
+    def fetch_day_positions(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch the Day's Account Positions.
 
@@ -2012,8 +2126,12 @@ class kotakneo(Broker):
             dict[Any, Any]: fenix Unified Position Response.
         """
         params = {"sId": headers["sId"]}
-        response = cls.fetch(method="GET", url=cls.urls["positions"],
-                             params=params, headers=headers["headers"])
+        response = cls.fetch(
+            method="GET",
+            url=cls.urls["positions"],
+            params=params,
+            headers=headers["headers"],
+        )
 
         try:
             return cls._json_parser(response)
@@ -2022,9 +2140,10 @@ class kotakneo(Broker):
                 return []
 
     @classmethod
-    def fetch_net_positions(cls,
-                            headers: dict,
-                            ) -> dict[Any, Any]:
+    def fetch_net_positions(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Total Account Positions.
 
@@ -2037,9 +2156,10 @@ class kotakneo(Broker):
         return cls.fetch_day_positions(headers=headers)
 
     @classmethod
-    def fetch_positions(cls,
-                        headers: dict,
-                        ) -> dict[Any, Any]:
+    def fetch_positions(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Day & Net Account Positions.
 
@@ -2052,9 +2172,10 @@ class kotakneo(Broker):
         return cls.fetch_day_positions(headers=headers)
 
     @classmethod
-    def fetch_holdings(cls,
-                       headers: dict,
-                       ) -> dict[Any, Any]:
+    def fetch_holdings(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Account Holdings.
 
@@ -2064,9 +2185,13 @@ class kotakneo(Broker):
         Returns:
             dict[Any, Any]: fenix Unified Positions Response.
         """
-        params = {'alt': 'false'}
-        response = cls.fetch(method="GET", url=cls.urls['holdings'],
-                             params=params, headers=headers["headers"])
+        params = {"alt": "false"}
+        response = cls.fetch(
+            method="GET",
+            url=cls.urls["holdings"],
+            params=params,
+            headers=headers["headers"],
+        )
         try:
             return cls._json_parser(response)
         except ResponseError as e:
@@ -2074,9 +2199,10 @@ class kotakneo(Broker):
                 return []
 
     @classmethod
-    def rms_limits(cls,
-                   headers: dict
-                   ) -> dict[Any, Any]:
+    def rms_limits(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Risk Management System Limits.
 
@@ -2089,6 +2215,11 @@ class kotakneo(Broker):
         params = {"sId": headers["sId"]}
         data = {"jData": "{'seg':'CASH','exch':'NSE','prod':'ALL'}"}
 
-        response = cls.fetch(method="POST", url=cls.urls["rms_limits"],
-                             params=params, data=data, headers=headers["headers"])
+        response = cls.fetch(
+            method="POST",
+            url=cls.urls["rms_limits"],
+            params=params,
+            data=data,
+            headers=headers["headers"],
+        )
         return cls._json_parser(response)

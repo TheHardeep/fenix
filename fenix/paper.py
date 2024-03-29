@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from requests.models import Response
 
 
-
 class paper(Broker):
     """
     Paper fenix Broker Class.
@@ -40,18 +39,22 @@ class paper(Broker):
         fenix.paper: fenix Paper Broker Object.
     """
 
-
     # Market Data Dictonaries
 
     indices = {}
     eq_tokens = {}
-    nfo_tokens = {}
-    token_params = ["user_id", "password", "birth_year", "totpstr", "api_key"]
+    fno_tokens = {}
+    token_params = [
+        "user_id",
+        "password",
+        "birth_year",
+        "totpstr",
+        "api_key",
+    ]
     orderbook = []
     positions = {}
-    id = 'paper'
+    id = "paper"
     _session = Broker._create_session()
-
 
     # Base URLs
 
@@ -75,7 +78,7 @@ class paper(Broker):
         OrderType.MARKET: "MARKET",
         OrderType.LIMIT: "LIMIT",
         OrderType.SL: "SL",
-        OrderType.SLM: "SL-M"
+        OrderType.SLM: "SL-M",
     }
 
     req_product = {
@@ -83,7 +86,7 @@ class paper(Broker):
         Product.NRML: "NRML",
         Product.CNC: "CNC",
         Product.CO: "CO",
-        Product.BO: "BO"
+        Product.BO: "BO",
     }
 
     req_side = {
@@ -102,8 +105,6 @@ class paper(Broker):
         Variety.BO: "BO",
         Variety.AMO: "AMO",
     }
-
-
 
     # response_dicts
 
@@ -151,7 +152,7 @@ class paper(Broker):
         "collateralvalue": "0.00",
         "rmsIpoAmnt": "0",
         "cncUnrealizedMtomPrsnt": "0.00",
-        "premiumPrsnt": "0.00"
+        "premiumPrsnt": "0.00",
     }
 
     profile_dict = {
@@ -163,73 +164,95 @@ class paper(Broker):
         "accountName": "KRATOS",
         "cellAddr": "8750407885",
         "emailAddr": "GODOFWAR@GMAIL.COM",
-        "exchEnabled": "bse_cm|bse_fo|bcs_fo|cde_fo|mcx_fo|nse_cm|nse_fo|"
+        "exchEnabled": "bse_cm|bse_fo|bcs_fo|cde_fo|mcx_fo|nse_cm|nse_fo|",
     }
 
-
     # NFO Script Fetch
-
 
     @classmethod
     def create_eq_tokens(cls) -> dict:
         """
-        Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Downlaods NSE & BSE Equity Info for F&O Segment.
+        Stores them in the paper.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
         """
-        nse_url = cls.base_urls["market_data"].replace(ExchangeCode.NFO, ExchangeCode.BSE)
-        df_bse = cls.data_reader(link=nse_url, filetype='csv')
+        nse_url = cls.base_urls["market_data"].replace(
+            ExchangeCode.NFO, ExchangeCode.BSE
+        )
+        df_bse = cls.data_reader(link=nse_url, filetype="csv")
 
-        df_bse = df_bse[(df_bse['Instrument Type'] == "E")]
-        df_bse = df_bse[["Trading Symbol", 'Token', "Lot Size", "Tick Size", "Exch"]]
-        df_bse.rename({"Trading Symbol": "Symbol",
-                       "Tick Size": 'TickSize', "Lot Size": "LotSize", "Exch": "Exchange"}, axis=1, inplace=True)
+        df_bse = df_bse[(df_bse["Instrument Type"] == "E")]
+        df_bse = df_bse[["Trading Symbol", "Token", "Lot Size", "Tick Size", "Exch"]]
+        df_bse.rename(
+            {
+                "Trading Symbol": "Symbol",
+                "Tick Size": "TickSize",
+                "Lot Size": "LotSize",
+                "Exch": "Exchange",
+            },
+            axis=1,
+            inplace=True,
+        )
 
-        df_bse.set_index(df_bse['Symbol'], inplace=True)
+        df_bse.set_index(df_bse["Symbol"], inplace=True)
 
-        df_bse['TickSize'] = df_bse['TickSize'].astype(float)
-        df_bse['LotSize'] = df_bse['LotSize'].astype(int)
+        df_bse["TickSize"] = df_bse["TickSize"].astype(float)
+        df_bse["LotSize"] = df_bse["LotSize"].astype(int)
 
+        bse_url = cls.base_urls["market_data"].replace(
+            ExchangeCode.NFO, ExchangeCode.NSE
+        )
+        df_nse = cls.data_reader(link=bse_url, filetype="csv")
 
-        bse_url = cls.base_urls["market_data"].replace(ExchangeCode.NFO, ExchangeCode.NSE)
-        df_nse = cls.data_reader(link=bse_url, filetype='csv')
+        df_nse = df_nse[(df_nse["Group Name"] == "EQ")]
+        df_nse = df_nse[
+            ["Symbol", "Trading Symbol", "Token", "Lot Size", "Tick Size", "Exch"]
+        ]
+        df_nse.rename(
+            {
+                "Symbol": "Index",
+                "Trading Symbol": "Symbol",
+                "Tick Size": "TickSize",
+                "Lot Size": "LotSize",
+                "Exch": "Exchange",
+            },
+            axis=1,
+            inplace=True,
+        )
 
-        df_nse = df_nse[(df_nse['Group Name'] == "EQ")]
-        df_nse = df_nse[["Symbol", "Trading Symbol", 'Token', "Lot Size", "Tick Size", "Exch"]]
-        df_nse.rename({"Symbol": "Index", "Trading Symbol": "Symbol",
-                       "Tick Size": 'TickSize', "Lot Size": "LotSize", "Exch": "Exchange"}, axis=1, inplace=True)
-
-        df_nse.set_index(df_nse['Index'], inplace=True)
+        df_nse.set_index(df_nse["Index"], inplace=True)
         df_nse.drop(columns="Index", inplace=True)
 
+        df_nse["TickSize"] = df_nse["TickSize"].astype(float)
+        df_nse["LotSize"] = df_nse["LotSize"].astype(int)
 
-        df_nse['TickSize'] = df_nse['TickSize'].astype(float)
-        df_nse['LotSize'] = df_nse['LotSize'].astype(int)
-
-
-        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient='index')
-        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient='index')
+        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient="index")
+        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient="index")
 
         return cls.eq_tokens
 
     @classmethod
     def create_indices(cls) -> dict:
         """
-        Gives Indices Info for F&O Segment.
-        Stores them in the aliceblue.indices Dictionary.
+        Downloads all the Broker Indices Token data.
+        Stores them in the paper.indices Dictionary.
 
         Returns:
             dict: Unified fenix indices format.
         """
         indices_url = cls.base_urls["market_data"].replace(ExchangeCode.NFO, "INDICES")
-        df = cls.data_reader(link=indices_url, filetype='csv')
+        df = cls.data_reader(link=indices_url, filetype="csv")
 
-        df.rename({"symbol": "Symbol", "token": "Token", "exch": "Exchange"}, axis=1, inplace=True)
-        df.index = df['Symbol']
+        df.rename(
+            {"symbol": "Symbol", "token": "Token", "exch": "Exchange"},
+            axis=1,
+            inplace=True,
+        )
+        df.index = df["Symbol"]
 
-        indices = df.to_dict(orient='index')
+        indices = df.to_dict(orient="index")
 
         indices[Root.BNF] = indices["NIFTY BANK"]
         indices[Root.NF] = indices["NIFTY 50"]
@@ -243,8 +266,8 @@ class paper(Broker):
     @classmethod
     def create_fno_tokens(cls) -> dict:
         """
-        Creates BANKNIFTY & NIFTY Current, Next and Far Expiries;
-        Stores them in the aliceblue.nfo_tokens Dictionary.
+        Downloades Token Data for the FNO Segment for the 3 latest Weekly Expiries.
+        Stores them in the paper.fno_tokens Dictionary.
 
         Raises:
             TokenDownloadError: Any Error Occured is raised through this Error Type.
@@ -254,62 +277,75 @@ class paper(Broker):
 
             df_nfo = df_nfo[
                 (
-                    (df_nfo['Symbol'] == 'BANKNIFTY') |
-                    (df_nfo['Symbol'] == 'NIFTY') |
-                    (df_nfo['Symbol'] == 'FINNIFTY') |
-                    (df_nfo['Symbol'] == 'MIDCPNIFTY')
-                ) &
-                (
-                    (df_nfo['Instrument Type'] == 'OPTIDX')
+                    (df_nfo["Symbol"] == "BANKNIFTY")
+                    | (df_nfo["Symbol"] == "NIFTY")
+                    | (df_nfo["Symbol"] == "FINNIFTY")
+                    | (df_nfo["Symbol"] == "MIDCPNIFTY")
                 )
+                & ((df_nfo["Instrument Type"] == "OPTIDX"))
             ]
 
-            bfo_url = cls.base_urls["market_data"].replace(ExchangeCode.NFO, ExchangeCode.BFO)
-            df_bfo = cls.data_reader(link=bfo_url, filetype='csv')
+            bfo_url = cls.base_urls["market_data"].replace(
+                ExchangeCode.NFO, ExchangeCode.BFO
+            )
+            df_bfo = cls.data_reader(link=bfo_url, filetype="csv")
 
             df_bfo = df_bfo[
-                (
-                    (df_bfo['Symbol'] == 'SENSEX') |
-                    (df_bfo['Symbol'] == 'BANKEX')
-                ) &
-                (
-                    ( df_bfo['Instrument Type'] == "IO")
-                )
-                ]
+                ((df_bfo["Symbol"] == "SENSEX") | (df_bfo["Symbol"] == "BANKEX"))
+                & ((df_bfo["Instrument Type"] == "IO"))
+            ]
 
             df = cls.concat_df([df_nfo, df_bfo])
 
-            df.rename({"Option Type": "Option", "Symbol": "Root", "Exch": "Exchange",
-                       "Expiry Date": "Expiry", "Trading Symbol": "Symbol",
-                       "Tick Size": 'TickSize', "Lot Size": "LotSize", "Strike Price": "StrikePrice"
-                       }, axis=1, inplace=True)
-            df = df[['Token', 'Symbol', 'Expiry', 'Option', 'StrikePrice',
-                     'LotSize', 'Root', 'TickSize', "Exchange"
-                     ]]
+            df.rename(
+                {
+                    "Option Type": "Option",
+                    "Symbol": "Root",
+                    "Exch": "Exchange",
+                    "Expiry Date": "Expiry",
+                    "Trading Symbol": "Symbol",
+                    "Tick Size": "TickSize",
+                    "Lot Size": "LotSize",
+                    "Strike Price": "StrikePrice",
+                },
+                axis=1,
+                inplace=True,
+            )
+            df = df[
+                [
+                    "Token",
+                    "Symbol",
+                    "Expiry",
+                    "Option",
+                    "StrikePrice",
+                    "LotSize",
+                    "Root",
+                    "TickSize",
+                    "Exchange",
+                ]
+            ]
 
-            df['StrikePrice'] = df['StrikePrice'].astype(int).astype(str)
-            df['Expiry'] = cls.pd_datetime(df['Expiry']).dt.date.astype(str)
+            df["StrikePrice"] = df["StrikePrice"].astype(int).astype(str)
+            df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
             df["Token"] = df["Token"].astype(int)
             df["TickSize"] = df["TickSize"].astype(float)
             df["LotSize"] = df["LotSize"].astype(float)
 
             expiry_data = cls.jsonify_expiry(data_frame=df)
-            cls.nfo_tokens = expiry_data
+            cls.fno_tokens = expiry_data
 
             return expiry_data
 
         except Exception as exc:
             raise TokenDownloadError({"Error": exc.args}) from exc
 
-
-
     # Headers & Json Parsers
 
-
     @classmethod
-    def create_headers(cls,
-                       params: dict = {},
-                       ) -> dict[str, str]:
+    def create_headers(
+        cls,
+        params: dict = {},
+    ) -> dict[str, str]:
         """
         Generate Headers used to access Endpoints in Paper.
 
@@ -321,25 +357,24 @@ class paper(Broker):
         """
 
         headers = {
-            "headers":
-                {
-                    "ID": "user_id",
-                    "AccessToken": "access_token",
-                    "Authorization": "Bearer user_id access_token",
-                    "X-SAS-Version": "2.0",
-                    "User-Agent": "fenix_Paper",
-                    "Content-Type": "application/json",
-                    "susertoken": "susertoken"
-                }
+            "headers": {
+                "ID": "user_id",
+                "AccessToken": "access_token",
+                "Authorization": "Bearer user_id access_token",
+                "X-SAS-Version": "2.0",
+                "User-Agent": "fenix_Paper",
+                "Content-Type": "application/json",
+                "susertoken": "susertoken",
+            }
         }
-
 
         return headers
 
     @classmethod
-    def _json_parser(cls,
-                     response: Response
-                     ) -> dict[Any, Any] | list[dict[Any, Any]]:
+    def _json_parser(
+        cls,
+        response: Response,
+    ) -> dict[Any, Any] | list[dict[Any, Any]]:
         """
         Parses the Json Repsonse Obtained from Broker.
 
@@ -354,29 +389,30 @@ class paper(Broker):
         """
         json_response = cls.on_json_response(response)
         if isinstance(json_response, dict):
-            stat = json_response.get('stat', None)
+            stat = json_response.get("stat", None)
 
-            if stat == 'Ok' or not stat:
+            if stat == "Ok" or not stat:
                 return json_response
 
-            error = json_response.get('emsg', None)
-            error = error if error else json_response.get('Emsg', None)
+            error = json_response.get("emsg", None)
+            error = error if error else json_response.get("Emsg", None)
             raise ResponseError(cls.id + " " + error)
 
         if isinstance(json_response, list):
-            stat = json_response[0].get('stat', )
+            stat = json_response[0].get("stat")
 
-            if stat == 'Ok' or not stat:
+            if stat == "Ok" or not stat:
                 return json_response
 
-            error = json_response[0].get('emsg', None)
-            error = error if error else json_response[0].get('Emsg', str(json_response))
+            error = json_response[0].get("emsg", None)
+            error = error if error else json_response[0].get("Emsg", str(json_response))
             raise ResponseError(cls.id + " " + error)
 
     @classmethod
-    def _order_data_creator(cls,
-                            order: dict,
-                            ) -> dict[Any, Any]:
+    def _order_data_creator(
+        cls,
+        order: dict,
+    ) -> dict[Any, Any]:
         """
         Parse Orderbook Order Json Response.
 
@@ -389,7 +425,7 @@ class paper(Broker):
         parsed_order = {
             Order.ID: str(time.time_ns()),
             Order.USERID: order[Order.USERID],
-            Order.TIMESTAMP: datetime.now().replace(microsecond=0),
+            Order.TIMESTAMP: str(datetime.now().replace(microsecond=0)),
             Order.SYMBOL: order[Order.SYMBOL],
             Order.TOKEN: order[Order.TOKEN],
             Order.SIDE: order[Order.SIDE],
@@ -429,11 +465,18 @@ class paper(Broker):
         Returns:
             dict: Unified fenix Profile Response.
         """
-        exchanges_enabled = [ExchangeCode.NSE, ExchangeCode.BSE, ExchangeCode.NFO,
-                             ExchangeCode.BFO, ExchangeCode.MCX, ExchangeCode.CDS,
-                             ExchangeCode.BFO, ExchangeCode.BCD, ExchangeCode.NCO,
-                             ExchangeCode.BCO
-                             ]
+        exchanges_enabled = [
+            ExchangeCode.NSE,
+            ExchangeCode.BSE,
+            ExchangeCode.NFO,
+            ExchangeCode.BFO,
+            ExchangeCode.MCX,
+            ExchangeCode.CDS,
+            ExchangeCode.BFO,
+            ExchangeCode.BCD,
+            ExchangeCode.NCO,
+            ExchangeCode.BCO,
+        ]
 
         parsed_profile = {
             Profile.CLIENTID: "796894",
@@ -447,37 +490,35 @@ class paper(Broker):
             Profile.BANKACCNO: "5354983205",
             Profile.EXHCNAGESENABLED: exchanges_enabled,
             Profile.ENABLED: True,
-            Profile.INFO: cls.profile_dict
+            Profile.INFO: cls.profile_dict,
         }
 
         return parsed_profile
 
-
     # Order Functions
 
-
     @classmethod
-    def create_order(cls,
-                     token_dict: dict,
-                     quantity: int,
-                     side: str,
-                     product: str,
-                     validity: str,
-                     variety: str,
-                     unique_id: str,
-                     headers: dict,
-                     price: float = 0.0,
-                     trigger: float = 0.0,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
-                     ) -> dict[Any, Any]:
-
+    def create_order(
+        cls,
+        token_dict: dict,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        unique_id: str,
+        headers: dict,
+        price: float = 0.0,
+        trigger: float = 0.0,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+    ) -> dict[Any, Any]:
         """
         Place an Order.
 
         Parameters:
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
             product (str, optional): Order product.
@@ -516,8 +557,12 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: trailing_sl,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+            Order.EXCHANGE: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
+            Order.SEGMENT: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -527,26 +572,25 @@ class paper(Broker):
         return order
 
     @classmethod
-    def market_order(cls,
-                     token_dict: dict,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     target: float = 0.0,
-                     stoploss: float = 0.0,
-                     trailing_sl: float = 0.0,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.REGULAR,
-                     ) -> dict[Any, Any]:
+    def market_order(
+        cls,
+        token_dict: dict,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Market Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
@@ -574,8 +618,12 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: trailing_sl,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+            Order.EXCHANGE: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
+            Order.SEGMENT: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -585,27 +633,26 @@ class paper(Broker):
         return order
 
     @classmethod
-    def limit_order(cls,
-                    token_dict: dict,
-                    price: float,
-                    quantity: int,
-                    side: str,
-                    unique_id: str,
-                    headers: dict,
-                    target: float = 0.0,
-                    stoploss: float = 0.0,
-                    trailing_sl: float = 0.0,
-                    product: str = Product.MIS,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.REGULAR,
-                    ) -> dict[Any, Any]:
+    def limit_order(
+        cls,
+        token_dict: dict,
+        price: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Limit Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             price (float): Order price.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
@@ -614,7 +661,7 @@ class paper(Broker):
             target (float, optional): Order Target price. Defaults to 0.
             stoploss (float, optional): Order Stoploss price. Defaults to 0.
             trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, op1tional): Order product. Defaults to Product.MIS.
+            product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
 
@@ -634,8 +681,12 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: trailing_sl,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+            Order.EXCHANGE: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
+            Order.SEGMENT: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -645,28 +696,27 @@ class paper(Broker):
         return order
 
     @classmethod
-    def sl_order(cls,
-                 token_dict: dict,
-                 price: float,
-                 trigger: float,
-                 quantity: int,
-                 side: str,
-                 unique_id: str,
-                 headers: dict,
-                 target: float = 0.0,
-                 stoploss: float = 0.0,
-                 trailing_sl: float = 0.0,
-                 product: str = Product.MIS,
-                 validity: str = Validity.DAY,
-                 variety: str = Variety.STOPLOSS,
-                 ) -> dict[Any, Any]:
+    def sl_order(
+        cls,
+        token_dict: dict,
+        price: float,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             price (float): Order price.
             trigger (float): order trigger price.
             quantity (int): Order quantity.
@@ -696,8 +746,12 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: trailing_sl,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+            Order.EXCHANGE: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
+            Order.SEGMENT: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -707,27 +761,26 @@ class paper(Broker):
         return order
 
     @classmethod
-    def slm_order(cls,
-                  token_dict: dict,
-                  trigger: float,
-                  quantity: int,
-                  side: str,
-                  unique_id: str,
-                  headers: dict,
-                  target: float = 0.0,
-                  stoploss: float = 0.0,
-                  trailing_sl: float = 0.0,
-                  product: str = Product.MIS,
-                  validity: str = Validity.DAY,
-                  variety: str = Variety.STOPLOSS,
-                  ) -> dict[Any, Any]:
+    def slm_order(
+        cls,
+        token_dict: dict,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order.
 
         Parameters:
-            token (int): Exchange token.
-            exchange (str): Exchange to place the order in.
-            symbol (str): Trading symbol.
+            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
             trigger (float): order trigger price.
             quantity (int): Order quantity.
             side (str): Order Side: BUY, SELL.
@@ -756,8 +809,12 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: trailing_sl,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+            Order.EXCHANGE: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
+            Order.SEGMENT: cls._key_mapper(
+                cls.req_exchange, token_dict["Exchange"], "exchange"
+            ),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -766,24 +823,23 @@ class paper(Broker):
         order = cls._order_data_creator(order)
         return order
 
-
     # Equity Order Functions
 
-
     @classmethod
-    def create_order_eq(cls,
-                        exchange: str,
-                        symbol: str,
-                        quantity: int,
-                        side: str,
-                        product: str,
-                        validity: str,
-                        variety: str,
-                        unique_id: str,
-                        headers: dict,
-                        price: float = 0.0,
-                        trigger: float = 0.0,
-                        ) -> dict[Any, Any]:
+    def create_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        unique_id: str,
+        headers: dict,
+        price: float = 0.0,
+        trigger: float = 0.0,
+    ) -> dict[Any, Any]:
         """
         Place an Order in NSE/BSE Equity Segment.
 
@@ -799,9 +855,6 @@ class paper(Broker):
             headers (dict): headers to send order request with.
             price (float): Order price
             trigger (float): order trigger price
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
 
         Returns:
             dict: fenix Unified Order Response.
@@ -809,7 +862,7 @@ class paper(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
         symbol = detail["Symbol"]
@@ -847,17 +900,18 @@ class paper(Broker):
         return order
 
     @classmethod
-    def market_order_eq(cls,
-                        exchange: str,
-                        symbol: str,
-                        quantity: int,
-                        side: str,
-                        unique_id: str,
-                        headers: dict,
-                        product: str = Product.MIS,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.REGULAR,
-                        ) -> dict[Any, Any]:
+    def market_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Market Order in NSE/BSE Equity Segment.
 
@@ -868,9 +922,6 @@ class paper(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -881,7 +932,7 @@ class paper(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
         symbol = detail["Symbol"]
@@ -910,18 +961,19 @@ class paper(Broker):
         return order
 
     @classmethod
-    def limit_order_eq(cls,
-                       exchange: str,
-                       symbol: str,
-                       price: float,
-                       quantity: int,
-                       side: str,
-                       unique_id: str,
-                       headers: dict,
-                       product: str = Product.MIS,
-                       validity: str = Validity.DAY,
-                       variety: str = Variety.REGULAR,
-                       ) -> dict[Any, Any]:
+    def limit_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        price: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+    ) -> dict[Any, Any]:
         """
         Place Limit Order in NSE/BSE Equity Segment.
 
@@ -933,9 +985,6 @@ class paper(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -946,7 +995,7 @@ class paper(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
         symbol = detail["Symbol"]
@@ -975,19 +1024,20 @@ class paper(Broker):
         return order
 
     @classmethod
-    def sl_order_eq(cls,
-                    exchange: str,
-                    symbol: str,
-                    price: float,
-                    trigger: float,
-                    quantity: int,
-                    side: str,
-                    unique_id: str,
-                    headers: dict,
-                    product: str = Product.MIS,
-                    validity: str = Validity.DAY,
-                    variety: str = Variety.STOPLOSS,
-                    ) -> dict[Any, Any]:
+    def sl_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        price: float,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss Order in NSE/BSE Equity Segment.
 
@@ -1000,9 +1050,6 @@ class paper(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -1013,7 +1060,7 @@ class paper(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
         symbol = detail["Symbol"]
@@ -1042,18 +1089,19 @@ class paper(Broker):
         return order
 
     @classmethod
-    def slm_order_eq(cls,
-                     exchange: str,
-                     symbol: str,
-                     trigger: float,
-                     quantity: int,
-                     side: str,
-                     unique_id: str,
-                     headers: dict,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.STOPLOSS,
-                     ) -> dict[Any, Any]:
+    def slm_order_eq(
+        cls,
+        exchange: str,
+        symbol: str,
+        trigger: float,
+        quantity: int,
+        side: str,
+        unique_id: str,
+        headers: dict,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order in NSE/BSE Equity Segment.
 
@@ -1065,9 +1113,6 @@ class paper(Broker):
             side (str): Order Side: BUY, SELL.
             unique_id (str): Unique user order_id.
             headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity. Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.REGULAR.
@@ -1078,7 +1123,7 @@ class paper(Broker):
         if not cls.eq_tokens:
             cls.create_eq_tokens()
 
-        exchange = cls._key_mapper(cls.req_exchange, exchange, 'exchange')
+        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
         detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
         token = detail["Token"]
         symbol = detail["Symbol"]
@@ -1106,45 +1151,44 @@ class paper(Broker):
         order = cls._order_data_creator(order)
         return order
 
-
     # FNO Order Functions
 
-
     @classmethod
-    def create_order_fno(cls,
-                         exchange: str,
-                         root: str,
-                         expiry: str,
-                         option: str,
-                         strike_price: str,
-                         quantity: int,
-                         side: str,
-                         product: str,
-                         validity: str,
-                         variety: str,
-                         unique_id: str,
-                         headers: dict,
-                         price: float = 0.0,
-                         trigger: float = 0.0,
-                         ) -> dict[Any, Any]:
+    def create_order_fno(
+        cls,
+        exchange: str,
+        root: str,
+        expiry: str,
+        option: str,
+        strike_price: str,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        unique_id: str,
+        headers: dict,
+        price: float = 0.0,
+        trigger: float = 0.0,
+    ) -> dict[Any, Any]:
         """
         Place an Order in F&O Segment.
 
         Parameters:
+            exchange (str):  Exchange to place the order in.
+            root (str): Derivative: BANKNIFTY, NIFTY.
+            expiry (str): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'.
             option (str): Option Type: 'CE', 'PE'.
             strike_price (str): Strike Price of the Option.
-            price (float): price of the order.
-            trigger (float): trigger price of the order.
             quantity (int): Order quantity.
             side (str): Order Side: 'BUY', 'SELL'.
+            product (str): Order product.
+            validity (str): Order validity.
+            variety (str): Order variety.
+            unique_id (str): Unique user orderid.
             headers (dict): headers to send order request with.
-            root (str): Derivative: BANKNIFTY, NIFTY.
-            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.DAY.
+            price (float): price of the order.
+            trigger (float): trigger price of the order.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1152,17 +1196,17 @@ class paper(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        token = detail['Token']
-        symbol = detail['Symbol']
+        token = detail["Token"]
+        symbol = detail["Symbol"]
 
         if not price and trigger:
             order_type = OrderType.SLM
@@ -1186,8 +1230,8 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: 0.0,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -1197,20 +1241,21 @@ class paper(Broker):
         return order
 
     @classmethod
-    def market_order_fno(cls,
-                         option: str,
-                         strike_price: str,
-                         quantity: int,
-                         side: str,
-                         headers: dict,
-                         root: str = Root.BNF,
-                         expiry: str = WeeklyExpiry.CURRENT,
-                         exchange: str = ExchangeCode.NFO,
-                         product: str = Product.MIS,
-                         validity: str = Validity.DAY,
-                         variety: str = Variety.REGULAR,
-                         unique_id: str = UniqueID.MARKETORDER,
-                         ) -> dict[Any, Any]:
+    def market_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+        unique_id: str = UniqueID.MARKETORDER,
+    ) -> dict[Any, Any]:
         """
         Place Market Order in F&O Segment.
 
@@ -1222,11 +1267,11 @@ class paper(Broker):
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1234,17 +1279,17 @@ class paper(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
-        token = detail['Token']
+        symbol = detail["Symbol"]
+        token = detail["Token"]
 
         order = {
             Order.USERID: unique_id,
@@ -1259,8 +1304,8 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: 0.0,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -1270,21 +1315,22 @@ class paper(Broker):
         return order
 
     @classmethod
-    def limit_order_fno(cls,
-                        option: str,
-                        strike_price: str,
-                        price: float,
-                        quantity: int,
-                        side: str,
-                        headers: dict,
-                        root: str = Root.BNF,
-                        expiry: str = WeeklyExpiry.CURRENT,
-                        exchange: str = ExchangeCode.NFO,
-                        product: str = Product.MIS,
-                        validity: str = Validity.DAY,
-                        variety: str = Variety.REGULAR,
-                        unique_id: str = UniqueID.LIMITORDER,
-                        ) -> dict[Any, Any]:
+    def limit_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        price: float,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.REGULAR,
+        unique_id: str = UniqueID.LIMITORDER,
+    ) -> dict[Any, Any]:
         """
         Place Limit Order in F&O Segment.
 
@@ -1297,11 +1343,11 @@ class paper(Broker):
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1309,17 +1355,17 @@ class paper(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
-        token = detail['Token']
+        symbol = detail["Symbol"]
+        token = detail["Token"]
 
         order = {
             Order.USERID: unique_id,
@@ -1334,8 +1380,8 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: 0.0,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -1345,22 +1391,23 @@ class paper(Broker):
         return order
 
     @classmethod
-    def sl_order_fno(cls,
-                     option: str,
-                     strike_price: str,
-                     price: float,
-                     trigger: float,
-                     quantity: int,
-                     side: str,
-                     headers: dict,
-                     root: str = Root.BNF,
-                     expiry: str = WeeklyExpiry.CURRENT,
-                     exchange: str = ExchangeCode.NFO,
-                     product: str = Product.MIS,
-                     validity: str = Validity.DAY,
-                     variety: str = Variety.STOPLOSS,
-                     unique_id: str = UniqueID.SLORDER,
-                     ) -> dict[Any, Any]:
+    def sl_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        price: float,
+        trigger: float,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+        unique_id: str = UniqueID.SLORDER,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss Order in F&O Segment.
 
@@ -1374,11 +1421,11 @@ class paper(Broker):
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1386,17 +1433,17 @@ class paper(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
-        token = detail['Token']
+        symbol = detail["Symbol"]
+        token = detail["Token"]
 
         order = {
             Order.USERID: unique_id,
@@ -1411,8 +1458,8 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: 0.0,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -1422,21 +1469,22 @@ class paper(Broker):
         return order
 
     @classmethod
-    def slm_order_fno(cls,
-                      option: str,
-                      strike_price: str,
-                      trigger: float,
-                      quantity: int,
-                      side: str,
-                      headers: dict,
-                      root: str = Root.BNF,
-                      expiry: str = WeeklyExpiry.CURRENT,
-                      exchange: str = ExchangeCode.NFO,
-                      product: str = Product.MIS,
-                      validity: str = Validity.DAY,
-                      variety: str = Variety.STOPLOSS,
-                      unique_id: str = UniqueID.SLORDER,
-                      ) -> dict[Any, Any]:
+    def slm_order_fno(
+        cls,
+        option: str,
+        strike_price: str,
+        trigger: float,
+        quantity: int,
+        side: str,
+        headers: dict,
+        root: str = Root.BNF,
+        expiry: str = WeeklyExpiry.CURRENT,
+        exchange: str = ExchangeCode.NFO,
+        product: str = Product.MIS,
+        validity: str = Validity.DAY,
+        variety: str = Variety.STOPLOSS,
+        unique_id: str = UniqueID.SLORDER,
+    ) -> dict[Any, Any]:
         """
         Place Stoploss-Market Order in F&O Segment.
 
@@ -1449,11 +1497,11 @@ class paper(Broker):
             headers (dict): headers to send order request with.
             root (str): Derivative: BANKNIFTY, NIFTY.
             expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
             exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
             product (str, optional): Order product. Defaults to Product.MIS.
             validity (str, optional): Order validity Defaults to Validity.DAY.
             variety (str, optional): Order variety Defaults to Variety.DAY.
+            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
 
         Raises:
             KeyError: If Strike Price Does not Exist.
@@ -1461,17 +1509,17 @@ class paper(Broker):
         Returns:
             dict: fenix Unified Order Response.
         """
-        if not cls.nfo_tokens:
-            cls.create_nfo_tokens()
+        if not cls.fno_tokens:
+            cls.create_fno_tokens()
 
-        detail = cls.nfo_tokens[expiry][root][option]
+        detail = cls.fno_tokens[expiry][root][option]
         detail = detail.get(strike_price, None)
 
         if not detail:
             raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
 
-        symbol = detail['Symbol']
-        token = detail['Token']
+        symbol = detail["Symbol"]
+        token = detail["Token"]
 
         order = {
             Order.USERID: unique_id,
@@ -1486,8 +1534,8 @@ class paper(Broker):
             Order.TRAILINGSTOPLOSS: 0.0,
             Order.QUANTITY: quantity,
             Order.PRODUCT: cls._key_mapper(cls.req_product, product, "product"),
-            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
-            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, 'exchange'),
+            Order.EXCHANGE: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
+            Order.SEGMENT: cls._key_mapper(cls.req_exchange, exchange, "exchange"),
             Order.VALIDITY: cls._key_mapper(cls.req_validity, validity, "validity"),
             Order.VARIETY: cls._key_mapper(cls.req_variety, variety, "variety"),
             Order.INFO: {},
@@ -1496,14 +1544,13 @@ class paper(Broker):
         order = cls._order_data_creator(order)
         return order
 
-
     # Order Details, OrderBook & TradeBook
 
-
     @classmethod
-    def fetch_orderbook(cls,
-                        headers: dict
-                        ) -> list[dict]:
+    def fetch_orderbook(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Orderbook Details.
 
@@ -1516,9 +1563,10 @@ class paper(Broker):
         return cls.orderbook
 
     @classmethod
-    def fetch_tradebook(cls,
-                        headers: dict
-                        ) -> list[dict]:
+    def fetch_tradebook(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch Tradebook Details.
 
@@ -1531,9 +1579,10 @@ class paper(Broker):
         return cls.orderbook
 
     @classmethod
-    def fetch_orders(cls,
-                     headers: dict
-                     ) -> list[dict]:
+    def fetch_orders(
+        cls,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch OrderBook Details which is unified across all brokers.
         Use This if you want Avg price, etc. values which sometimes unavailable
@@ -1551,10 +1600,11 @@ class paper(Broker):
         return cls.orderbook
 
     @classmethod
-    def fetch_order(cls,
-                    order_id: str,
-                    headers: dict
-                    ) -> dict[Any, Any]:
+    def fetch_order(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Order Details.
 
@@ -1576,10 +1626,11 @@ class paper(Broker):
         raise InputError({"This order_id does not exist."})
 
     @classmethod
-    def fetch_orderhistory(cls,
-                           order_id: str,
-                           headers: dict
-                           ) -> list[dict]:
+    def fetch_orderhistory(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> list[dict]:
         """
         Fetch History of an order.
 
@@ -1592,20 +1643,19 @@ class paper(Broker):
         """
         return [cls.fetch_order(order_id, headers)]
 
-
     # Order Modification & Sq Off
 
-
     @classmethod
-    def modify_order(cls,
-                     order_id: str,
-                     headers: dict,
-                     price: float | None = None,
-                     trigger: float | None = None,
-                     quantity: int | None = None,
-                     order_type: str | None = None,
-                     validity: str | None = None,
-                     ) -> dict[Any, Any]:
+    def modify_order(
+        cls,
+        order_id: str,
+        headers: dict,
+        price: float | None = None,
+        trigger: float | None = None,
+        quantity: int | None = None,
+        order_type: str | None = None,
+        validity: str | None = None,
+    ) -> dict[Any, Any]:
         """
         Modify an open order.
 
@@ -1630,18 +1680,24 @@ class paper(Broker):
                     order[Order.PRICE] = price or order[Order.PRICE]
                     order[Order.TRIGGERPRICE] = trigger or order[Order.TRIGGERPRICE]
                     order[Order.QUANTITY] = quantity or order[Order.QUANTITY]
-                    order[Order.VALIDITY] = cls._key_mapper(cls.req_validity, validity, 'validity')
-                    order[Order.TYPE] = cls._key_mapper(cls.req_order_type, order_type, 'order_type') or order[Order.TYPE]
+                    order[Order.VALIDITY] = cls._key_mapper(
+                        cls.req_validity, validity, "validity"
+                    )
+                    order[Order.TYPE] = (
+                        cls._key_mapper(cls.req_order_type, order_type, "order_type")
+                        or order[Order.TYPE]
+                    )
 
                 return order
 
         raise InputError({"This order_id does not exist."})
 
     @classmethod
-    def cancel_order(cls,
-                     order_id: str,
-                     headers: dict
-                     ) -> dict[Any, Any]:
+    def cancel_order(
+        cls,
+        order_id: str,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Cancel an open order.
 
@@ -1662,19 +1718,17 @@ class paper(Broker):
 
                 return order
 
-
         raise InputError({"This order_id does not exist."})
-
 
     # Positions, Account Limits & Profile
 
-
     @classmethod
-    def _position_calc(cls,
-                       position,
-                       order,
-                       key
-                       ):
+    def _position_calc(
+        cls,
+        position,
+        order,
+        key,
+    ):
 
         qkey = f"{key}qty"
         pkey = f"{key}price"
@@ -1685,17 +1739,20 @@ class paper(Broker):
         qty = sum(position[Position.INFO][qkey])
         price = 0
 
-        for order_qty, order_price in zip(position[Position.INFO][qkey], position[Position.INFO][pkey]):
-            price += (order_qty * order_price)
+        for order_qty, order_price in zip(
+            position[Position.INFO][qkey], position[Position.INFO][pkey]
+        ):
+            price += order_qty * order_price
 
         avgprice = price / qty
 
         return qty, avgprice, price
 
     @classmethod
-    def fetch_day_positions(cls,
-                            headers: dict,
-                            ) -> dict[Any, Any]:
+    def fetch_day_positions(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch the Day's Account Positions.
 
@@ -1708,9 +1765,10 @@ class paper(Broker):
         return cls.fetch_positions(headers)
 
     @classmethod
-    def fetch_net_positions(cls,
-                            headers: dict,
-                            ) -> dict[Any, Any]:
+    def fetch_net_positions(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Total Account Positions.
 
@@ -1723,9 +1781,10 @@ class paper(Broker):
         return cls.fetch_positions(headers)
 
     @classmethod
-    def fetch_positions(cls,
-                        headers: dict,
-                        ) -> dict[Any, Any]:
+    def fetch_positions(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Day & Net Account Positions.
 
@@ -1742,14 +1801,27 @@ class paper(Broker):
                     position = cls.positions[order[Order.SYMBOL]]
 
                     if order[Order.SIDE] == Side.BUY:
-                        position[Position.BUYQTY], position[Position.BUYPRICE], position[Position.INFO]["b_avgprice"] = cls._position_calc(position, order, "b")
+                        (
+                            position[Position.BUYQTY],
+                            position[Position.BUYPRICE],
+                            position[Position.INFO]["b_avgprice"],
+                        ) = cls._position_calc(position, order, "b")
                     else:
-                        position[Position.SELLQTY], position[Position.SELLPRICE], position[Position.INFO]["s_avgprice"] = cls._position_calc(position, order, "s")
+                        (
+                            position[Position.SELLQTY],
+                            position[Position.SELLPRICE],
+                            position[Position.INFO]["s_avgprice"],
+                        ) = cls._position_calc(position, order, "s")
 
-                    tprice = position[Position.INFO]["b_avgprice"] + position[Position.INFO]["s_avgprice"]
+                    tprice = (
+                        position[Position.INFO]["b_avgprice"]
+                        + position[Position.INFO]["s_avgprice"]
+                    )
                     tqty = position[Position.BUYQTY] + position[Position.SELLQTY]
 
-                    position[Position.NETQTY] = abs(position[Position.BUYQTY] - position[Position.SELLQTY])
+                    position[Position.NETQTY] = abs(
+                        position[Position.BUYQTY] - position[Position.SELLQTY]
+                    )
                     position[Order.AVGPRICE] = tprice / tqty
 
                 else:
@@ -1767,10 +1839,15 @@ class paper(Broker):
                         Position.LTP: None,
                         Position.PRODUCT: order[Order.PRODUCT],
                         Position.EXCHANGE: order[Order.EXCHANGE],
-                        Position.INFO: {"bqty": [], "bprice": [], "b_avgprice": 0,
-                                        "sqty": [], "sprice": [], "s_avgprice": 0}
+                        Position.INFO: {
+                            "bqty": [],
+                            "bprice": [],
+                            "b_avgprice": 0,
+                            "sqty": [],
+                            "sprice": [],
+                            "s_avgprice": 0,
+                        },
                     }
-
 
                     if order[Order.SIDE] == Side.BUY:
                         position[Position.BUYQTY] = order[Order.QUANTITY]
@@ -1783,17 +1860,15 @@ class paper(Broker):
                         position[Position.INFO]["sqty"].append(order[Order.QUANTITY])
                         position[Position.INFO]["sprice"].append(order[Order.AVGPRICE])
 
-
                     cls.positions[order[Order.SYMBOL]] = position
-
 
         return list(cls.positions.values())
 
-
     @classmethod
-    def fetch_holdings(cls,
-                       headers: dict,
-                       ) -> dict[Any, Any]:
+    def fetch_holdings(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Account Holdings.
 
@@ -1806,9 +1881,10 @@ class paper(Broker):
         return cls.fetch_positions(headers)
 
     @classmethod
-    def rms_limits(cls,
-                   headers: dict
-                   ) -> dict[Any, Any]:
+    def rms_limits(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Risk Management System Limits.
 
@@ -1821,9 +1897,10 @@ class paper(Broker):
         return cls.rms_limits_dict
 
     @classmethod
-    def profile(cls,
-                headers: dict
-                ) -> dict[Any, Any]:
+    def profile(
+        cls,
+        headers: dict,
+    ) -> dict[Any, Any]:
         """
         Fetch Profile Limits of the User.
 

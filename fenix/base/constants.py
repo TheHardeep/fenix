@@ -20,6 +20,7 @@ class Side:
     """
     Order Side Constants.
     """
+
     BUY = "BUY"
     SELL = "SELL"
 
@@ -28,6 +29,7 @@ class Root:
     """
     BANKNIFTY & NIFTY Constants.
     """
+
     BNF = "BANKNIFTY"
     NF = "NIFTY"
     FNF = "FINNIFTY"
@@ -40,23 +42,28 @@ class WeeklyExpiry:
     """
     Weekly Expiry Constants.
     """
+
     CURRENT = "CURRENT"
     NEXT = "NEXT"
     FAR = "FAR"
     EXPIRY = "Expiry"
     LOTSIZE = "LotSize"
 
+
 class Option:
     """
     Trading Options
     """
+
     CE = "CE"
     PE = "PE"
+
 
 class OrderType:
     """
     Order Type Constants.
     """
+
     MARKET = "MARKET"
     LIMIT = "LIMIT"
     SLM = "SLM"
@@ -67,6 +74,7 @@ class ExchangeCode:
     """
     Exchange Code Constants.
     """
+
     NSE = "NSE"  # NSE Equity
     NFO = "NFO"  # NSE F&O
     BSE = "BSE"  # BSE Equity
@@ -82,6 +90,7 @@ class Product:
     """
     Product Type Constants.
     """
+
     CNC = "CNC"
     NRML = "NRML"
     MARGIN = "MARGIN"
@@ -95,6 +104,7 @@ class Validity:
     """
     Order Validity Constnats.
     """
+
     DAY = "DAY"
     IOC = "IOC"
     GTD = "GTD"
@@ -107,6 +117,7 @@ class Variety:
     """
     Order Variety Constants.
     """
+
     REGULAR = "REGULAR"
     STOPLOSS = "STOPLOSS"
     AMO = "AMO"
@@ -120,6 +131,7 @@ class Status:
     """
     Order Status Constants.
     """
+
     PENDING = "PENDING"
     OPEN = "OPEN"
     PARTIALLYFILLED = "PARTIALLYFILLED"
@@ -133,10 +145,11 @@ class Order:
     """
     Unified Order Response Dicitonary Keys Constants.
     """
+
     ID = "id"
     USERID = "userOrderId"
     CLIENTID = "clientId"
-    TIMESTAMP = 'timestamp'
+    TIMESTAMP = "timestamp"
     SYMBOL = "symbol"
     TOKEN = "token"
     SIDE = "side"
@@ -166,6 +179,7 @@ class Position:
     """
     Unified Account Positions Response Dicitonary Keys Constants.
     """
+
     SYMBOL = "symbol"
     TOKEN = "token"
     NETQTY = "netQty"
@@ -186,6 +200,7 @@ class Profile:
     """
     Unified Account Profile Response Dicitonary Keys Constants.
     """
+
     CLIENTID = "clientId"
     NAME = "name"
     EMAILID = "emailId"
@@ -204,7 +219,8 @@ class UniqueID:
     """
     Default Unique Order ID Constants.
     """
-    DEFORDER= "FenixOrder"
+
+    DEFORDER = "FenixOrder"
     MARKETORDER = "MarketOrder"
     LIMITORDER = "LIMITOrder"
     SLORDER = "SLOrder"

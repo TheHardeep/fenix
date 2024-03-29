@@ -4,7 +4,7 @@ __all__ = [
     "TokenDownloadError",
     "RequestTimeout",
     "NetworkError",
-    "BrokerError"
+    "BrokerError",
 ]
 
 

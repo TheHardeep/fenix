@@ -41,15 +41,14 @@ options.mode.chained_assignment = None
 
 
 __all__ = [
-    'Broker',
+    "Broker",
 ]
 
 
 class Broker:
+    """Base Class Common to All Brokers"""
 
-    """ Base Class Common to All Brokers """
-
-    id = ''
+    id = ""
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
@@ -74,16 +73,17 @@ class Broker:
         return req_session()
 
     @classmethod
-    def fetch(cls,
-              method: str,
-              url: str,
-              headers: dict[Any, Any] | None = None,
-              data: dict[Any, Any] | None = None,
-              json: dict[Any, Any] | None = None,
-              params: dict[Any, Any] | None = None,
-              auth: tuple[str, str] | None = None,
-              timeout: int = 10,
-              ) -> Response:
+    def fetch(
+        cls,
+        method: str,
+        url: str,
+        headers: dict[Any, Any] | None = None,
+        data: dict[Any, Any] | None = None,
+        json: dict[Any, Any] | None = None,
+        params: dict[Any, Any] | None = None,
+        auth: tuple[str, str] | None = None,
+        timeout: int = 10,
+    ) -> Response:
         """
         A Wrapper for Python Requests module,
         sending requests over a session which persists the cookies over the entire session.
@@ -108,51 +108,57 @@ class Broker:
         """
 
         try:
-            response = cls._session.request(method=method,
-                                            url=url,
-                                            headers=headers,
-                                            data=data,
-                                            json=json,
-                                            params=params,
-                                            auth=auth,
-                                            timeout=timeout,
-                                            )
+            response = cls._session.request(
+                method=method,
+                url=url,
+                headers=headers,
+                data=data,
+                json=json,
+                params=params,
+                auth=auth,
+                timeout=timeout,
+            )
 
             response.raise_for_status()
 
             return response
 
         except Timeout as exc:
-            details = ' '.join([cls.id, method, url])
+            details = " ".join([cls.id, method, url])
             raise RequestTimeout(details) from exc
 
         except TooManyRedirects as exc:
-            details = ' '.join([cls.id, method, url])
+            details = " ".join([cls.id, method, url])
             raise BrokerError(details) from exc
 
         except SSLError as exc:
-            details = ' '.join([cls.id, method, url])
+            details = " ".join([cls.id, method, url])
             raise BrokerError(details) from exc
 
         except HTTPError as exc:
-            details = ' '.join([cls.id, method, str(response.status_code), url, response.text])
+            details = " ".join(
+                [cls.id, method, str(response.status_code), url, response.text]
+            )
             raise BrokerError(details) from exc
 
         except requestsConnectionError as exc:
             error_string = str(exc)
-            details = ' '.join([cls.id, method, url, error_string])
-            if 'Read timed out' in error_string:
+            details = " ".join([cls.id, method, url, error_string])
+            if "Read timed out" in error_string:
                 raise RequestTimeout(details) from exc
             raise NetworkError(details) from exc
 
         except ConnectionResetError as exc:
-            details = ' '.join([cls.id, method, url])
+            details = " ".join([cls.id, method, url])
             raise NetworkError(details) from exc
 
         except RequestException as exc:  # base exception class
             error_string = str(exc)
-            details = ' '.join([cls.id, method, url])
-            if any(x in error_string for x in ['ECONNRESET', 'Connection aborted.', 'Connection broken:']):
+            details = " ".join([cls.id, method, url])
+            if any(
+                x in error_string
+                for x in ["ECONNRESET", "Connection aborted.", "Connection broken:"]
+            ):
                 raise NetworkError(exc) from exc
             raise BrokerError(exc) from exc
 
@@ -172,12 +178,14 @@ class Broker:
             # print(response)
             return response
         except Exception as exc:
-            raise ResponseError({"Status": response.status_code,
-                                 "Error": response.text,
-                                 "URL": response.url,
-                                 "Reason": response.reason
-                                 }
-                                ) from exc
+            raise ResponseError(
+                {
+                    "Status": response.status_code,
+                    "Error": response.text,
+                    "URL": response.url,
+                    "Reason": response.reason,
+                }
+            ) from exc
 
     @staticmethod
     def json_dumps(json_data: dict) -> str:
@@ -197,9 +205,11 @@ class Broker:
         # print(response.text)
         return loads(response.text.strip())
 
-
     @staticmethod
-    def _eq_mapper(dictionary: dict, key: str) -> str:
+    def _eq_mapper(
+        dictionary: dict,
+        key: str,
+    ) -> str:
         """
         A Simple Function to help the User if they input a wrong Symbol in the eq_tokens dictionary,
         also tells the User the possible Symbols for the Segment.
@@ -223,9 +233,12 @@ class Broker:
 
         raise KeyError(f"Invalid Symbol!: {key}, Possible Values: {possible_values}")
 
-
     @staticmethod
-    def _key_mapper(dictionary: dict, key: str, name: str) -> str:
+    def _key_mapper(
+        dictionary: dict,
+        key: str,
+        name: str,
+    ) -> str:
         """
         A Simple Function to help the User if they input a wrong Key in the Dictionary,
         also tells the User the possible Keys for the Dicitonary.
@@ -245,7 +258,9 @@ class Broker:
         if key in dictionary:
             return dictionary[key]
 
-        raise KeyError(f"Invalid {name}!: {key}, Possible Values: {list(dictionary.keys())}")
+        raise KeyError(
+            f"Invalid {name}!: {key}, Possible Values: {list(dictionary.keys())}"
+        )
 
     @staticmethod
     def totp_creator(totpbase: str) -> str:
@@ -265,14 +280,14 @@ class Broker:
             if totpobj.verify(totp):
                 return totp
 
-
     @staticmethod
-    def data_reader(link: str,
-                    filetype: str,
-                    dtype: dict | None = None,
-                    sep: str = ",",
-                    col_names: list = [],
-                    ) -> DataFrame:
+    def data_reader(
+        link: str,
+        filetype: str,
+        dtype: dict | None = None,
+        sep: str = ",",
+        col_names: list = [],
+    ) -> DataFrame:
         """
         Pandas.read_csv & Pandas.read_json Functions Wrapper
 
@@ -293,19 +308,18 @@ class Broker:
 
         if filetype == "csv":
             if col_names:
-                return read_csv(link,
-                                dtype=dtype,
-                                sep=sep,
-                                names=col_names,
-                                )
+                return read_csv(
+                    link,
+                    dtype=dtype,
+                    sep=sep,
+                    names=col_names,
+                )
 
-            return read_csv(link,
-                            dtype=dtype,
-                            sep=sep
-                            )
+            return read_csv(link, dtype=dtype, sep=sep)
 
-
-        raise InputError(f"Wrong Filetype: {filetype}, the possible values are: 'json', 'csv'")
+        raise InputError(
+            f"Wrong Filetype: {filetype}, the possible values are: 'json', 'csv'"
+        )
 
     @staticmethod
     def data_frame(data: list) -> DataFrame:
@@ -320,11 +334,11 @@ class Broker:
         """
         return DataFrame(data)
 
-
     @staticmethod
-    def pd_datetime(datetime_obj: str,
-                    unit: str = "ns"
-                    ) -> datetime:
+    def pd_datetime(
+        datetime_obj: str,
+        unit: str = "ns",
+    ) -> datetime:
         """
         Pandas.to_datetime Function Wrapper
 
@@ -335,14 +349,13 @@ class Broker:
         Returns:
             datetime: Timestamp object
         """
-        return to_datetime(arg=datetime_obj,
-                           unit=unit
-                           )
+        return to_datetime(arg=datetime_obj, unit=unit)
 
     @staticmethod
-    def datetime_strp(datetime_obj: str,
-                      dtformat: str
-                      ) -> datetime:
+    def datetime_strp(
+        datetime_obj: str,
+        dtformat: str,
+    ) -> datetime:
         """
         Python datetime.datetime.strptime Function Wrapper
 
@@ -353,9 +366,7 @@ class Broker:
         Returns:
             datetime: datetime.datetime object
         """
-        return datetime.strptime(datetime_obj,
-                                 dtformat
-                                 )
+        return str(datetime.strptime(datetime_obj, dtformat))
 
     @staticmethod
     def from_timestamp(datetime_obj: int) -> datetime:
@@ -368,7 +379,7 @@ class Broker:
         Returns:
             datetime: datetime.datetime object
         """
-        return datetime.fromtimestamp(datetime_obj)
+        return str(datetime.fromtimestamp(datetime_obj))
 
     @staticmethod
     def current_datetime() -> datetime:
@@ -381,11 +392,9 @@ class Broker:
         return datetime.now()
 
     @staticmethod
-    def time_delta(datetime_object: datetime,
-                   delta: int,
-                   dtformat: str,
-                   default='sub'
-                   ) -> str:
+    def time_delta(
+        datetime_object: datetime, delta: int, dtformat: str, default="sub"
+    ) -> str:
         """
         Add Days to a datetime.datetime object
 
@@ -406,7 +415,9 @@ class Broker:
         if default == "add":
             return (datetime_object + timedelta(days=delta)).strftime(dtformat)
 
-        raise InputError(f"Wrong default: {default}, the possible values are 'sub', 'add'")
+        raise InputError(
+            f"Wrong default: {default}, the possible values are 'sub', 'add'"
+        )
 
     def pd_dateoffset(*args, **kwargs) -> DateOffset:
         """
@@ -417,11 +428,9 @@ class Broker:
         """
         return DateOffset(*args, **kwargs)
 
-
     @staticmethod
     def concat_df(dfs: list[DataFrame]) -> DataFrame:
         return concat(dfs)
-
 
     @staticmethod
     def dates_filter(data):
@@ -431,32 +440,42 @@ class Broker:
         return data
 
     @classmethod
-    def download_expiry_dates_nfo(cls, root):
+    def download_expiry_dates_nfo(
+        cls,
+        root,
+    ):
         temp_session = req_session()
 
         for _ in range(5):
             try:
                 headers = {
-                    'accept': '*/*',
-                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7',
-                    'dnt': '1',
-                    'referer': 'https://www.nseindia.com/option-chain',
-                    'sec-ch-ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-                    'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                    'sec-fetch-dest': 'empty',
-                    'sec-fetch-mode': 'cors',
-                    'sec-fetch-site': 'same-origin',
-                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                    "accept": "*/*",
+                    "accept-language": "en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7",
+                    "dnt": "1",
+                    "referer": "https://www.nseindia.com/option-chain",
+                    "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+                    "sec-ch-ua-mobile": "?0",
+                    "sec-ch-ua-platform": '"Windows"',
+                    "sec-fetch-dest": "empty",
+                    "sec-fetch-mode": "cors",
+                    "sec-fetch-site": "same-origin",
+                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
                 }
 
                 params = {
-                    'symbol': f'{root}',
+                    "symbol": f"{root}",
                 }
 
-                response = temp_session.request(method="GET", url=cls.nfo_url, params=params, cookies=cls.cookies, headers=headers, timeout=10)
+                response = temp_session.request(
+                    method="GET",
+                    url=cls.nfo_url,
+                    params=params,
+                    cookies=cls.cookies,
+                    headers=headers,
+                    timeout=10,
+                )
                 data = response.json()
-                expiry_dates = data['records']['expiryDates']
+                expiry_dates = data["records"]["expiryDates"]
                 cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
                 return None
 
@@ -464,9 +483,11 @@ class Broker:
                 pass
 
             try:
-                response = popen(f'curl "{cls.nfo_url}?symbol={root}" -H "authority: beta.nseindia.com" -H "cache-control: max-age=0" -H "dnt: 1" -H "upgrade-insecure-requests: 1" -H "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36" -H "sec-fetch-user: ?1" -H "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9" -H "sec-fetch-site: none" -H "sec-fetch-mode: navigate" -H "accept-encoding: gzip, deflate, br" -H "accept-language: en-US,en;q=0.9,hi;q=0.8" --compressed').read()
+                response = popen(
+                    f'curl "{cls.nfo_url}?symbol={root}" -H "authority: beta.nseindia.com" -H "cache-control: max-age=0" -H "dnt: 1" -H "upgrade-insecure-requests: 1" -H "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36" -H "sec-fetch-user: ?1" -H "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9" -H "sec-fetch-site: none" -H "sec-fetch-mode: navigate" -H "accept-encoding: gzip, deflate, br" -H "accept-language: en-US,en;q=0.9,hi;q=0.8" --compressed'
+                ).read()
                 data = loads(response)
-                expiry_dates = data['records']['expiryDates']
+                expiry_dates = data["records"]["expiryDates"]
                 cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
                 return None
 
@@ -476,7 +497,10 @@ class Broker:
             sleep(5)
 
     @classmethod
-    def download_expiry_dates_bfo(cls, root):
+    def download_expiry_dates_bfo(
+        cls,
+        root,
+    ):
         if root == Root.SENSEX:
             scrip_cd = 1
         elif root == Root.BANKEX:
@@ -487,31 +511,37 @@ class Broker:
         for _ in range(5):
             try:
                 headers = {
-                    'accept': 'application/json, text/plain, */*',
-                    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7',
-                    'dnt': '1',
-                    'if-modified-since': 'Sun, 24 Mar 2024 11:21:31 GMT',
-                    'origin': 'https://www.bseindia.com',
-                    'referer': 'https://www.bseindia.com/',
-                    'sec-ch-ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-                    'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                    'sec-fetch-dest': 'empty',
-                    'sec-fetch-mode': 'cors',
-                    'sec-fetch-site': 'same-site',
-                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                    "accept": "application/json, text/plain, */*",
+                    "accept-language": "en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7",
+                    "dnt": "1",
+                    "if-modified-since": "Sun, 24 Mar 2024 11:21:31 GMT",
+                    "origin": "https://www.bseindia.com",
+                    "referer": "https://www.bseindia.com/",
+                    "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+                    "sec-ch-ua-mobile": "?0",
+                    "sec-ch-ua-platform": '"Windows"',
+                    "sec-fetch-dest": "empty",
+                    "sec-fetch-mode": "cors",
+                    "sec-fetch-site": "same-site",
+                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
                 }
 
                 params = {
-                    'ProductType': 'IO',
-                    'scrip_cd': scrip_cd,
+                    "ProductType": "IO",
+                    "scrip_cd": scrip_cd,
                 }
 
-                response = temp_session.request(method="GET", url=cls.bfo_url, params=params, headers=headers, timeout=10)
+                response = temp_session.request(
+                    method="GET",
+                    url=cls.bfo_url,
+                    params=params,
+                    headers=headers,
+                    timeout=10,
+                )
                 data = response.json()
 
-                expiry_dates = data['Table1']
-                expiry_dates = [i['ExpiryDate'] for i in expiry_dates]
+                expiry_dates = data["Table1"]
+                expiry_dates = [i["ExpiryDate"] for i in expiry_dates]
                 cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
                 return None
 
@@ -519,11 +549,13 @@ class Broker:
                 pass
 
             try:
-                response = popen(f"curl '{cls.bfo_url}?ProductType=IO&scrip_cd=1' -H 'accept: application/json, text/plain, */*' -H 'accept-language: en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7' -H 'dnt: 1' -H 'if-modified-since: Sun, 24 Mar 2024 11:21:31 GMT' -H 'origin: https://www.bseindia.com' -H 'referer: https://www.bseindia.com/' -H 'sec-ch-ua-mobile: ?0' -H 'sec-fetch-dest: empty' -H 'sec-fetch-mode: cors' -H 'sec-fetch-site: same-site' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'").read()
+                response = popen(
+                    f"curl '{cls.bfo_url}?ProductType=IO&scrip_cd=1' -H 'accept: application/json, text/plain, */*' -H 'accept-language: en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7' -H 'dnt: 1' -H 'if-modified-since: Sun, 24 Mar 2024 11:21:31 GMT' -H 'origin: https://www.bseindia.com' -H 'referer: https://www.bseindia.com/' -H 'sec-ch-ua-mobile: ?0' -H 'sec-fetch-dest: empty' -H 'sec-fetch-mode: cors' -H 'sec-fetch-site: same-site' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'"
+                ).read()
                 data = loads(response)
 
-                expiry_dates = data['Table1']
-                expiry_dates = [i['ExpiryDate'] for i in expiry_dates]
+                expiry_dates = data["Table1"]
+                expiry_dates = [i["ExpiryDate"] for i in expiry_dates]
                 cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
                 return None
 
@@ -533,7 +565,10 @@ class Broker:
             sleep(5)
 
     @classmethod
-    def jsonify_expiry(cls, data_frame: DataFrame) -> dict[Any, Any]:
+    def jsonify_expiry(
+        cls,
+        data_frame: DataFrame,
+    ) -> dict[Any, Any]:
         """
         Creates a fenix Unified Dicitonary for BankNifty & Nifty Options,
         in the following Format:
@@ -579,47 +614,89 @@ class Broker:
         """
 
         expiry_data = {
-            WeeklyExpiry.CURRENT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}, Root.SENSEX: {}, Root.BANKEX: {} },
-            WeeklyExpiry.NEXT: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}, Root.SENSEX: {}, Root.BANKEX: {} },
-            WeeklyExpiry.FAR: {Root.BNF: {}, Root.NF: {}, Root.FNF: {}, Root.MIDCPNF: {}, Root.SENSEX: {}, Root.BANKEX: {} },
-            WeeklyExpiry.EXPIRY: {Root.BNF: [], Root.NF: [], Root.FNF: [], Root.MIDCPNF: [], Root.SENSEX: [], Root.BANKEX: []},
-            WeeklyExpiry.LOTSIZE: {Root.BNF: nan, Root.NF: nan, Root.FNF: nan, Root.MIDCPNF: nan, Root.SENSEX: nan, Root.BANKEX: nan},
+            WeeklyExpiry.CURRENT: {
+                Root.BNF: {},
+                Root.NF: {},
+                Root.FNF: {},
+                Root.MIDCPNF: {},
+                Root.SENSEX: {},
+                Root.BANKEX: {},
+            },
+            WeeklyExpiry.NEXT: {
+                Root.BNF: {},
+                Root.NF: {},
+                Root.FNF: {},
+                Root.MIDCPNF: {},
+                Root.SENSEX: {},
+                Root.BANKEX: {},
+            },
+            WeeklyExpiry.FAR: {
+                Root.BNF: {},
+                Root.NF: {},
+                Root.FNF: {},
+                Root.MIDCPNF: {},
+                Root.SENSEX: {},
+                Root.BANKEX: {},
+            },
+            WeeklyExpiry.EXPIRY: {
+                Root.BNF: [],
+                Root.NF: [],
+                Root.FNF: [],
+                Root.MIDCPNF: [],
+                Root.SENSEX: [],
+                Root.BANKEX: [],
+            },
+            WeeklyExpiry.LOTSIZE: {
+                Root.BNF: nan,
+                Root.NF: nan,
+                Root.FNF: nan,
+                Root.MIDCPNF: nan,
+                Root.SENSEX: nan,
+                Root.BANKEX: nan,
+            },
         }
 
-        data_frame = data_frame.sort_values(by=['Expiry'])
+        data_frame = data_frame.sort_values(by=["Expiry"])
 
-        for root in [Root.BNF, Root.NF, Root.FNF, Root.MIDCPNF, Root.SENSEX, Root.BANKEX]:
+        for root in [
+            Root.BNF,
+            Root.NF,
+            Root.FNF,
+            Root.MIDCPNF,
+            Root.SENSEX,
+            Root.BANKEX,
+        ]:
 
             if root not in cls.expiry_dates:
                 if root in [Root.SENSEX, Root.BANKEX]:
                     cls.download_expiry_dates_bfo(root=root)
                 else:
                     cls.download_expiry_dates_nfo(root=root)
-            small_df = data_frame[data_frame['Root'] == root]
+            small_df = data_frame[data_frame["Root"] == root]
 
             if small_df.shape[0]:
-                expiries = small_df['Expiry'].unique()
+                expiries = small_df["Expiry"].unique()
                 expiries = expiries[expiries >= str(datetime.now().date())]
-                lotsize = small_df['LotSize'].unique()[0]
+                lotsize = small_df["LotSize"].unique()[0]
 
-                dfex1 = small_df[small_df['Expiry'] == cls.expiry_dates[root][0]]
-                dfex2 = small_df[small_df['Expiry'] == cls.expiry_dates[root][1]]
-                dfex3 = small_df[small_df['Expiry'] == cls.expiry_dates[root][2]]
+                dfex1 = small_df[small_df["Expiry"] == cls.expiry_dates[root][0]]
+                dfex2 = small_df[small_df["Expiry"] == cls.expiry_dates[root][1]]
+                dfex3 = small_df[small_df["Expiry"] == cls.expiry_dates[root][2]]
 
                 dfexs = [("CURRENT", dfex1), ("NEXT", dfex2), ("FAR", dfex3)]
 
                 for expiry_name, dfex in dfexs:
 
-                    dfex['ExpiryName'] = expiry_name
+                    dfex["ExpiryName"] = expiry_name
 
-                    global_dict = {'CE': {}, "PE": {}}
+                    global_dict = {"CE": {}, "PE": {}}
 
-                    for j, i in dfex.groupby(['Option', 'StrikePrice']):
-                        global_dict[j[0]][j[1]] = i.to_dict('records')[0]
+                    for j, i in dfex.groupby(["Option", "StrikePrice"]):
+                        global_dict[j[0]][j[1]] = i.to_dict("records")[0]
                         expiry_data[expiry_name][root] = global_dict
 
-                    expiry_data['Expiry'][root] = list(expiries)
-                    expiry_data['LotSize'][root] = lotsize
+                    expiry_data["Expiry"][root] = list(expiries)
+                    expiry_data["LotSize"][root] = lotsize
             else:
                 pass
 

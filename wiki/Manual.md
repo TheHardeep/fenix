@@ -35,7 +35,7 @@ The Fenix library currently supports the following 16 Indian Brokers and their t
 
 ## Usage
 
-To connect to an broker and start trading you need to import an exchange class from fenix library.
+To connect to a broker and start trading you need to import an exchange class from fenix library.
 
 To get the full list of ids of supported broker programmatically:
 

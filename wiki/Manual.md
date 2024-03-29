@@ -1093,7 +1093,7 @@ orders = zerodha.fetch_tradebook(headers)
 [{
     'id': '231124401406418',
     'userOrderId': 'MARKETOrderNFO',
-    'timestamp': datetime.datetime(2023, 11, 24, 12, 51, 30),
+    'timestamp': '2023-11-24 12:51:30',
     'symbol': 'BANKNIFTY23NOV43700CE',
     'token': 14918402,
     'side': 'BUY',
@@ -1124,7 +1124,7 @@ An OrderBook / TradeBook is an array of dictionaries with the following keys:
 
 - `userOrderId`: ID provided by the user at the time of order placement.
 
-- `timestamp`: datetime object of the order Execution Time.
+- `timestamp`: string datetime of the order Execution Time.
 
 - `symbol`: Symbol of the Ticker for which the order is placed.
 
@@ -1183,7 +1183,7 @@ An OrderBook / TradeBook is an array of dictionaries with the following keys:
 {
     'id': '231122000383315',
     'userOrderId': 'SLOrderNFO',
-    'timestamp': datetime.datetime(2023, 11, 22, 11, 9, 37),
+    'timestamp': '2023-11-22 11:09:37',
     'symbol': 'BANKNIFTY22NOV2345500CE',
     'token': '42163',
     'side': 'BUY',
@@ -1252,7 +1252,7 @@ An OrderBook / TradeBook is an array of dictionaries with the following keys:
 ```python
 [{'id': '231217000002374',
   'userOrderId': '1702818893-475934-HBWPK2428E-ADMINAPI',
-  'timestamp': datetime.datetime(2023, 12, 17, 18, 44, 53),
+  'timestamp': '2023-12-17 18:44:53',
   'symbol': 'BANKNIFTY23D2047500CE',
   'token': '38223',
   'side': 'BUY',
@@ -1278,7 +1278,7 @@ An OrderBook / TradeBook is an array of dictionaries with the following keys:
   'info': {}},
  {'id': '231217000002374',
   'userOrderId': '1702818723-649114-HBWPK2428E-ADMINAPI',
-  'timestamp': datetime.datetime(2023, 12, 17, 18, 42, 3),
+  'timestamp': '2023-12-17 18:42:03',
   'symbol': 'BANKNIFTY23D2047500CE',
   'token': '38223',
   'side': 'BUY',
@@ -1304,7 +1304,7 @@ An OrderBook / TradeBook is an array of dictionaries with the following keys:
   'info': {}},
  {'id': '231217000002374',
   'userOrderId': '1702818612-325437-HBWPK2428E-ADMINAPI',
-  'timestamp': datetime.datetime(2023, 12, 17, 18, 40, 12),
+  'timestamp': '2023-12-17 18:40:10',
   'symbol': 'BANKNIFTY23D2047500CE',
   'token': '38223',
   'side': 'BUY',
@@ -1330,7 +1330,7 @@ An OrderBook / TradeBook is an array of dictionaries with the following keys:
   'info': {}},
  {'id': '231217000002374',
   'userOrderId': '1702798953-865415-HBWPK2428E-ADMINAPI',
-  'timestamp': datetime.datetime(2023, 12, 17, 13, 12, 33),
+  'timestamp': '2023-12-17 13:12:33',
   'symbol': 'BANKNIFTY23D2047500CE',
   'token': '38223',
   'side': 'BUY',

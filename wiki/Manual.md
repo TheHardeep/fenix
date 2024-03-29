@@ -51,7 +51,7 @@ A broker can be used as shown in the examples below:
 import fenix
 
 broker = fenix.aliceblue
-nfo_tokens = broker.create_fno_tokens()
+fno_tokens = broker.create_fno_tokens()
 
 # using python eval
 id = "angelone"
@@ -88,7 +88,7 @@ Here's an overview of generic broker properties with values added for example:
 id = 'aliceblue'
 indices = {}
 eq_tokens = {}
-nfo_tokens = {}
+fno_tokens = {}
 token_params = ["user_id", "password", "birth_year", "totpstr", "api_key"]
 _session = Broker._create_session()
 
@@ -141,7 +141,7 @@ urls = {
 
 - `eq_tokens`: A dicitonary used to manage the data of all the symbols in the Equity Segment along with their token ,tick size, lot size and Exchange.
 
-- `nfo_tokens
+- `fno_tokens
 `: A dictionary used to store all the data pertaining to the FNO Segment BankNifty, Nifty, FinNifty, MidcapNifty, Sensex to name a few. The data is nested dictionary containing all the data needed for a FNO Symbol like it's Strike Price, Expiry, Option, Trading Symbol, Lot Size, Tick Size and Exchange.
 
 - `token_params`: An array of strings containig all the parameters requre to create the HTTP *headers* used to access endpoints for placing orders, fetching orderbook, positions, etc.
@@ -354,7 +354,7 @@ The following Enums are used across the fenix library:
 
 # Loading Broker Master Scripts
 
-In most cases you are required to load the data of trading symbols for a particular broker prior to accessing other API methods. If you forget to load the symbol data the fenix library will do that automatically upon your first call to the unified API. It will send two HTTP requests, first for symbols and then the second one for other data, sequentially. For that reason, your first call to a unified Fenix API method like create_order, create_nfo_order, create_bo_order, etc. will take more time, than the consequent calls, since it has to do more work loading the market information from the Broker API.
+In most cases you are required to load the data of trading symbols for a particular broker prior to accessing other API methods. If you forget to load the symbol data the fenix library will do that automatically upon your first call to the unified API. It will send two HTTP requests, first for symbols and then the second one for other data, sequentially. For that reason, your first call to a unified Fenix API method like create_order, create_fno_order, create_bo_order, etc. will take more time, than the consequent calls, since it has to do more work loading the market information from the Broker API.
 
 In order to load trading symbol data manually beforehand call the `create_fno_tokens ()` / `create_eq_tokens ()` method on a broker class. It returns a dictionary of markets indexed by trading symbol/expiry. If you want more control over the execution of your logic, preloading markets by hand is recommended.
 
@@ -450,7 +450,7 @@ This dictionary stores the Indices data from both *NSE & BSE* exchanges and is f
 }
 ```
 
-## cls.nfo_tokens
+## cls.fno_tokens
 
 This class variable is a dictionary sotring the data for the FNO segment in the following format:
 
@@ -570,7 +570,7 @@ These methods download the MasterScript of the broker and stores the data of the
 
 - `create_indices ()`: Fetches all the Indices data. Stores the data in the `indices` attribute of the broker.
 
-- `create_fno_tokens ()`: Fetches all the FNO Segment data. Stores the data in the `nfo_tokens` attribute of the broker.
+- `create_fno_tokens ()`: Fetches all the FNO Segment data. Stores the data in the `fno_tokens` attribute of the broker.
 
 
 ## Headers Method
@@ -693,7 +693,7 @@ This method allows the user to place any type of order in the Equity Segment. It
 ### create_order ( )
 This method allows the user to place orders in any segment. It takes the following parameters:
 
-- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
 
 - `target` (float, optional): Order Target price. Defaults to 0.
 
@@ -703,7 +703,7 @@ This method allows the user to place orders in any segment. It takes the followi
 
     ```python
     headers = symphony.create_headers(params)
-    token_data = symphony.nfo_tokens["CURRENT"]["BANKNIFTY"]["CE"]["38500"]
+    token_data = symphony.fno_tokens["CURRENT"]["BANKNIFTY"]["CE"]["38500"]
 
     symphony.create_order(token_dict = token_data,
                           quantity = 15,
@@ -792,12 +792,12 @@ A market order does not require a *price* or *trigger* to send the order.
 
 #### Any Segment
 
-- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
 
     ```python
     from fenix import Side, fyers
 
-    token_data = symphony.nfo_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
+    token_data = symphony.fno_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
 
     fyers.market_order(token_dict = token_data,
                        quantity = 100,
@@ -858,12 +858,12 @@ Limit Orders require another parameter along with other [common parameters](#com
 
 #### Any Segment
 
-- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
 
     ```python
     from fenix import Side, fyers
 
-    token_data = symphony.nfo_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
+    token_data = symphony.fno_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
 
     fyers.limit_order(token_dict = token_data,
                       price = 400.50,
@@ -929,12 +929,12 @@ Stoploss Orders require another parameter along with other [common parameters](#
 
 #### Any Segment
 
-- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
 
     ```python
     from fenix import Side, fyers
 
-    token_data = symphony.nfo_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
+    token_data = symphony.fno_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
 
     fyers.sl_order(token_dict = token_data,
                    price = 400.50,
@@ -998,12 +998,12 @@ Stoploss-Market Orders require another parameter along with other [common parame
 
 #### Any Segment
 
-- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or nfo_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
+- `token_dict` (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens. (Contains "Exchange", "Token" and "Symbol" as keys.)
 
     ```python
     from fenix import Side, fyers
 
-    token_data = symphony.nfo_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
+    token_data = symphony.fno_tokens["CURRENT"]["NIFTY"]["PE"]["22100"]
 
     fyers.slm_order(token_dict = token_data,
                    trigger = 395.0,

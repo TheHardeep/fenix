@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 import re
+import io
+import zipfile
 from requests_oauthlib import OAuth2Session
 
 from fenix.base.broker import Broker
@@ -58,6 +60,7 @@ class mastertrust(Broker):
         "marketdata_doc": " http://139.180.212.2/ray-websocket",
         "base": "https://masterswift-beta.mastertrust.co.in/api/v1",
         "market_data": "https://masterswift.mastertrust.co.in/api/v2/contracts.json",
+        "bfo_data": "https://masterswift-beta.mastertrust.co.in/api/v1/contract/Compact",
     }
 
     # Access Token Generation URLs
@@ -239,11 +242,32 @@ class mastertrust(Broker):
         )
         data = cls._json_parser(response)["NSE-IND"]
 
-        df = cls.data_frame(data)
+        df_nse = cls.data_frame(data)
 
-        df = df[["trading_symbol", "code"]]
-        df.rename({"trading_symbol": "Symbol", "code": "Token"}, axis=1, inplace=True)
+        params = {"exchanges": "BSE"}
+        response = cls.fetch(
+            method="GET",
+            url=cls.base_urls["market_data"],
+            params=params,
+        )
+        data = cls._json_parser(response)["BSE-IND"]
+
+        df_bse = cls.data_frame(data)
+
+        df = cls.concat_df([df_nse, df_bse])
+
+        df = df[["trading_symbol", "code", "exchange"]]
+        df.rename(
+            {
+                "trading_symbol": "Symbol",
+                "code": "Token",
+                "exchange": "Exchange",
+            },
+            axis=1,
+            inplace=True,
+        )
         df.index = df["Symbol"]
+        df["Token"] = df["Token"].astype(int)
 
         indices = df.to_dict(orient="index")
 
@@ -273,18 +297,25 @@ class mastertrust(Broker):
                 params=params,
             )
             data = cls._json_parser(response)["NSE-OPT"]
-            df = cls.data_frame(data)
 
-            df = df[
-                df["symbol"].str.startswith(
+            df_nfo = cls.data_frame(data)
+
+            df_nfo = df_nfo[
+                df_nfo["symbol"].str.startswith(
                     ("BANKNIFTY", "NIFTY", "FINNIFTY", "MIDCPNIFTY")
                 )
             ]
 
-            df["Root"] = df["symbol"].str.split(" ", expand=True)[0]
-            dfx = df["symbol"].str.rsplit(pat=" ", n=3, expand=True)
+            df_nfo["Root"] = df_nfo["symbol"].str.split(" ", expand=True)[0]
 
-            df.rename(
+            sp_op = df_nfo["symbol"].str.rsplit(pat=" ", n=3, expand=True)
+            df_nfo["StrikePrice"] = sp_op[2]
+            df_nfo["Option"] = sp_op[3]
+            df_nfo["expiry"] = cls.pd_datetime(
+                df_nfo["expiry"], unit="s"
+            ).dt.date.astype(str)
+
+            df_nfo.rename(
                 {
                     "code": "Token",
                     "expiry": "Expiry",
@@ -296,10 +327,7 @@ class mastertrust(Broker):
                 inplace=True,
             )
 
-            df["StrikePrice"] = dfx[2]
-            df["Option"] = dfx[3]
-
-            df = df[
+            df_nfo = df_nfo[
                 [
                     "Token",
                     "Symbol",
@@ -312,8 +340,59 @@ class mastertrust(Broker):
                 ]
             ]
 
+            params = {
+                "info": "download",
+                "exchanges": "BFO",
+            }
+            response = cls.fetch(
+                method="GET",
+                url=cls.base_urls["bfo_data"],
+                params=params,
+            )
+
+            zip_data = zipfile.ZipFile(io.BytesIO(response.content))
+            bfo_file = zip_data.namelist()[0]
+            with zip_data.open(bfo_file) as data:
+                df_bfo = cls.data_reader(data, filetype="csv")
+
+            df_bfo.rename(
+                {
+                    "exchange_token": "Token",
+                    "expiry": "Expiry",
+                    "trading_symbol": "Symbol",
+                    "lot_size": "LotSize",
+                    "exchange": "Exchange",
+                    "option_type": "Option",
+                    "strike": "StrikePrice",
+                    "company_name": "Root",
+                },
+                axis=1,
+                inplace=True,
+            )
+
+            df_bfo = df_bfo[
+                ((df_bfo["Root"] == Root.SENSEX) | (df_bfo["Root"] == Root.BANKEX))
+                & (df_bfo["instrument_name"] == "IO")
+            ]
+
+            df_bfo = df_bfo[
+                [
+                    "Token",
+                    "Symbol",
+                    "Expiry",
+                    "Option",
+                    "StrikePrice",
+                    "LotSize",
+                    "Root",
+                    "Exchange",
+                ]
+            ]
+
+            df_bfo["Expiry"] = cls.pd_datetime(df_bfo["Expiry"]).dt.date.astype(str)
+
+            df = cls.concat_df([df_nfo, df_bfo])
+
             df["StrikePrice"] = df["StrikePrice"].astype(float).astype(int).astype(str)
-            df["Expiry"] = cls.pd_datetime(df["Expiry"], unit="s").dt.date.astype(str)
             df["Token"] = df["Token"].astype(int)
             df["LotSize"] = df["LotSize"].astype(int)
 

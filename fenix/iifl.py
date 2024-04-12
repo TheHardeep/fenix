@@ -248,13 +248,23 @@ class iifl(Broker):
         )
         data_bse = cls._json_parser(response)["result"]["indexList"]
 
-        data_nse.extend(data_bse)
-
         indices = {}
 
         for i in data_nse:
             symbol, token = i.split("_")
-            indices[symbol] = {"Symbol": symbol, "Token": int(token)}
+            indices[symbol] = {
+                "Symbol": symbol,
+                "Token": int(token),
+                "Exchange": "NSECM",
+            }
+
+        for i in data_bse:
+            symbol, token = i.split("_")
+            indices[symbol] = {
+                "Symbol": symbol,
+                "Token": int(token),
+                "Exchange": "BSECM",
+            }
 
         indices[Root.BNF] = indices["NIFTY BANK"]
         indices[Root.NF] = indices["NIFTY 50"]

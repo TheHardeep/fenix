@@ -41,6 +41,7 @@ class kotak(Broker):
         "password",
         "consumer_key",
         "access_token",
+        "consumer_secret",
     ]
     id = "kotak"
     _session = Broker._create_session()
@@ -162,7 +163,6 @@ class kotak(Broker):
         """
         date_obj = cls.data_datetime()
         link = f"{cls.base_urls['market_data']}/TradeApiInstruments_Cash_{date_obj}.txt"
-
         df = cls.data_reader(link, filetype="csv", sep="|")
 
         df = df[df["instrumentType"] == "EQ"]
@@ -193,6 +193,7 @@ class kotak(Broker):
         df_bse.set_index(df_bse["Symbol"], inplace=True)
 
         df_nse = df[df["Exchange"] == ExchangeCode.NSE]
+        df_nse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
         df_nse.set_index(df_nse["Symbol"], inplace=True)
 
         cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient="index")
@@ -381,7 +382,9 @@ class kotak(Broker):
                 "consumerKey": params["consumer_key"],
                 "sessionToken": info02["success"]["sessionToken"],
                 "Authorization": f"Bearer {params['access_token']}",
-            }
+            },
+            "consumer_key": params["consumer_key"],
+            "consumer_secret": params["consumer_secret"],
         }
 
         cls._session = cls._create_session()

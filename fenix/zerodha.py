@@ -43,7 +43,13 @@ class zerodha(Broker):
     indices = {}
     eq_tokens = {}
     nfo_tokens = {}
-    token_params = ["user_id", "password", "totpstr", "api_key", "api_secret"]
+    token_params = [
+        "user_id",
+        "password",
+        "totpstr",
+        "api_key",
+        "api_secret",
+    ]
     id = "zerodha"
     _session = Broker._create_session()
 
@@ -205,9 +211,15 @@ class zerodha(Broker):
         """
         df = cls.data_reader(cls.base_urls["market_data"], filetype="csv")
 
-        df = df[(df["segment"] == "INDICES")][["tradingsymbol", "instrument_token"]]
+        df = df[(df["segment"] == "INDICES")][
+            ["tradingsymbol", "instrument_token", "exchange"]
+        ]
         df.rename(
-            {"tradingsymbol": "Symbol", "instrument_token": "Token"},
+            {
+                "tradingsymbol": "Symbol",
+                "instrument_token": "Token",
+                "exchange": "Exchange",
+            },
             axis=1,
             inplace=True,
         )

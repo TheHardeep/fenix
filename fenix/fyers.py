@@ -200,6 +200,8 @@ class fyers(Broker):
             "Underlying FyToken",
             "NA",
             "NAA",
+            "NAAA",
+            "NAAAA",
         ]
 
         df_bse = cls.data_reader(
@@ -309,6 +311,8 @@ class fyers(Broker):
             "Underlying FyToken",
             "NA",
             "NAA",
+            "NAAA",
+            "NAAAA",
         ]
 
         df_nse = cls.data_reader(
@@ -316,7 +320,6 @@ class fyers(Broker):
             filetype="csv",
             col_names=col_names,
         )
-
         df_bse = cls.data_reader(
             cls.base_urls["market_data"].replace("NSE_FO", "BSE_CM"),
             filetype="csv",
@@ -326,7 +329,7 @@ class fyers(Broker):
         df = cls.concat_df([df_nse, df_bse])
 
         df = df[df["Symbol ticker"].str.endswith("INDEX")][
-            ["Symbol ticker", "Scrip code"]
+            ["Symbol ticker", "Scrip code", "Exchange", "Segment"]
         ]
         df.rename(
             {"Symbol ticker": "Symbol", "Scrip code": "Token"}, axis=1, inplace=True
@@ -379,12 +382,13 @@ class fyers(Broker):
                 "Underlying FyToken",
                 "NA",
                 "NAA",
+                "NAAA",
+                "NAAAA",
             ]
 
             df_nfo = cls.data_reader(
                 cls.base_urls["market_data"], filetype="csv", col_names=col_names
             )
-
             df_nfo = df_nfo[
                 (
                     (df_nfo["Underlying scrip code"] == "BANKNIFTY")
@@ -437,6 +441,8 @@ class fyers(Broker):
                     "LotSize",
                     "Root",
                     "TickSize",
+                    "Exchange",
+                    "Segment",
                 ]
             ]
 

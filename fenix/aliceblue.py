@@ -114,7 +114,7 @@ class aliceblue(Broker):
         "token_01": "https://ant.aliceblueonline.com/rest/AliceBlueAPIService",
         "token_02": "https://ant.aliceblueonline.com/",
         "base": "https://ant.aliceblueonline.com/rest/AliceBlueAPIService/api",
-        "market_data": f"https://v2api.aliceblueonline.com/restpy/static/contract_master/{ExchangeCode.NFO}.csv",
+        "market_data": "https://v2api.aliceblueonline.com/restpy/contract_master",
     }
 
     # Access Token Generation URLs
@@ -247,19 +247,25 @@ class aliceblue(Broker):
         Returns:
             dict: Unified fenix indices format.
         """
-        nse_url = cls.base_urls["market_data"].replace(
-            ExchangeCode.NFO, ExchangeCode.BSE
+        params = {"exch": ExchangeCode.BSE}
+        response = cls.fetch(
+            method="GET",
+            url=cls.base_urls["market_data"],
+            params=params,
         )
-        df_bse = cls.data_reader(link=nse_url, filetype="csv")
+        data = cls._json_parser(response)[ExchangeCode.BSE]
 
-        df_bse = df_bse[(df_bse["Instrument Type"] == "E")]
-        df_bse = df_bse[["Trading Symbol", "Token", "Lot Size", "Tick Size", "Exch"]]
+        df_bse = cls.data_frame(data)
+
+        df_bse = df_bse[(df_bse["instrument_type"] == "E")]
+        df_bse = df_bse[["trading_symbol", "token", "lot_size", "tick_size", "exch"]]
         df_bse.rename(
             {
-                "Trading Symbol": "Symbol",
-                "Tick Size": "TickSize",
-                "Lot Size": "LotSize",
-                "Exch": "Exchange",
+                "trading_symbol": "Symbol",
+                "tick_size": "TickSize",
+                "lot_size": "LotSize",
+                "exch": "Exchange",
+                "token": "Token",
             },
             axis=1,
             inplace=True,
@@ -269,23 +275,30 @@ class aliceblue(Broker):
 
         df_bse["TickSize"] = df_bse["TickSize"].astype(float)
         df_bse["LotSize"] = df_bse["LotSize"].astype(int)
+        df_bse["Token"] = df_bse["Token"].astype(int)
 
-        bse_url = cls.base_urls["market_data"].replace(
-            ExchangeCode.NFO, ExchangeCode.NSE
+        params = {"exch": ExchangeCode.NSE}
+        response = cls.fetch(
+            method="GET",
+            url=cls.base_urls["market_data"],
+            params=params,
         )
-        df_nse = cls.data_reader(link=bse_url, filetype="csv")
+        data = cls._json_parser(response)[ExchangeCode.NSE]
 
-        df_nse = df_nse[(df_nse["Group Name"] == "EQ")]
+        df_nse = cls.data_frame(data)
+
+        df_nse = df_nse[(df_nse["group_name"] == "EQ")]
         df_nse = df_nse[
-            ["Symbol", "Trading Symbol", "Token", "Lot Size", "Tick Size", "Exch"]
+            ["symbol", "trading_symbol", "token", "lot_size", "tick_size", "exch"]
         ]
         df_nse.rename(
             {
-                "Symbol": "Index",
-                "Trading Symbol": "Symbol",
-                "Tick Size": "TickSize",
-                "Lot Size": "LotSize",
-                "Exch": "Exchange",
+                "symbol": "Index",
+                "trading_symbol": "Symbol",
+                "tick_size": "TickSize",
+                "lot_size": "LotSize",
+                "exch": "Exchange",
+                "token": "Token",
             },
             axis=1,
             inplace=True,
@@ -296,6 +309,7 @@ class aliceblue(Broker):
 
         df_nse["TickSize"] = df_nse["TickSize"].astype(float)
         df_nse["LotSize"] = df_nse["LotSize"].astype(int)
+        df_nse["Token"] = df_nse["Token"].astype(int)
 
         cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient="index")
         cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient="index")
@@ -311,17 +325,24 @@ class aliceblue(Broker):
         Returns:
             dict: Unified fenix indices format.
         """
-        indices_url = cls.base_urls["market_data"].replace(ExchangeCode.NFO, "INDICES")
-        df = cls.data_reader(link=indices_url, filetype="csv")
 
-        df.rename(
-            {"symbol": "Symbol", "token": "Token", "exch": "Exchange"},
-            axis=1,
-            inplace=True,
+        params = {"exch": "INDICES"}
+        response = cls.fetch(
+            method="GET",
+            url=cls.base_urls["market_data"],
+            params=params,
         )
-        df.index = df["Symbol"]
+        data = cls._json_parser(response)
 
-        indices = df.to_dict(orient="index")
+        indices = {}
+
+        for exch in [ExchangeCode.NSE, ExchangeCode.BSE, ExchangeCode.MCX]:
+            for token_data in data[exch]:
+                indices[token_data["symbol"]] = {
+                    "Symbol": token_data["symbol"],
+                    "Token": token_data["token"],
+                    "Exchange": exch,
+                }
 
         indices[Root.BNF] = indices["NIFTY BANK"]
         indices[Root.NF] = indices["NIFTY 50"]
@@ -342,40 +363,54 @@ class aliceblue(Broker):
             TokenDownloadError: Any Error Occured is raised through this Error Type.
         """
         try:
-            df_nfo = cls.data_reader(link=cls.base_urls["market_data"], filetype="csv")
+            params = {"exch": ExchangeCode.NFO}
+            response = cls.fetch(
+                method="GET",
+                url=cls.base_urls["market_data"],
+                params=params,
+            )
+            data = cls._json_parser(response)[ExchangeCode.NFO]
+
+            df_nfo = cls.data_frame(data)
 
             df_nfo = df_nfo[
                 (
-                    (df_nfo["Symbol"] == "BANKNIFTY")
-                    | (df_nfo["Symbol"] == "NIFTY")
-                    | (df_nfo["Symbol"] == "FINNIFTY")
-                    | (df_nfo["Symbol"] == "MIDCPNIFTY")
+                    (df_nfo["symbol"] == "BANKNIFTY")
+                    | (df_nfo["symbol"] == "NIFTY")
+                    | (df_nfo["symbol"] == "FINNIFTY")
+                    | (df_nfo["symbol"] == "MIDCPNIFTY")
                 )
-                & ((df_nfo["Instrument Type"] == "OPTIDX"))
+                & ((df_nfo["instrument_type"] == "OPTIDX"))
             ]
 
-            bfo_url = cls.base_urls["market_data"].replace(
-                ExchangeCode.NFO, ExchangeCode.BFO
+            params = {"exch": ExchangeCode.BFO}
+            response = cls.fetch(
+                method="GET",
+                url=cls.base_urls["market_data"],
+                params=params,
             )
-            df_bfo = cls.data_reader(link=bfo_url, filetype="csv")
+            data = cls._json_parser(response)[ExchangeCode.BFO]
+
+            df_bfo = cls.data_frame(data)
 
             df_bfo = df_bfo[
-                ((df_bfo["Symbol"] == "SENSEX") | (df_bfo["Symbol"] == "BANKEX"))
-                & ((df_bfo["Instrument Type"] == "IO"))
+                ((df_bfo["symbol"] == "SENSEX") | (df_bfo["symbol"] == "BANKEX"))
+                & ((df_bfo["instrument_type"] == "IO"))
             ]
 
             df = cls.concat_df([df_nfo, df_bfo])
 
             df.rename(
                 {
-                    "Option Type": "Option",
-                    "Symbol": "Root",
-                    "Exch": "Exchange",
-                    "Expiry Date": "Expiry",
-                    "Trading Symbol": "Symbol",
-                    "Tick Size": "TickSize",
-                    "Lot Size": "LotSize",
-                    "Strike Price": "StrikePrice",
+                    "option_type": "Option",
+                    "symbol": "Root",
+                    "exch": "Exchange",
+                    "expiry_date": "Expiry",
+                    "trading_symbol": "Symbol",
+                    "tick_size": "TickSize",
+                    "lot_size": "LotSize",
+                    "strike_price": "StrikePrice",
+                    "token": "Token",
                 },
                 axis=1,
                 inplace=True,
@@ -395,7 +430,7 @@ class aliceblue(Broker):
             ]
 
             df["StrikePrice"] = df["StrikePrice"].astype(int).astype(str)
-            df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
+            df["Expiry"] = cls.pd_datetime(df["Expiry"], unit="ms").dt.date.astype(str)
             df["Token"] = df["Token"].astype(int)
             df["TickSize"] = df["TickSize"].astype(float)
             df["LotSize"] = df["LotSize"].astype(float)

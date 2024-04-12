@@ -221,6 +221,8 @@ class fivepaisa(Broker):
         df_bse = df_bse[
             ["Symbol", "Token", "TickSize", "LotSize", "Exchange", "ExchangeType"]
         ]
+
+        df_bse["Exchange"] = ExchangeCode.BSE
         df_bse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
         df_bse.set_index(df_bse["Symbol"], inplace=True)
 
@@ -323,6 +325,7 @@ class fivepaisa(Broker):
                 inplace=True,
             )
 
+            df["Exchange"].replace({"B": "BSE", "N": "NSE"}, inplace=True)
             df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
             df["StrikePrice"] = df["StrikePrice"].astype(int).astype(str)
 
@@ -416,6 +419,7 @@ class fivepaisa(Broker):
             "headers": req_headers,
             "user_key": params["user_key"],
             "client_code": client_code,
+            "access_token": jwt_token,
             "json_data": json_data,
         }
 
@@ -678,7 +682,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exchange": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exchange": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchangeType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),
@@ -710,7 +716,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exch": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exch": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),
@@ -784,7 +792,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exchange": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exchange": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchangeType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),
@@ -816,7 +826,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exch": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exch": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),
@@ -892,7 +904,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exchange": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exchange": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchangeType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),
@@ -924,7 +938,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exch": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exch": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),
@@ -1002,7 +1018,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exchange": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exchange": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchangeType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),
@@ -1034,7 +1052,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exch": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exch": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),
@@ -1110,7 +1130,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exchange": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exchange": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchangeType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),
@@ -1142,7 +1164,9 @@ class fivepaisa(Broker):
                 },
                 "body": {
                     "ScripCode": token_dict["Token"],
-                    "Exch": cls._key_mapper(cls.req_exchange, token_dict["Exchange"], "exchange"),
+                    "Exch": cls._key_mapper(
+                        cls.req_exchange, token_dict["Exchange"], "exchange"
+                    ),
                     "ExchType": cls._key_mapper(
                         cls.req_exchange_type, token_dict["Exchange"], "exchange"
                     ),

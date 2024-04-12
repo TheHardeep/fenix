@@ -313,9 +313,16 @@ class Broker:
                     dtype=dtype,
                     sep=sep,
                     names=col_names,
+                    # sep="|",
                 )
 
-            return read_csv(link, dtype=dtype, sep=sep)
+            return read_csv(
+                link,
+                dtype=dtype,
+                sep=sep,
+                on_bad_lines="skip",
+                encoding_errors="ignore",
+            )
 
         raise InputError(
             f"Wrong Filetype: {filetype}, the possible values are: 'json', 'csv'"

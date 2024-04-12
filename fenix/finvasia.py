@@ -80,9 +80,10 @@ class finvasia(Broker):
     req_exchange = {
         ExchangeCode.NSE: "NSE",
         ExchangeCode.NFO: "NFO",
+        ExchangeCode.BSE: "BSE",
+        ExchangeCode.BFO: "BFO",
         ExchangeCode.CDS: "CDS",
         ExchangeCode.MCX: "MCX",
-        ExchangeCode.BSE: "BSE",
     }
 
     req_order_type = {
@@ -211,6 +212,8 @@ class finvasia(Broker):
         indices[Root.NF] = indices["NIFTY INDEX"]
         indices[Root.FNF] = indices["FINNIFTY"]
         indices[Root.MIDCPNF] = indices["MIDCPNIFTY"]
+        indices[Root.SENSEX] = {"Symbol": "SENSEX", "Token": 1}
+        indices[Root.BANKEX] = {"Symbol": "BANKEX", "Token": 12}
 
         cls.indices = indices
 

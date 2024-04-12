@@ -4,11 +4,10 @@ from typing import Any
 
 import time
 from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service as ChromeService
+import undetected_chromedriver as uc
 
 from fenix.base.broker import Broker
 
@@ -188,19 +187,24 @@ class upstox(Broker):
                 "exchange_token": "ExchangeToken",
                 "tick_size": "TickSize",
                 "lot_size": "LotSize",
+                "exchange": "Exchange",
             },
             axis=1,
             inplace=True,
         )
 
-        df_bse = df[df["exchange"] == "BSE_EQ"]
-        df_bse = df_bse[["Symbol", "Token", "ExchangeToken", "TickSize", "LotSize"]]
+        df_bse = df[df["Exchange"] == "BSE_EQ"]
+        df_bse = df_bse[
+            ["Symbol", "Token", "ExchangeToken", "TickSize", "LotSize", "Exchange"]
+        ]
         df_bse["ExchangeToken"] = df_bse["ExchangeToken"].astype(int)
         df_bse.set_index(df_bse["Symbol"], inplace=True)
         df_bse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
 
-        df_nse = df[df["exchange"] == "NSE_EQ"]
-        df_nse = df_nse[["Symbol", "Token", "ExchangeToken", "TickSize", "LotSize"]]
+        df_nse = df[df["Exchange"] == "NSE_EQ"]
+        df_nse = df_nse[
+            ["Symbol", "Token", "ExchangeToken", "TickSize", "LotSize", "Exchange"]
+        ]
         df_nse["ExchangeToken"] = df_nse["ExchangeToken"].astype(int)
         df_nse.set_index(df_nse["Symbol"], inplace=True)
         df_nse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
@@ -222,16 +226,20 @@ class upstox(Broker):
         df = cls.data_reader(link=cls.base_urls["market_data"], filetype="csv")
 
         df = df[((df["exchange"] == "NSE_INDEX") | (df["exchange"] == "BSE_INDEX"))][
-            ["name", "instrument_key", "exchange_token"]
+            ["name", "instrument_key", "exchange"]
         ]
 
         df.rename(
-            {"instrument_key": "Symbol", "exchange_token": "Token"},
+            {
+                "instrument_key": "Token",
+                "name": "Symbol",
+                "exchange": "Exchange",
+            },
             axis=1,
             inplace=True,
         )
-        df.index = df["name"]
-        del df["name"]
+        df.index = df["Symbol"]
+        # del df["Symbol"]
         indices = df.to_dict(orient="index")
 
         indices[Root.BNF] = indices["Nifty Bank"]
@@ -273,11 +281,11 @@ class upstox(Broker):
                     "lot_size": "LotSize",
                     "strike": "StrikePrice",
                     "exchange_token": "ExchangeToken",
+                    "exchange": "Exchange",
                 },
                 axis=1,
                 inplace=True,
             )
-
             df = df[
                 [
                     "Token",
@@ -289,6 +297,7 @@ class upstox(Broker):
                     "LotSize",
                     "Root",
                     "TickSize",
+                    "Exchange",
                 ]
             ]
 
@@ -342,9 +351,7 @@ class upstox(Broker):
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36"
         )
 
-        driver = webdriver.Chrome(
-            service=ChromeService(ChromeDriverManager().install()), options=options
-        )
+        driver = driver = uc.Chrome()
 
         driver.get(dialog_url)
 
@@ -353,6 +360,7 @@ class upstox(Broker):
         elem.send_keys(params["mobile_no"])
 
         c1 = driver.find_element(By.ID, "getOtp")
+        driver.execute_script("arguments[0].removeAttribute('disabled');", c1)
         c1.click()
 
         totp = cls.totp_creator(params["totpstr"])

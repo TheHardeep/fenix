@@ -57,6 +57,7 @@ class kotakneo(Broker):
 
     base_urls = {
         "api_doc": "https://documenter.getpostman.com/view/21534797/UzBnqmpD",
+        "api_doc2": "https://hypersync.in/apidoc_neo/",
         "base": "https://gw-napi.kotaksecurities.com",
         "market_data": "https://lapi.kotaksecurities.com/wso2-scripmaster/v1/prod/<date>/transformed/<exchange>.csv",
     }
@@ -91,7 +92,7 @@ class kotakneo(Broker):
         ExchangeCode.BSE: "bse_cm",
         ExchangeCode.BFO: "bse_fo",
         ExchangeCode.BCD: "bcs_fo",
-        ExchangeCode.MCX: "mcx",
+        ExchangeCode.MCX: "mcx_fo",
         ExchangeCode.CDS: "cde_fo",
     }
 
@@ -274,8 +275,8 @@ class kotakneo(Broker):
         df_bse = cls.data_reader(bse_url, filetype="csv")
 
         df = cls.concat_df([df_nse, df_bse])
-        df = df[df["pGroup"].isna()][["pTrdSymbol", "pSymbol", "pSymbolName"]]
-        df.rename({"pTrdSymbol": "Symbol", "pSymbol": "Token"}, axis=1, inplace=True)
+        df = df[df["pGroup"].isna()][["pTrdSymbol", "pSymbol", "pSymbolName", "pExchSeg"]]
+        df.rename({"pTrdSymbol": "Symbol", "pSymbol": "Token", "pExchSeg": "Exchange"}, axis=1, inplace=True)
         df.index = df["pSymbolName"]
         del df["pSymbolName"]
 
@@ -400,109 +401,109 @@ class kotakneo(Broker):
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 
-            base64_code = base64.b64encode(
-                f"{params['consumer_key']}:{params['consumer_secret']}".encode()
-            ).decode()
-            headers = {
-                "Authorization": f"Basic {base64_code}",
-                "Content-Type": "application/x-www-form-urlencoded",
-            }
+        base64_code = base64.b64encode(
+            f"{params['consumer_key']}:{params['consumer_secret']}".encode()
+        ).decode()
+        headers = {
+            "Authorization": f"Basic {base64_code}",
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
 
-            data = {
-                "grant_type": "password",
-                "username": params["client_id"],
-                "password": params["password"],
-            }
+        data = {
+            "grant_type": "password",
+            "username": params["client_id"],
+            "password": params["password"],
+        }
+        print(data)
+        response01 = cls.fetch(
+            method="POST",
+            url=cls.token_urls["token"],
+            data=data,
+            headers=headers,
+        )
 
-            response01 = cls.fetch(
-                method="POST",
-                url=cls.token_urls["token"],
-                data=data,
-                headers=headers,
-            )
+        info01 = cls._json_parser(response01)
+        access_token = info01["access_token"]
 
-            info01 = cls._json_parser(response01)
-            access_token = info01["access_token"]
+        json_data = {
+            "mobileNumber": params["mobile_no"],
+            "password": params["trade_password"],
+        }
 
-            json_data = {
-                "mobileNumber": params["mobile_no"],
-                "password": params["trade_password"],
-            }
+        headers = {
+            "accept": "*/*",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        }
 
-            headers = {
-                "accept": "*/*",
-                "Content-Type": "application/json",
+        response02 = cls.fetch(
+            method="POST",
+            url=cls.token_urls["validate"],
+            json=json_data,
+            headers=headers,
+        )
+
+        info02 = cls._json_parser(response02)
+        token = info02["data"]["token"]
+        session_id = info02["data"]["sid"]
+        token_decode = jwt.decode(
+            token, algorithms=["RS256"], options={"verify_signature": False}
+        )
+        user_id = token_decode["sub"]
+
+        json_data = {"userId": user_id, "sendEmail": True, "isWhitelisted": True}
+
+        headers = {
+            "accept": "*/*",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        }
+
+        response03 = cls.fetch(
+            method="POST",
+            url=cls.token_urls["otp_generate"],
+            json=json_data,
+            headers=headers,
+        )
+        _ = cls._json_parser(response03)
+
+        json_data = {"userId": user_id, "mpin": params["pin"]}
+
+        headers = {
+            "accept": "*/*",
+            "sid": session_id,
+            "Auth": token,
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}",
+        }
+
+        response04 = cls.fetch(
+            method="POST",
+            url=cls.token_urls["validate"],
+            json=json_data,
+            headers=headers,
+        )
+
+        info04 = cls._json_parser(response04)
+        session_id_headers = info04["data"]["sid"]
+        token_headers = info04["data"]["token"]
+        hid = info04["data"]["hsServerId"]
+
+        headers = {
+            "headers": {
+                "Sid": session_id_headers,
+                "Auth": token_headers,
+                "neo-fin-key": "neotradeapi",
+                # "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": f"Bearer {access_token}",
-            }
+                "accept": "application/json",
+            },
+            "sId": hid,
+        }
 
-            response02 = cls.fetch(
-                method="POST",
-                url=cls.token_urls["validate"],
-                json=json_data,
-                headers=headers,
-            )
+        cls._session = cls._create_session()
 
-            info02 = cls._json_parser(response02)
-            token = info02["data"]["token"]
-            session_id = info02["data"]["sid"]
-            token_decode = jwt.decode(
-                token, algorithms=["RS256"], options={"verify_signature": False}
-            )
-            user_id = token_decode["sub"]
-
-            json_data = {"userId": user_id, "sendEmail": True, "isWhitelisted": True}
-
-            headers = {
-                "accept": "*/*",
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {access_token}",
-            }
-
-            response03 = cls.fetch(
-                method="POST",
-                url=cls.token_urls["otp_generate"],
-                json=json_data,
-                headers=headers,
-            )
-            _ = cls._json_parser(response03)
-
-            json_data = {"userId": user_id, "mpin": params["pin"]}
-
-            headers = {
-                "accept": "*/*",
-                "sid": session_id,
-                "Auth": token,
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {access_token}",
-            }
-
-            response04 = cls.fetch(
-                method="POST",
-                url=cls.token_urls["validate"],
-                json=json_data,
-                headers=headers,
-            )
-
-            info04 = cls._json_parser(response04)
-            session_id_headers = info04["data"]["sid"]
-            token_headers = info04["data"]["token"]
-            hid = info04["data"]["hsServerId"]
-
-            headers = {
-                "headers": {
-                    "Sid": session_id_headers,
-                    "Auth": token_headers,
-                    "neo-fin-key": "neotradeapi",
-                    # "Content-Type": "application/x-www-form-urlencoded",
-                    "Authorization": f"Bearer {access_token}",
-                    "accept": "application/json",
-                },
-                "sId": hid,
-            }
-
-            cls._session = cls._create_session()
-
-            return headers
+        return headers
 
     @classmethod
     def _json_parser(

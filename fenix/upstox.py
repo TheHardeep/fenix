@@ -6,8 +6,8 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import NoSuchDriverException
 from selenium.webdriver.support import expected_conditions as EC
-import undetected_chromedriver as uc
 
 from fenix.base.broker import Broker
 
@@ -29,6 +29,8 @@ from fenix.base.errors import InputError
 from fenix.base.errors import ResponseError
 from fenix.base.errors import BrokerError
 from fenix.base.errors import TokenDownloadError
+
+
 
 if TYPE_CHECKING:
     from requests.models import Response
@@ -200,7 +202,7 @@ class upstox(Broker):
         df_bse["ExchangeToken"] = df_bse["ExchangeToken"].astype(int)
         df_bse.set_index(df_bse["Symbol"], inplace=True)
         df_bse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
-
+        return df
         df_nse = df[df["Exchange"] == "NSE_EQ"]
         df_nse = df_nse[
             ["Symbol", "Token", "ExchangeToken", "TickSize", "LotSize", "Exchange"]
@@ -345,13 +347,48 @@ class upstox(Broker):
             .replace("<redirect_uri>", params["redirect_uri"])
         )
 
-        options = webdriver.ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36"
-        )
 
-        driver = driver = uc.Chrome()
+        try:
+            options = webdriver.EdgeOptions()
+            options.add_argument("--headless")
+            options.add_argument(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36"
+            )
+
+
+            driver = webdriver.Edge(options=options)
+
+        except NoSuchDriverException as e:
+            print(e, "Edge")
+
+            try:
+                options = webdriver.ChromeOptions()
+                options.add_argument("--headless")
+                options.add_argument(
+                    "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36"
+                )
+
+
+                driver = webdriver.Chrome(options=options)
+
+            except NoSuchDriverException as e:
+                print(e, "Chrome")
+
+                try:
+                    options = webdriver.FirefoxOptions()
+                    options.add_argument("--headless")
+                    options.add_argument(
+                        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36"
+                    )
+
+
+                    driver = webdriver.Firefox(options=options)
+
+                except NoSuchDriverException as e:
+                    print(e, "Firefox")
+
+
+
 
         driver.get(dialog_url)
 

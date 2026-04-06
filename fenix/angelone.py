@@ -53,7 +53,7 @@ class angelone(Broker):
         "api_doc": "https://smartapi.angelbroking.com/docs",
         "access_token": "https://apiconnect.angelbroking.com/rest/auth/angelbroking/user/v1/loginByPassword",
         "base": "https://apiconnect.angelbroking.com/rest/secure/angelbroking",
-        "market_data": "https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json",
+        "market_data": "https://margincalculator.angelone.in/OpenAPI_File/files/OpenAPIScripMaster.json",
     }
 
     # Order Placing URLs

@@ -83,6 +83,7 @@ class Broker:
         params: dict[Any, Any] | None = None,
         auth: tuple[str, str] | None = None,
         timeout: int = 10,
+        verify: bool = True,
     ) -> Response:
         """
         A Wrapper for Python Requests module,
@@ -117,6 +118,7 @@ class Broker:
                 params=params,
                 auth=auth,
                 timeout=timeout,
+                verify=verify,
             )
 
             response.raise_for_status()
@@ -441,10 +443,36 @@ class Broker:
 
     @staticmethod
     def dates_filter(data):
-        data = to_datetime(data)
-        data = data[data >= datetime.now()]
+        data = to_datetime(data, format='mixed')
+        data = data[data.date >= datetime.now().date()]
         data = list(data.sort_values().date.astype(str))
         return data
+
+    @classmethod
+    def cookie_getter(cls):
+        try:
+            headers = {
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-language": "en-GB,en;q=0.9",
+                "dnt": "1",
+                "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
+                "sec-fetch-dest": "document",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "none",
+                "sec-fetch-user": "?1",
+                "upgrade-insecure-requests": "1",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+            }
+
+            temp_session = cls._create_session()
+            response = temp_session.request(
+                method="GET", url="https://www.nseindia.com/option-chain", headers=headers
+            )
+            cls.cookies = dict(response.cookies)
+        except Exception as e:
+            print(e)
 
     @classmethod
     def download_expiry_dates_nfo(
@@ -453,55 +481,43 @@ class Broker:
     ):
         temp_session = req_session()
 
-        for _ in range(5):
-            try:
-                headers = {
-                    "accept": "*/*",
-                    "accept-language": "en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7",
-                    "dnt": "1",
-                    "referer": "https://www.nseindia.com/option-chain",
-                    "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-                    "sec-ch-ua-mobile": "?0",
-                    "sec-ch-ua-platform": '"Windows"',
-                    "sec-fetch-dest": "empty",
-                    "sec-fetch-mode": "cors",
-                    "sec-fetch-site": "same-origin",
-                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                }
+        try:
+            headers = {
+                "accept": "*/*",
+                "accept-language": "en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7",
+                "dnt": "1",
+                "referer": "https://www.nseindia.com/option-chain",
+                "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+            }
 
-                params = {
-                    "symbol": f"{root}",
-                }
+            params = {
+                "symbol": f"{root}",
+            }
 
-                response = temp_session.request(
-                    method="GET",
-                    url=cls.nfo_url,
-                    params=params,
-                    cookies=cls.cookies,
-                    headers=headers,
-                    timeout=10,
-                )
-                data = response.json()
-                expiry_dates = data["records"]["expiryDates"]
-                cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
-                return None
+            if not cls.cookies:
+                cls.cookie_getter()
 
-            except:
-                pass
+            response = temp_session.request(
+                method="GET",
+                url=cls.nfo_url,
+                params=params,
+                cookies=cls.cookies,
+                headers=headers,
+                timeout=10,
+            )
+            data = response.json()
+            expiry_dates = data["records"]["expiryDates"]
+            cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
+            return cls.expiry_dates[root]
 
-            try:
-                response = popen(
-                    f'curl "{cls.nfo_url}?symbol={root}" -H "authority: beta.nseindia.com" -H "cache-control: max-age=0" -H "dnt: 1" -H "upgrade-insecure-requests: 1" -H "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.117 Safari/537.36" -H "sec-fetch-user: ?1" -H "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9" -H "sec-fetch-site: none" -H "sec-fetch-mode: navigate" -H "accept-encoding: gzip, deflate, br" -H "accept-language: en-US,en;q=0.9,hi;q=0.8" --compressed'
-                ).read()
-                data = loads(response)
-                expiry_dates = data["records"]["expiryDates"]
-                cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
-                return None
-
-            except:
-                pass
-
-            sleep(5)
+        except Exception as e:
+            raise BrokerError(f"Cannot Fetch Expiry Date from NSE for: {root}, Error:{e}")
 
     @classmethod
     def download_expiry_dates_bfo(
@@ -515,61 +531,44 @@ class Broker:
 
         temp_session = req_session()
 
-        for _ in range(5):
-            try:
-                headers = {
-                    "accept": "application/json, text/plain, */*",
-                    "accept-language": "en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7",
-                    "dnt": "1",
-                    "if-modified-since": "Sun, 24 Mar 2024 11:21:31 GMT",
-                    "origin": "https://www.bseindia.com",
-                    "referer": "https://www.bseindia.com/",
-                    "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-                    "sec-ch-ua-mobile": "?0",
-                    "sec-ch-ua-platform": '"Windows"',
-                    "sec-fetch-dest": "empty",
-                    "sec-fetch-mode": "cors",
-                    "sec-fetch-site": "same-site",
-                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                }
+        try:
+            headers = {
+                "accept": "application/json, text/plain, */*",
+                "accept-language": "en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7",
+                "dnt": "1",
+                "if-modified-since": "Sun, 24 Mar 2024 11:21:31 GMT",
+                "origin": "https://www.bseindia.com",
+                "referer": "https://www.bseindia.com/",
+                "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-site",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+            }
 
-                params = {
-                    "ProductType": "IO",
-                    "scrip_cd": scrip_cd,
-                }
+            params = {
+                "ProductType": "IO",
+                "scrip_cd": scrip_cd,
+            }
 
-                response = temp_session.request(
-                    method="GET",
-                    url=cls.bfo_url,
-                    params=params,
-                    headers=headers,
-                    timeout=10,
-                )
-                data = response.json()
+            response = temp_session.request(
+                method="GET",
+                url=cls.bfo_url,
+                params=params,
+                headers=headers,
+                timeout=10,
+            )
+            data = response.json()
 
-                expiry_dates = data["Table1"]
-                expiry_dates = [i["ExpiryDate"] for i in expiry_dates]
-                cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
-                return None
+            expiry_dates = data["Table1"]
+            expiry_dates = [i["ExpiryDate"] for i in expiry_dates]
+            cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
+            return cls.expiry_dates[root]
 
-            except:
-                pass
-
-            try:
-                response = popen(
-                    f"curl '{cls.bfo_url}?ProductType=IO&scrip_cd=1' -H 'accept: application/json, text/plain, */*' -H 'accept-language: en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7' -H 'dnt: 1' -H 'if-modified-since: Sun, 24 Mar 2024 11:21:31 GMT' -H 'origin: https://www.bseindia.com' -H 'referer: https://www.bseindia.com/' -H 'sec-ch-ua-mobile: ?0' -H 'sec-fetch-dest: empty' -H 'sec-fetch-mode: cors' -H 'sec-fetch-site: same-site' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'"
-                ).read()
-                data = loads(response)
-
-                expiry_dates = data["Table1"]
-                expiry_dates = [i["ExpiryDate"] for i in expiry_dates]
-                cls.expiry_dates[root] = cls.dates_filter(expiry_dates)
-                return None
-
-            except:
-                pass
-
-            sleep(5)
+        except Exception as e:
+            raise BrokerError(f"Cannot Fetch Expiry Date from NSE for: {root}, Error:{e}")
 
     @classmethod
     def jsonify_expiry(
@@ -675,10 +674,12 @@ class Broker:
         ]:
 
             if root not in cls.expiry_dates:
+                print(root,"QQ")
                 if root in [Root.SENSEX, Root.BANKEX]:
                     cls.download_expiry_dates_bfo(root=root)
                 else:
                     cls.download_expiry_dates_nfo(root=root)
+
             small_df = data_frame[data_frame["Root"] == root]
 
             if small_df.shape[0]:

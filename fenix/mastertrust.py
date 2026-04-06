@@ -158,6 +158,7 @@ class mastertrust(Broker):
             method="GET",
             url=cls.base_urls["market_data"],
             params=params,
+            verify=False,
         )
         data = cls._json_parser(response)[ExchangeCode.NSE]
 
@@ -239,6 +240,7 @@ class mastertrust(Broker):
             method="GET",
             url=cls.base_urls["market_data"],
             params=params,
+            verify=False,
         )
         data = cls._json_parser(response)["NSE-IND"]
 
@@ -249,6 +251,7 @@ class mastertrust(Broker):
             method="GET",
             url=cls.base_urls["market_data"],
             params=params,
+            verify=False,
         )
         data = cls._json_parser(response)["BSE-IND"]
 
@@ -295,6 +298,7 @@ class mastertrust(Broker):
                 method="GET",
                 url=cls.base_urls["market_data"],
                 params=params,
+                verify=False
             )
             data = cls._json_parser(response)["NSE-OPT"]
 
@@ -348,6 +352,7 @@ class mastertrust(Broker):
                 method="GET",
                 url=cls.base_urls["bfo_data"],
                 params=params,
+                verify=False
             )
 
             zip_data = zipfile.ZipFile(io.BytesIO(response.content))

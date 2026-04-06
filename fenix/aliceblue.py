@@ -519,11 +519,38 @@ class aliceblue(Broker):
             return headers
 
         else:
+            headers = {
+                'authority': 'ant.aliceblueonline.com',
+                'accept': '*/*',
+                'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7',
+                'content-type': 'application/json',
+                'dnt': '1',
+                'origin': 'https://ant.aliceblueonline.com',
+                'referer': 'https://ant.aliceblueonline.com/',
+                'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+            }
 
             json_data = {"userId": params["user_id"]}
+
+            response = cls.fetch(
+                method="POST",
+                url=cls.token_urls["verify"],
+                headers=headers,
+                json=json_data,
+
+            )
+            response = cls._json_parser(response)
+
             response = cls.fetch(
                 method="POST",
                 url=cls.token_urls["enc_key"],
+                headers=headers,
                 json=json_data,
             )
             response = cls._json_parser(response)
@@ -548,7 +575,24 @@ class aliceblue(Broker):
             login_token = login_resp["result"][0]["token"]
 
             totp = cls.totp_creator(params["totpstr"])
-            headers = {"authorization": f'Bearer {params["user_id"]} WEB {login_token}'}
+
+            headers = {
+                'authority': 'ant.aliceblueonline.com',
+                'accept': '*/*',
+                'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8,hi;q=0.7',
+                'authorization': f'Bearer {params["user_id"]} WEB {login_token}',
+                'content-type': 'application/json',
+                'dnt': '1',
+                'origin': 'https://ant.aliceblueonline.com',
+                'referer': 'https://ant.aliceblueonline.com/',
+                'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-origin',
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+            }
             json_data = {
                 "totp": totp,
                 "userId": params["user_id"],
@@ -590,13 +634,15 @@ class aliceblue(Broker):
             susertoken = hashlib.sha256(sha256_encryption1.encode("utf-8")).hexdigest()
 
             headers = {
-                "ID": params["user_id"],
-                "AccessToken": access_token,
-                "Authorization": f'Bearer {params["user_id"]} {access_token}',
-                "X-SAS-Version": "2.0",
-                "User-Agent": "AliceBlue_V21.0.1",
-                "Content-Type": "application/json",
-                "susertoken": susertoken,
+                "headers": {
+                    "ID": params["user_id"],
+                    "AccessToken": access_token,
+                    "Authorization": f'Bearer {params["user_id"]} {access_token}',
+                    "X-SAS-Version": "2.0",
+                    "User-Agent": "AliceBlue_V21.0.1",
+                    "Content-Type": "application/json",
+                    "susertoken": susertoken,
+                }
             }
 
             cls._session = cls._create_session()

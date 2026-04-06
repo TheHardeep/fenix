@@ -103,6 +103,12 @@ class symphony(Broker):
 
     # Response Parameters Dictionaries
 
+    resp_exchange = {
+        "NSECM": ExchangeCode.NSE,
+        "NSEFO": ExchangeCode.NFO,
+        "BSECM": ExchangeCode.BSE,
+    }
+
     resp_order_type = {
         "Market": OrderType.MARKET,
         "Limit": OrderType.LIMIT,
@@ -142,39 +148,65 @@ class symphony(Broker):
         data = [row.split("|") for row in data.split("\n")]
 
         df = cls.data_frame(data)
+        cols = {
+            0: "Exchange",
+            1: "Token",
+            2: "Index",
+            3: "Name",
+            4: "Symbol",
+            5: "Series",
+            6: "NameWithSeries",
+            7: "InstrumentID",
+            8: "PriceBand.High",
+            9: "PriceBand.Low",
+            10: "FreezeQty",
+            11: "TickSize",
+            12: "LotSize",
+            13: "Multiplier",
+            14: "DisplayName",
+            15: "ISIN",
+            16: "PriceNumerator",
+            17: "PriceDenominator",
+            18: "DetailedDescription",
+            19: "ExtendedSurvIndicator",
+            20: "CautionIndicator",
+            21: "GSMIndicator"}
 
-        df.rename(
-            {
-                0: "Exchange",
-                1: "Token",
-                3: "Index",
-                4: "Symbol",
-                5: "Series",
-                11: "TickSize",
-                12: "LotSize",
-            },
-            axis=1,
-            inplace=True,
-        )
+
+        df.rename(cols, axis=1, inplace=True)
+
+        df = df[["Exchange", "Token", "Name", "FreezeQty", "Symbol",
+                 "LotSize", "ISIN", "DetailedDescription", "Series"]]
 
         df["Token"] = df["Token"].astype(int)
         df["LotSize"] = df["LotSize"].astype(int)
-        df["TickSize"] = df["TickSize"].astype(float)
+        df["FreezeQty"] = df["FreezeQty"].astype(float).astype(int).astype(str)
 
-        df_bse = df[(df["Exchange"] == "BSECM")]
-        df_bse = df_bse[["Token", "Index", "Symbol", "LotSize", "TickSize", "Exchange"]]
-        df_bse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
-        df_bse.set_index(df_bse["Index"], inplace=True)
-        df_bse.drop(columns="Index", inplace=True)
+        df_nse = df[(df['Exchange'] == 'NSECM') & (df['Series'] == "EQ")]
+        df_nse['DetailedDescription'] = df_nse["DetailedDescription"].str.title().str.replace("-Eq", "")
+        df_nse = df_nse.drop_duplicates(subset=['DetailedDescription'], keep='first')
+        df_nse = df_nse.set_index('DetailedDescription')
+        df_nse['DetailedDescription'] = df_nse.index
 
-        df_nse = df[(df["Exchange"] == "NSECM") & (df["Series"] == "EQ")]
-        df_nse = df_nse[["Token", "Index", "Symbol", "LotSize", "TickSize", "Exchange"]]
-        df_nse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
-        df_nse.set_index(df_nse["Index"], inplace=True)
-        df_nse.drop(columns="Index", inplace=True)
 
-        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient="index")
-        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient="index")
+        df_bse = df[df['Exchange'] == 'BSECM']
+        df_bse = df_bse[(df_bse['ISIN'] != "") & (~df_bse['ISIN'].duplicated())]
+        df_bse = df_bse[~df_bse['Series'].isin(["F", "FC", "G", "GC"])]
+        df_bse['DetailedDescription'] = df_bse['DetailedDescription'].str.capitalize()
+        df_bse = df_bse.drop_duplicates(subset=['DetailedDescription'], keep='first')
+        df_bse = df_bse.set_index('DetailedDescription')
+        df_bse['DetailedDescription'] = df_bse.index
+
+
+        df_isin = cls.concat_df([df_nse, df_bse])
+        df_isin = df_isin.sort_values("Exchange",ascending=False)
+        df_isin = df_isin.drop_duplicates(subset=['ISIN'], keep="first")
+        df_isin = df_isin.set_index('ISIN')
+        df_isin['ISIN'] = df_isin.index
+
+        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict('index')
+        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict('index')
+        cls.eq_tokens["ISIN"] = df_isin.to_dict('index')
 
         return cls.eq_tokens
 
@@ -234,29 +266,29 @@ class symphony(Broker):
             response = cls.fetch(
                 method="POST",
                 url=cls.base_urls["market_data"],
-                json={"exchangeSegmentList": ["NSEFO", "BSEFO"]},
+                json={"exchangeSegmentList": ["NSEFO", "BSEFO", "MCXFO"]},
             )
             data = cls._json_parser(response)["result"]
             data = [row.split("|") for row in data.split("\n")]
 
             df = cls.data_frame(data)
 
-            df = df[
-                (
-                    (df[3] == "BANKNIFTY")
-                    | (df[3] == "NIFTY")
-                    | (df[3] == "FINNIFTY")
-                    | (df[3] == "MIDCPNIFTY")
-                    | (df[3] == "SENSEX")
-                    | (df[3] == "BANKEX")
-                )
-                & ((df[5] == "OPTIDX") | (df[5] == "IO"))
-            ]
+            # df = df[
+            #     (
+            #         (df[3] == "BANKNIFTY")
+            #         | (df[3] == "NIFTY")
+            #         | (df[3] == "FINNIFTY")
+            #         | (df[3] == "MIDCPNIFTY")
+            #         | (df[3] == "SENSEX")
+            #         | (df[3] == "BANKEX")
+            #     )
+            #     & ((df[5] == "OPTIDX") | (df[5] == "IO"))
+            # ]
 
-            df[10] = df[10].astype(int) - 1
+            # df[10] = df[10].astype(int) - 1
 
             df.rename(
-                {
+                {   0: "Exchange",
                     1: "Token",
                     3: "Root",
                     10: "QtyLimit",
@@ -280,6 +312,7 @@ class symphony(Broker):
                     "QtyLimit",
                     "Root",
                     "TickSize",
+                    "Exchange"
                 ]
             ]
 
@@ -339,7 +372,8 @@ class symphony(Broker):
             "headers": {
                 "Content-Type": "application/json",
                 "Authorization": access_token,
-            }
+            },
+            "user_id": token_resp["result"]["userID"],
         }
 
         return headers
@@ -370,7 +404,7 @@ class symphony(Broker):
         raise ResponseError(cls.id + " " + json_response["message"])
 
     @classmethod
-    def _orderbook_json_parser(
+    def orderbook_json_parser(
         cls,
         order: dict,
     ) -> dict[Any, Any]:
@@ -430,27 +464,31 @@ class symphony(Broker):
         Returns:
             dict: Unified fenix Position Response.
         """
+        buy_qty = int(position["OpenBuyQuantity"])
+        sell_qty = int(position["OpenSellQuantity"])
+        buy_price = float(position["BuyAveragePrice"])
+        sell_price = float(position["SellAveragePrice"])
+
+        avg_price = ((buy_price * buy_qty) + (sell_price * sell_qty)) / (buy_qty + sell_qty)
+        mtm = (sell_price - buy_price) * min(sell_qty, buy_qty)
+
         parsed_position = {
             Position.SYMBOL: position["TradingSymbol"],
-            Position.TOKEN: position["ExchangeInstrumentID"],
+            Position.TOKEN: position["ExchangeInstrumentId"],
             Position.NETQTY: position["Quantity"],
-            Position.AVGPRICE: (
-                position["SumOfTradedQuantityAndPriceBuy"]
-                + position["SumOfTradedQuantityAndPriceSell"]
-            )
-            / (position["BuyAmount"] + position["SellAmount"]),
-            Position.MTM: position["RealizedMTM"],
-            Position.PNL: position["MTM"],
-            Position.BUYQTY: position["OpenBuyQuantity"],
-            Position.BUYPRICE: position["BuyAveragePrice"],
-            Position.SELLQTY: position["OpenSellQuantity"],
-            Position.SELLPRICE: position["SellAveragePrice"],
+            Position.AVGPRICE: avg_price,
+            Position.MTM: mtm,
+            Position.PNL: float(position["MTM"]) ,
+            Position.BUYQTY: buy_qty,
+            Position.SELLQTY: sell_qty,
+            Position.BUYPRICE: buy_price,
+            Position.SELLPRICE: sell_price,
             Position.LTP: 0.0,
             Position.EXCHANGE: cls.resp_exchange.get(
                 position["ExchangeSegment"], position["ExchangeSegment"]
             ),
             Position.PRODUCT: cls.req_product.get(
-                position["product"], position["product"]
+                position["ProductType"], position["ProductType"]
             ),
             Position.INFO: position,
         }
@@ -1736,7 +1774,7 @@ class symphony(Broker):
 
         orders = []
         for order in info["result"]:
-            detail = cls._orderbook_json_parser(order)
+            detail = cls.orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
@@ -1764,7 +1802,7 @@ class symphony(Broker):
 
         orders = []
         for order in info["result"]:
-            detail = cls._orderbook_json_parser(order)
+            detail = cls.orderbook_json_parser(order)
             orders.append(detail)
 
         return orders
@@ -1811,7 +1849,7 @@ class symphony(Broker):
         info = cls.fetch_raw_orderhistory(order_id=order_id, headers=headers)
 
         detail = info["result"][-1]
-        order = cls._orderbook_json_parser(detail)
+        order = cls.orderbook_json_parser(detail)
 
         return order
 
@@ -1835,7 +1873,7 @@ class symphony(Broker):
 
         order_history = []
         for order in info["result"]:
-            history = cls._orderbook_json_parser(order)
+            history = cls.orderbook_json_parser(order)
             order_history.append(history)
 
         return order_history
@@ -1950,7 +1988,13 @@ class symphony(Broker):
             headers=headers["headers"],
         )
 
-        return cls._json_parser(response)
+        response = cls._json_parser(response)
+
+        position_list = []
+        for position in response["result"]["positionList"]:
+            position_list.append(cls._position_json_parser(position))
+
+        return position_list
 
     @classmethod
     def fetch_net_positions(
@@ -1974,7 +2018,13 @@ class symphony(Broker):
             headers=headers["headers"],
         )
 
-        return cls._json_parser(response)
+        response = cls._json_parser(response)
+
+        position_list = []
+        for position in response["result"]["positionList"]:
+            position_list.append(cls._position_json_parser(position))
+
+        return position_list
 
     @classmethod
     def fetch_positions(

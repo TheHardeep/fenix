@@ -1,3 +1,17 @@
+"""
+Fenix Trading Library
+====================
+A Python library for trading in the Indian Finance Sector with support for 15+ broker APIs.
+
+Documentation is available in the docstrings and
+online at https://github.com/TheHardeep/fenix/wiki.
+
+Examples are available at https://github.com/TheHardeep/fenix#examples
+
+:copyright: (c) 2024 by Hardeep Singh.
+:license: GPLv3, see LICENSE for more details.
+"""
+
 #  ------------------------------------------------------------------------------
 
 
@@ -6,10 +20,7 @@ __version__ = "1.0.5"
 
 #  ------------------------------------------------------------------------------
 
-from threading import Thread
-
 from fenix.base.broker import Broker  # noqa: F401
-
 
 from fenix.base import errors  # noqa: F401
 from fenix.base.errors import InputError  # noqa: F401
@@ -83,32 +94,3 @@ base = [
 ]
 
 __all__ = base + errors.__all__ + brokers + constants.__all__
-
-
-headers = {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-    "accept-language": "en-GB,en;q=0.9",
-    "dnt": "1",
-    "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-    "sec-fetch-dest": "document",
-    "sec-fetch-mode": "navigate",
-    "sec-fetch-site": "none",
-    "sec-fetch-user": "?1",
-    "upgrade-insecure-requests": "1",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-}
-
-temp_session = Broker._create_session()
-response = temp_session.request(
-    method="GET", url="https://www.nseindia.com/option-chain", headers=headers
-)
-Broker.cookies = dict(response.cookies)
-
-if not Broker.expiry_dates:
-    for root in [Root.BNF, Root.NF, Root.FNF, Root.MIDCPNF]:
-        Thread(target=Broker.download_expiry_dates_nfo, args=(root,)).start()
-
-    for root in [Root.SENSEX, Root.BANKEX]:
-        Thread(target=Broker.download_expiry_dates_bfo, args=(root,)).start()

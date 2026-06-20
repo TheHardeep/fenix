@@ -1,0 +1,126 @@
+{
+  "fenix": [
+    {
+      "id": "broker-aliceblue",
+      "title": "AliceBlue"
+    },
+    {
+      "id": "broker-angelone",
+      "title": "Angel One"
+    },
+    {
+      "id": "broker-anandrathi",
+      "title": "Anand Rathi"
+    },
+    {
+      "id": "broker-dhan",
+      "title": "Dhan"
+    },
+    {
+      "id": "broker-finvasia",
+      "title": "Finvasia"
+    },
+    {
+      "id": "broker-fivepaisa",
+      "title": "5paisa"
+    },
+    {
+      "id": "broker-fyers",
+      "title": "Fyers"
+    },
+    {
+      "id": "broker-groww",
+      "title": "Groww"
+    },
+    {
+      "id": "broker-iifl",
+      "title": "IIFL"
+    },
+    {
+      "id": "broker-kotakneo",
+      "title": "Kotak Neo"
+    },
+    {
+      "id": "broker-mastertrust",
+      "title": "Master Trust"
+    },
+    {
+      "id": "broker-motilaloswal",
+      "title": "Motilal Oswal"
+    },
+    {
+      "id": "broker-symphony",
+      "title": "Symphony"
+    },
+    {
+      "id": "broker-upstox",
+      "title": "Upstox"
+    },
+    {
+      "id": "broker-zerodha",
+      "title": "Zerodha"
+    }
+  ],
+  "pro": [
+    {
+      "id": "pro-broker-aliceblue",
+      "title": "AliceBlue"
+    },
+    {
+      "id": "pro-broker-angelone",
+      "title": "Angel One"
+    },
+    {
+      "id": "pro-broker-finvasia",
+      "title": "Finvasia"
+    },
+    {
+      "id": "pro-broker-fivepaisa",
+      "title": "5paisa"
+    },
+    {
+      "id": "pro-broker-fyers",
+      "title": "Fyers"
+    },
+    {
+      "id": "pro-broker-iifl",
+      "title": "IIFL"
+    },
+    {
+      "id": "pro-broker-kotak",
+      "title": "Kotak"
+    },
+    {
+      "id": "pro-broker-kotakneo",
+      "title": "Kotak Neo"
+    },
+    {
+      "id": "pro-broker-kunjee",
+      "title": "Kunjee"
+    },
+    {
+      "id": "pro-broker-mastertrust",
+      "title": "Master Trust"
+    },
+    {
+      "id": "pro-broker-motilaloswal",
+      "title": "Motilal Oswal"
+    },
+    {
+      "id": "pro-broker-symphony",
+      "title": "Symphony"
+    },
+    {
+      "id": "pro-broker-upstox",
+      "title": "Upstox"
+    },
+    {
+      "id": "pro-broker-vpc",
+      "title": "VPC"
+    },
+    {
+      "id": "pro-broker-zerodha",
+      "title": "Zerodha"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 38 124 124" role="img" aria-label="V Station">
+  <defs>
+    <linearGradient id="vBladeL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9FC6FF" />
+      <stop offset="100%" stop-color="#2E8BFF" />
+    </linearGradient>
+    <linearGradient id="vBladeR" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2E8BFF" />
+      <stop offset="100%" stop-color="#16407A" />
+    </linearGradient>
+  </defs>
+  <!-- depth / drop shadow layer -->
+  <path d="M152 44 L126 44 L92 150 L118 150 Z" transform="translate(5,6)" fill="#0C1A30" />
+  <path d="M48 44 L74 44 L108 150 L82 150 Z" transform="translate(5,6)" fill="#0C1A30" />
+  <!-- gradient blades -->
+  <path d="M152 44 L126 44 L92 150 L118 150 Z" fill="url(#vBladeR)" />
+  <path d="M48 44 L74 44 L108 150 L82 150 Z" fill="url(#vBladeL)" />
+</svg>

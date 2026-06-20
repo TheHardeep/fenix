@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 36 354 128" role="img" aria-label="VPC">
+  <defs>
+    <linearGradient id="vpcLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9FC6FF" />
+      <stop offset="100%" stop-color="#2E8BFF" />
+    </linearGradient>
+    <linearGradient id="vpcDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2E8BFF" />
+      <stop offset="100%" stop-color="#16407A" />
+    </linearGradient>
+  </defs>
+
+  <!-- depth / drop shadow layer -->
+  <path d="M152 44 L126 44 L92 150 L118 150 Z" transform="translate(5,6)" fill="#0C1A30" />
+  <path d="M48 44 L74 44 L108 150 L82 150 Z" transform="translate(5,6)" fill="#0C1A30" />
+  <path d="M185 44 L211 44 L211 150 L185 150 Z" transform="translate(5,6)" fill="#0C1A30" />
+  <path d="M211 44 A36 36 0 0 1 211 116 L211 90 A10 10 0 0 0 211 70 Z" transform="translate(5,6)" fill="#0C1A30" />
+  <path d="M358 54 A53 53 0 1 0 358 140 L344 119 A27 27 0 1 1 344 75 Z" transform="translate(5,6)" fill="#0C1A30" />
+
+  <!-- V -->
+  <path d="M152 44 L126 44 L92 150 L118 150 Z" fill="url(#vpcDark)" />
+  <path d="M48 44 L74 44 L108 150 L82 150 Z" fill="url(#vpcLight)" />
+
+  <!-- P -->
+  <path d="M185 44 L211 44 L211 150 L185 150 Z" fill="url(#vpcLight)" />
+  <path d="M211 44 A36 36 0 0 1 211 116 L211 90 A10 10 0 0 0 211 70 Z" fill="url(#vpcDark)" />
+
+  <!-- C -->
+  <path d="M358 54 A53 53 0 1 0 358 140 L344 119 A27 27 0 1 1 344 75 Z" fill="url(#vpcDark)" />
+</svg>

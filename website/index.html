@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fenix · Developer Docs</title>
+  <meta name="description" content="Developer documentation for Fenix — a unified Python trading API for Indian stock brokers." />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#0a0a0a" />
+
+  <!-- Social / Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Fenix Developer Docs" />
+  <meta property="og:title" content="Fenix · Developer Docs" />
+  <meta property="og:description" content="A unified Python trading API for Indian stock brokers — authentication, orders, instrument tokens, paper mode, and real-time market data." />
+  <meta property="og:url" content="https://fenix.hardeep.tech/" />
+  <meta property="og:image" content="https://fenix.hardeep.tech/assets/img/brand/reddit-social-card.png" />
+  <meta property="og:image:alt" content="Fenix — A unified Python trading API for Indian stock brokers" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Fenix · Developer Docs" />
+  <meta name="twitter:description" content="A unified Python trading API for Indian stock brokers — authentication, orders, instrument tokens, paper mode, and real-time market data." />
+  <meta name="twitter:image" content="https://fenix.hardeep.tech/assets/img/brand/reddit-social-card.png" />
+  <meta name="twitter:image:alt" content="Fenix — A unified Python trading API for Indian stock brokers" />
+
+  <link rel="icon" href="assets/img/brand/favicon.ico" sizes="any" />
+  <link rel="icon" href="assets/img/brand/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="assets/img/brand/apple-touch-icon.png" />
+  <link rel="manifest" href="assets/img/brand/site.webmanifest" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Markdown + syntax highlighting (CDN). `defer` keeps them off the render
+       path; they execute in order before the deferred app scripts below. -->
+  <script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/languages/python.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/languages/json.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/languages/bash.min.js"></script>
+
+  <link rel="stylesheet" href="assets/css/styles.css?v=40" />
+</head>
+<body>
+  <!-- Ambient ember field + film grain (fixed, behind all content) -->
+  <div class="bg-field" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span></div>
+  <div class="bg-grain" aria-hidden="true"></div>
+  <!-- ───────────────────────── Top navigation ───────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-left">
+        <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Toggle navigation">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <a class="brand" href="#/overview">
+          <img class="brand-mark" src="assets/img/brand/logo-sm.png" alt="Fenix logo" width="28" height="29" />
+          <span class="brand-name">Fenix</span>
+          <span class="brand-sub">Dev Docs</span>
+        </a>
+        <nav class="top-tabs" id="topTabs"><!-- injected --></nav>
+      </div>
+
+      <div class="topbar-right">
+        <button class="search-trigger" id="searchTrigger" aria-label="Search">
+          <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Search docs</span>
+          <kbd>Ctrl K</kbd>
+        </button>
+        <button class="icon-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18"><path d="M21 12.8A8.5 8.5 0 1111.2 3a6.5 6.5 0 009.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </button>
+        <a class="icon-btn" href="https://github.com/TheHardeep/fenix" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49l-.01-1.9c-2.78.62-3.37-1.21-3.37-1.21-.46-1.18-1.11-1.49-1.11-1.49-.9-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.34 1.12 2.91.86.09-.66.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.3 9.3 0 015 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9l-.01 2.82c0 .27.18.6.69.49A10.02 10.02 0 0022 12.25C22 6.58 17.52 2 12 2z"/></svg>
+        </a>
+        <a class="pill-btn" href="https://pypi.org/project/fenix/" target="_blank" rel="noopener">PyPI&nbsp;›</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- ───────────────────────── Sidebar ───────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+      <!-- Mobile-only section switcher (top-tabs are hidden on small screens) -->
+      <nav class="drawer-tabs" id="drawerTabs" aria-label="Sections"><!-- injected --></nav>
+      <nav class="sidebar-nav" id="sidebarNav"><!-- injected --></nav>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <!-- ───────────────────────── Main content ───────────────────────── -->
+    <main class="content" id="contentScroll">
+      <article class="doc" id="doc"><!-- markdown rendered here --></article>
+      <footer class="page-foot" id="pageFoot"><!-- prev / next --></footer>
+      <div class="content-credit">
+        <span>Fenix Developer Documentation</span>
+      </div>
+    </main>
+
+    <!-- ───────────────────────── On this page (TOC) ───────────────────────── -->
+    <aside class="toc" id="toc">
+      <div class="toc-title">
+        <svg class="toc-title-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+          <path d="M3 4.25h7.5M3 8h10M3 11.75h5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M3 4.25v1.1M3 8v1.1M3 11.75v1.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <span>On this page</span>
+      </div>
+      <nav class="toc-list" id="tocList"><!-- injected --></nav>
+    </aside>
+  </div>
+
+  <!-- ───────────────────────── Search modal ───────────────────────── -->
+  <div class="search-modal" id="searchModal" hidden>
+    <div class="search-box" role="dialog" aria-modal="true" aria-label="Search documentation">
+      <div class="search-input-row">
+        <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input type="text" id="searchInput" placeholder="Search the Fenix docs…" autocomplete="off" spellcheck="false" />
+        <kbd>Esc</kbd>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+  </div>
+
+  <script defer src="assets/js/nav.js?v=10"></script>
+  <script defer src="assets/js/app.js?v=25"></script>
+  <script defer src="assets/js/contact-modal.js?v=2"></script>
+</body>
+</html>

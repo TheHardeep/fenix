@@ -1,156 +1,301 @@
-# Fenix – Indian Broker Trading Library
+<p align="center">
+  <img src="assets/fenix-logo.png" alt="Fenix" width="180">
+</p>
 
-![License](https://img.shields.io/badge/License-GPLv3-blue?color=%234ec820)
+<h1 align="center">Fenix</h1>
 
+<p align="center">
+  <b>Change one word. Trade any broker.</b><br>
+  One unified Python API across <b>15 Indian brokers</b> — authentication, instrument tokens,
+  orders, positions, and account data, all returned in one consistent shape.
+</p>
 
-A Python library for trading in the Indian Finance Sector with support for many broker APIs.
+<p align="center">
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-GPLv3-blue?color=%234ec820"></a>
+  <a href="https://pypi.org/project/fenix/"><img alt="PyPI" src="https://img.shields.io/pypi/v/fenix"></a>
+  <img alt="Python" src="https://img.shields.io/pypi/pyversions/fenix">
+  <a href="https://fenix.hardeep.tech"><img alt="Docs" src="https://img.shields.io/badge/docs-fenix.hardeep.tech-orange"></a>
+</p>
 
-### [Install](#install) · [Usage](#usage) · [Manual](https://github.com/TheHardeep/fenix/wiki)
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#supported-brokers">Brokers</a> ·
+  <a href="#unified-vocabulary">Constants</a> ·
+  <a href="#paper-trading">Paper Mode</a> ·
+  <a href="https://fenix.hardeep.tech">Documentation</a>
+</p>
 
-The **Fenix** library is used to connect and trade with brokers in the Indian Financial Markets. It provides quick access to market data, order palcemement, etc. for storage, analysis, visualization, indicator development, algorithmic trading, strategy backtesting, bot programming, and related software engineering.
+---
 
-It is intended to be used by **coders, developers, technically-skilled traders, data-scientists and financial analysts** for building trading algorithms.
+Every Indian broker ships its own REST API with its own URLs, field names, constants for order
+side and product type, error envelope, and rate limits. Writing a strategy against one broker
+means re-learning all of that for the next. **Fenix is an adapter library**: each broker is a
+class that implements the same methods and returns the same dictionaries — a single unified
+interface purpose-built for the Indian markets (NSE, BSE, NFO, BFO, MCX, CDS).
 
-Current feature list:
+```python
+# swap one word — the rest never changes
+from fenix import Zerodha
+from fenix import Side, Product
 
-- support for many brokers — more coming soon.
-- optional normalized data for cross-exchange analytics.
-- an out of the box unified API that is extremely easy to integrate.
-- works in Python 3.
+broker = Zerodha()
+broker.authenticate(params=creds)
+broker.market_order(token_dict=contract, quantity=1, side=Side.BUY, product=Product.MIS, unique_id="entry-1")
+```
 
+It is built for **coders, quant developers, technically-skilled traders, and data scientists**
+building algorithmic trading systems on top of one stable API.
 
+## Why Fenix
 
-## Supported Indian Brokers
-
-The fenix library currently supports the following 16 indian brokers and their trading APIs:
-
-
-
-
-| Logo | Id  | Name | Supported |
-|------|-----|-----|-----------|
-|[<img src='https://global.discourse-cdn.com/business4/uploads/aliceblueonline/original/1X/e83a546773cc49916c1a15f7095ee5185340ddbf.png' width='110'>](https://ant.aliceblueonline.com/)| aliceblue | [AliceBlue](https://ant.aliceblueonline.com/) | 🟢 |
-|[<img src='https://w3assets.angelone.in/wp-content/uploads/2023/08/AO-R-Logo.png' width='80'>](https://www.angelone.in/login/?redirectUrl=)| angelone | [AngelOne](https://www.angelone.in/login/?redirectUrl=) | 🟢 |
-|[<img src='https://finx.choiceindia.com/assets/images/finx-icons/finx-login-logo.svg' width='80'>](https://finx.choiceindia.com/auth/login)| choice | [Choice](https://finx.choiceindia.com/auth/login) | 🟢 |
-|[<img src='https://shoonya.com/static/img/shoonya_logo.1937b07.png' width='80'>](https://shoonya.com/)| finvasia | [Finvasia](https://shoonya.com/) | 🟢 |
-|[<img src='https://login.5paisa.com/content/images/5paisa-logo.svg' width='80'>](https://login.5paisa.com/)| fivepaisa | [5paisa](https://login.5paisa.com/) | 🟢 |
-|[<img src='https://assets.fyers.in/images/logo.svg' width='80'>](https://login.fyers.in/)| fyers | [Fyers](https://login.fyers.in/) | 🟢 |
-|[<img src='https://www.iifl.com/files/2022-04/iifl-securities.webp' width='70'>](https://smartapps.iifl.com/CustomerPortal/Login)| iifl | [IIFL](https://smartapps.iifl.com/CustomerPortal/Login) | 🟢 |
-|[<img src='https://www.kotaksecurities.com/trade/9f5989b5a2a4ec74830f.svg' width='140'>](https://www.kotaksecurities.com/trade/login)| kotak | [Kotak](https://www.kotaksecurities.com/trade/login) | 🟢 |
-|[<img src='https://www.kotaksecurities.com/trade/26482affd706bc8fc0c2.svg' width='50'>](https://neo.kotaksecurities.com/)| kotakneo| [Kotak Neo](https://neo.kotaksecurities.com/) | 🟢 |
-|[<img src='https://www.farsightshares.com/assets/icons/kunjee.png' width='80' height='70'>](https://trade.kunjee.net:3000/#!/app)| kunjee | [Kunjee](https://trade.kunjee.net:3000/#!/app) | 🟢 |
-|[<img src='https://salesiq.zohopublic.in/hasharesstockbrokersltd/clogo/1613986085716_60005626196/photo.ls?nps=202' width='100'>](https://www.mastertrust.co.in/trade-login)| mastertrust | [Master Trust](https://www.mastertrust.co.in/trade-login) | 🟢 |
-|[<img src='https://www.motilaloswal.com/img/mologo.png?1210' width='80'>](https://invest.motilaloswal.com/)| motilaloswal | [Motilal Oswal](https://invest.motilaloswal.com/) | 🟢 |
-|[<img src='https://jmfl.com/Content/assets/images/logo.png' width='110'>](https://blinktrade.jmfinancialservices.in/userMaster/login)| symphony | [JM Financial](https://blinktrade.jmfinancialservices.in/userMaster/login) | 🟢 |
-|[<img src='https://upstox.com/open-demat-account/assets/images/new-oda/oda-logo.svg' width='80'>](https://login.upstox.com/)| upstox | [Upstox](https://login.upstox.com/) | 🟢 |
-|[<img src='https://play-lh.googleusercontent.com/EOZ2aJdWEr2xPM29J7Eg7FMIfyPJSRBzXxd1GuCO4ne3qDvDdH-qqcMBEokyH2AQo9k=w240-h480-rw' width='40' height='40'>](https://play.google.com/store/apps/details?id=com.vpcBroker)| vpc | [VPC](https://play.google.com/store/apps/details?id=com.vpcBroker) | 🟢 |
-|[<img src='https://zerodha.com/static/images/logo.svg' width='90'>](https://kite.zerodha.com/)| zerodha | [Zerodha](https://kite.zerodha.com/) | 🟢 |
-
-
-
+- **Learn it once, ship everywhere.** The same method names, parameters, and return shapes work
+  across every adapter. Porting a strategy to a new broker is a one-line change — not a rewrite.
+- **One vocabulary, not fifteen.** Your code speaks in Fenix constants — `Side.BUY`,
+  `Product.MIS`, `OrderType.SLM` — and each adapter translates to its broker's dialect, with
+  validation.
+- **Backtest with paper mode.** Flip one flag and the same strategy runs against a built-in
+  matching engine — realistic fills, positions, and PnL, with no credentials and zero live calls.
+- **Safe by default.** Token-bucket rate limiting per endpoint, structured errors with
+  HTTP-status mapping, and automatic redaction of secrets from every log line.
 
 ## Install
 
-
-[fenix in **PyPI**](https://pypi.python.org/pypi/fenix)
+Fenix 2.0 requires **Python 3.10 or newer** and runs on Windows, macOS, and Linux.
 
 ```shell
 pip install fenix
 ```
 
-```Python
-import fenix
-print(fenix.brokers)
-# print a list of all available exchange classes
+To install a specific release:
+
+```shell
+pip install fenix==2.0.0
 ```
+
+Verify the installation and inspect the broker registry:
+
+```python
+import fenix
+
+print(fenix.__version__)   # 2.0.0
+print(fenix.brokers)       # ['AliceBlue', 'AngelOne', 'AnandRathi', ...]
+```
+
+## Quickstart
+
+Instantiate a broker, authenticate, download instrument tokens, place an order, and read it
+back — all through the unified API. The same code runs against any broker.
+
+```python
+from fenix import Zerodha, Side, Validity
+
+# 1 · Instantiate
+broker = Zerodha()
+
+# 2 · Authenticate — each broker declares the credentials it needs in `tokenParams`
+creds = {
+    "user_id":    "YOUR_USER_ID",
+    "password":   "YOUR_PASSWORD",
+    "totpstr":    "YOUR_TOTP_SECRET",   # the TOTP *seed*, not a 6-digit code
+    "api_key":    "YOUR_API_KEY",
+    "api_secret": "YOUR_API_SECRET",
+}
+broker.authenticate(params=creds)
+
+# 3 · Download instrument tokens (reshaped into a standardized lookup)
+fno, _ = broker.load_fno_tokens()
+contract = fno["Options"]["NFO"]["NIFTY"][0]
+
+# 4 · Place an order — returns a unified order record (same keys for every broker)
+order = broker.limit_order(
+    token_dict=contract,
+    side=Side.BUY,
+    price=152.0,
+    quantity=75,
+    unique_id="entry-1",
+)
+
+# 5 · Read it back, then modify or cancel
+detail = broker.fetch_order(order["id"])
+broker.modify_order(order_id=order["id"], price=151.5, quantity=75)
+broker.cancel_order(order_id=order["id"])
+
+# 6 · Inspect positions and account
+positions = broker.fetch_net_positions()
+holdings  = broker.fetch_holdings()
+margins   = broker.fetch_margin_limits()   # unified RMS record
+profile   = broker.fetch_profile()
+```
+
+> See the [Quickstart guide](https://fenix.hardeep.tech) for the full walkthrough, including
+> reusing an authenticated session across runs.
+
+### Order & account methods
+
+| Order entry | Account & order reads |
+|-------------|-----------------------|
+| `place_order`, `modify_order`, `cancel_order` | `fetch_orderbook`, `fetch_tradebook` |
+| `market_order`, `limit_order`, `sl_order`, `slm_order` | `fetch_order`, `fetch_order_history` |
+| `market_buy_order`, `market_sell_order` | `fetch_net_positions`, `fetch_day_positions` |
+| `limit_buy_order`, `limit_sell_order` | `fetch_holdings`, `fetch_margin_limits` |
+| `sl_buy_order`, `slm_sell_order`, … | `fetch_profile` |
+
+## Features
+
+Fenix 2.0 is a ground-up refactor of the broker layer. Highlights:
+
+- 🔁 **Unified, one-line broker swap.** Identical method names, parameters, and return shapes
+  across all 15 adapters — port a strategy by changing a single class name.
+- 🧱 **One shared base class.** Every adapter subclasses `fenix.base.broker.Broker`, which owns
+  the HTTP session, request wrapper, URL building, constant translation, and error mapping. New
+  brokers stay thin and consistent.
+- 📄 **Built-in paper-mode engine.** An in-process matching engine simulates fills, positions,
+  and PnL with no credentials and zero live calls — flip `paper_mode` and the same code runs.
+- 🗣️ **One vocabulary.** Fenix constants (`Side`, `Product`, `OrderType`, `Validity`, `Variety`,
+  `Status`) are translated per broker with validation — see [Constants](#unified-vocabulary).
+- 🚦 **Per-endpoint rate limiting.** Token-bucket throttling defined in each adapter's
+  `rateLimits`; requests self-throttle before hitting the broker.
+- 🔐 **Secret redaction.** Passwords, tokens, API keys, authorization headers, and TOTP values
+  are automatically scrubbed from every log line.
+- 🧾 **Structured errors.** Broker error envelopes are mapped to typed Fenix exceptions with
+  HTTP-status context.
+- 🩺 **Request/response diagnostics.** Every broker keeps the latest HTTP snapshots
+  (`last_request_*`, `last_response_*`) — plus paper-mode equivalents.
+- ⌨️ **Typed.** Ships a PEP 561 `py.typed` marker so downstream type checkers pick up Fenix's
+  annotations.
+
+## Supported Brokers
+
+Fenix 2.0 exposes **15 broker adapters**. Each has its own
+[reference page](https://fenix.hardeep.tech) documenting every method it supports.
+
+The **Class** name is the public identifier — it is exactly what `fenix.brokers` lists and what
+`broker.describe()["id"]` returns.
+
+| | Broker | Class |
+|---|--------|-------|
+| <img src="assets/brokers/aliceblue.svg" alt="AliceBlue" height="22"> | AliceBlue | `AliceBlue` |
+| <img src="assets/brokers/angelone.svg" alt="Angel One" height="22"> | Angel One | `AngelOne` |
+| <img src="assets/brokers/anandrathi.jpeg" alt="Anand Rathi" height="22"> | Anand Rathi | `AnandRathi` |
+| <img src="assets/brokers/dhan.svg" alt="Dhan" height="22"> | Dhan | `Dhan` |
+| <img src="assets/brokers/finvasia.svg" alt="Finvasia" height="22"> | Finvasia / Shoonya | `Finvasia` |
+| <img src="assets/brokers/fivepaisa.svg" alt="5paisa" height="22"> | 5paisa | `FivePaisa` |
+| <img src="assets/brokers/fyers.svg" alt="Fyers" height="22"> | Fyers | `Fyers` |
+| <img src="assets/brokers/groww.svg" alt="Groww" height="22"> | Groww | `Groww` |
+| <img src="assets/brokers/iifl.svg" alt="IIFL" height="22"> | IIFL | `Iifl` |
+| <img src="assets/brokers/kotakneo.svg" alt="Kotak Neo" height="22"> | Kotak Neo | `KotakNeo` |
+| <img src="assets/brokers/mastertrust.svg" alt="Master Trust" height="22"> | Master Trust | `MasterTrust` |
+| <img src="assets/brokers/motilaloswal.jpeg" alt="Motilal Oswal" height="22"> | Motilal Oswal | `MotilalOswal` |
+| <img src="assets/brokers/symphony.svg" alt="Symphony" height="22"> | Symphony | `Symphony` |
+| <img src="assets/brokers/upstox.svg" alt="Upstox" height="22"> | Upstox | `Upstox` |
+| <img src="assets/brokers/zerodha.svg" alt="Zerodha" height="22"> | Zerodha | `Zerodha` |
+
+```python
+import fenix
+print(fenix.brokers)   # always reflects exactly what your installed version supports
+```
+
+> The deprecated v1 modules `choice`, `kotak`, `kunjee`, and `vpc` were removed in v2.0.
+
+## Unified Vocabulary
+
+Your strategy speaks Fenix constants; each adapter translates them to its broker's dialect and
+validates them. The constant classes are top-level exports (`from fenix import Side, Product, …`).
+
+| Constant | Common values |
+|----------|---------------|
+| `Side` | `BUY`, `SELL` |
+| `OrderType` | `MARKET`, `LIMIT`, `SL`, `SLM` |
+| `Product` | `MIS`, `NRML`, `CNC`, `MARGIN`, `MTF`, `BO`, `CO` |
+| `Validity` | `DAY`, `IOC`, `GTD`, `GTC`, `FOK`, `TTL` |
+| `Variety` | `REGULAR`, `STOPLOSS`, `AMO`, `BO`, `CO`, `ICEBERG`, `AUCTION` |
+| `Status` | `PENDING`, `OPEN`, `PARTIALLY_FILLED`, `FILLED`, `REJECTED`, `CANCELLED` |
+| `ExchangeCode` | `NSE`, `NFO`, `BSE`, `BFO`, `MCX`, `CDS`, … |
+| `Root` | `NIFTY`, `BANKNIFTY`, `FINNIFTY`, `SENSEX`, `CRUDEOIL`, … |
+| `Option` | `CE`, `PE` |
+
+Returned records also use a fixed key set (`Order`, `Position`, `Profile`, `RMS`), so the same
+parsing code works for every broker. Full reference at **[fenix.hardeep.tech](https://fenix.hardeep.tech)**.
+
+## Paper Trading
+
+Paper mode routes supported order entry and account reads through Fenix's in-process matching
+engine instead of live broker endpoints — no credentials, zero live calls. Flip one flag and the
+exact same code runs against the simulator.
+
+```python
+from fenix import AliceBlue, Side, UniqueID
+
+broker = AliceBlue({"paper_mode": True})
+broker.authenticate()                      # no-op in paper mode
+
+token = {"Token": 12345, "Symbol": "TESTSTOCK", "Exchange": "NSE"}
+
+order = broker.market_order(
+    token_dict=token, quantity=1, side=Side.BUY, unique_id=UniqueID.MARKET_ORDER,
+)
+
+broker.on_tick(token=12345, ltp=2500.0)    # feed prices to drive fills
+
+print(broker.fetch_orderbook())
+print(broker.fetch_positions())
+```
+
+Paper mode supports order books, trade books, order history, positions, holdings, margin limits,
+profile data, stop-order validation, and square-off validation.
+
+## How it fits together
+
+Every adapter — `Zerodha`, `AngelOne`, `Fyers`, … — subclasses `fenix.base.broker.Broker`. The
+base class owns everything identical across brokers (HTTP session, throttling, the `fetch()`
+request wrapper, URL building, constant translation, logging/redaction, error mapping, and the
+embedded paper engine), while each subclass supplies only what is broker-specific.
+
+```
+  Your strategy            Fenix · Unified API           Brokers
+┌────────────────┐          ┌──────────────────────────┐          ┌──────────────────────────┐
+│                │          │  authenticate · login    │          │  Zerodha · Angel One     │
+│  one codebase  │  ──────▶ │  orders · positions      │  ──────▶ │  Fyers · Upstox · Dhan   │
+│                │   call   │  account · paper mode    │   REST   │  … + 10 more brokers     │
+└────────────────┘          └──────────────────────────┘          └──────────────────────────┘
+```
+
+### Operational features
+
+- **Rate limits.** Adapters define token-bucket buckets in `rateLimits`; requests throttle
+  automatically before hitting endpoints. Configure with `enableRateLimit` and
+  `rate_limit_padding`.
+- **Logging & redaction.** Pass a logger or `verbose=True` to inspect request/response flow.
+  Fenix redacts passwords, tokens, API keys, authorization headers, and TOTP values.
+- **Diagnostics.** Every broker keeps the latest HTTP snapshots (`last_request_*`,
+  `last_response_*`) — and in paper mode, `last_paper_request` / `last_paper_response` /
+  `last_paper_interaction`.
+- **Typed.** Ships a PEP 561 `py.typed` marker so downstream type checkers pick up Fenix's
+  annotations.
+
+## Fenix-Pro — real-time market data
+
+[**Fenix-Pro**](https://fenix.hardeep.tech) is the paid, real-time companion to Fenix. It hides
+each broker's WebSocket transport, payload format, and subscription conventions behind a unified,
+callback-oriented interface — **LTP, market depth, and order updates**, normalized into one
+`TickData` / `Order` shape across 15 live-feed adapters. It shares Fenix's broker roster and
+instrument-token shapes, so the two compose cleanly.
 
 ## Documentation
 
-Read the [Manual](https://github.com/TheHardeep/fenix/wiki) for more details.
+Full developer documentation — guides, architecture, the unified API reference, paper mode,
+constants, and a reference page per broker — lives at **[fenix.hardeep.tech](https://fenix.hardeep.tech)**.
 
-## Usage
+## License
 
-### Intro
+Fenix is released under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) for
+details.
 
+---
 
-The fenix library provides unifed methods for fetching market data, generating access tokens, placing different order types, fetching orderbook & tradebook, fetching order updates, etc.
-
-In order to trade you need to provide your user credentials. It usually means signing up to the broker and creating API keys for your account. Some exchanges require personal info or identification. Sometimes verification may be necessary as well. In this case you will need to register yourself, this library will not create accounts or API keys for you.
-
-Using this library you can perform the following:
-
-- get instrument tokens for equity, options for both NSE & BSE.
-- trade by making market, limit, stoploss and stoploss-market and bracket orders (if provided by the broker).
-- modify and cancel open orders.
-- query single order updates.
-- query orderbook & tradebook.
-- query positionbook.
-- query holdings.
-- query personal account info.
-- query rms limits.
-
-
-### Examples
-
-```Python
-# coding=utf-8
-
-from fenix import aliceblue, angelone, zerodha, iifl
-from fenix import constants
-
-
-# Download all the FNO Intrument Tokens, Symbols, Lot Size
-nfo_tokens = zerodha.create_fno_tokens()
-
-
-# Create Headers which contain Access Token used to place orders, fetch orderbook, etc.
-params = {
-    "user_id": "YOUR_USER_ID",
-    "password": 'YOUR_PASSWORD',
-    "totpstr": 'YOUR_TOTP_STRING',
-    "api_key": 'YOUR_API_KEY',
-    "api_secret":'YOUR_API_SECRET'
-    }
-
-headers = zerodha.create_headers(params)
-
-
-# Place a Limit Order in the FNO Segment
-limit_order = zerodha.limit_order_fno(
-                        price = 13.0,
-                        option = "CE",
-                        strike_price = 45500,
-                        quantity = 15,
-                        side = "BUY",
-                        unique_id = 'LIMITOrderNFO',
-                        headers = headers,
-                        )
-
-
-# Fetch the current detail of a single order
-order_detail = zerodha.fetch_order('ORDER_ID', headers)
-
-
-# Modify an open order
-modified_order = zerodha.modify_order(
-                            order_id='231217000002374',
-                            price=10.0,
-                            trigger=9.5,
-                            quantity=15,
-                            order_type=constants.OrderType.SL,
-                            validity=constants.Validity.DAY,
-                            headers=headers
-                            )
-
-# Cancel an open order
-cancelled_order = zerodha.cancel_order(
-                            order_id='231217000005603',
-                            headers=headers
-                            )
-
-# Fetch OrderBook
-orderbook = aliceblue.fetch_orders(headers=headers)
-
-
-print(aliceblue.id, aliceblue.create_fno_tokens())
-print(angelone.id, angelone.create_fno_tokens())
+<p align="center">
+  <img src="assets/fenix-logo-sm.png" alt="Fenix" width="48"><br>
+  <sub>Built for the Indian markets · <a href="https://fenix.hardeep.tech">fenix.hardeep.tech</a></sub>
+</p>

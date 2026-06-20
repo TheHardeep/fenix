@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+    <defs>
+        <clipPath id="ellipse-stencil">
+            <ellipse cx="500" cy="300" rx="470" ry="270" />
+        </clipPath>
+    </defs>
+
+    <ellipse cx="500" cy="300" rx="470" ry="270" fill="#0066CC"/>
+
+    <path d="
+        M 210 520
+        L 340 120
+        L 500 520
+        L 660 120
+        L 790 520
+        "
+        fill="none"
+        stroke="white"
+        stroke-width="60"
+        stroke-linecap="butt"
+        stroke-linejoin="miter"
+        clip-path="url(#ellipse-stencil)"/>
+</svg>

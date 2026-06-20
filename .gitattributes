@@ -1,0 +1,30 @@
+# Normalize line endings: store as LF in the repo, auto-handle on checkout.
+* text=auto eol=lf
+
+# Source / text files -> LF
+*.py    text eol=lf
+*.pyi   text eol=lf
+*.txt   text eol=lf
+*.md    text eol=lf
+*.cfg   text eol=lf
+*.ini   text eol=lf
+*.toml  text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# Windows-only scripts keep CRLF
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Binary assets: never touch
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.so    binary
+*.pyd   binary

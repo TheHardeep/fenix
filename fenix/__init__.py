@@ -15,82 +15,68 @@ Examples are available at https://github.com/TheHardeep/fenix#examples
 #  ------------------------------------------------------------------------------
 
 
-__version__ = "1.0.5"
+__version__ = "2.0.0"
 
 
 #  ------------------------------------------------------------------------------
 
+# Base class
 from fenix.base.broker import Broker  # noqa: F401
 
-from fenix.base import errors  # noqa: F401
-from fenix.base.errors import InputError  # noqa: F401
-from fenix.base.errors import ResponseError  # noqa: F401
-from fenix.base.errors import TokenDownloadError  # noqa: F401
-from fenix.base.errors import RequestTimeout  # noqa: F401
-from fenix.base.errors import NetworkError  # noqa: F401
-from fenix.base.errors import BrokerError  # noqa: F401
+# Errors & constants — re-export each submodule's curated public API.
+# Each `import *` honours that module's own `__all__`, keeping it the single
+# source of truth so `fenix.__all__` can never advertise an unbound name.
+from fenix.base import errors, constants  # noqa: F401
+from fenix.base.errors import *  # noqa: F401,F403
+from fenix.base.constants import *  # noqa: F401,F403
 
 
-from fenix.base import constants  # noqa: F401
-from fenix.base.constants import Side  # noqa: F401
-from fenix.base.constants import Root  # noqa: F401
-from fenix.base.constants import WeeklyExpiry  # noqa: F401
-from fenix.base.constants import Option  # noqa: F401
-from fenix.base.constants import OrderType  # noqa: F401
-from fenix.base.constants import ExchangeCode  # noqa: F401
-from fenix.base.constants import Product  # noqa: F401
-from fenix.base.constants import Validity  # noqa: F401
-from fenix.base.constants import Variety  # noqa: F401
-from fenix.base.constants import Status  # noqa: F401
-from fenix.base.constants import Order  # noqa: F401
-from fenix.base.constants import Position  # noqa: F401
-from fenix.base.constants import Profile  # noqa: F401
-from fenix.base.constants import UniqueID  # noqa: F401
+# Broker adapters — kept explicit (no per-broker __all__) for clear, statically
+# analysable imports. `brokers` is derived from the classes below to avoid drift.
+from fenix.aliceblue import AliceBlue  # noqa: F401
+from fenix.angelone import AngelOne  # noqa: F401
+from fenix.anandrathi import AnandRathi  # noqa: F401
+from fenix.dhan import Dhan  # noqa: F401
+from fenix.finvasia import Finvasia  # noqa: F401
+from fenix.fivepaisa import FivePaisa  # noqa: F401
+from fenix.fyers import Fyers  # noqa: F401
+from fenix.groww import Groww  # noqa: F401
+from fenix.iifl import Iifl  # noqa: F401
+from fenix.kotakneo import KotakNeo  # noqa: F401
+from fenix.mastertrust import MasterTrust  # noqa: F401
+from fenix.motilaloswal import MotilalOswal  # noqa: F401
+from fenix.symphony import Symphony  # noqa: F401
+from fenix.upstox import Upstox  # noqa: F401
+from fenix.zerodha import Zerodha  # noqa: F401
 
 
-from fenix.aliceblue import aliceblue  # noqa :F401
-from fenix.angelone import angelone  # noqa :F401
-from fenix.choice import choice  # noqa :F401
-from fenix.finvasia import finvasia  # noqa :F401
-from fenix.fivepaisa import fivepaisa  # noqa :F401
-from fenix.fyers import fyers  # noqa :F401
-from fenix.iifl import iifl  # noqa :F401
-from fenix.kotak import kotak  # noqa :F401
-from fenix.kotakneo import kotakneo  # noqa :F401
-from fenix.kunjee import kunjee  # noqa :F401
-from fenix.mastertrust import mastertrust  # noqa :F401
-from fenix.motilaloswal import motilaloswal  # noqa :F401
-from fenix.paper import paper  # noqa :F401
-from fenix.symphony import symphony  # noqa :F401
-from fenix.upstox import upstox  # noqa :F401
-from fenix.vpc import vpc  # noqa :F401
-from fenix.zerodha import zerodha  # noqa :F401
-
-
+# Public registry of available brokers (ccxt-style: list of class names),
+# derived from the imported classes so it stays in sync automatically.
 brokers = [
-    "aliceblue",
-    "angelone",
-    "choice",
-    "finvasia",
-    "fivepaisa",
-    "fyers",
-    "iifl",
-    "kotak",
-    "kotakneo",
-    "kunjee",
-    "mastertrust",
-    "motilaloswal",
-    "paper",
-    "symphony",
-    "upstox",
-    "vpc",
-    "zerodha",
+    cls.__name__
+    for cls in (
+        AliceBlue,
+        AngelOne,
+        AnandRathi,
+        Dhan,
+        Finvasia,
+        FivePaisa,
+        Fyers,
+        Groww,
+        Iifl,
+        KotakNeo,
+        MasterTrust,
+        MotilalOswal,
+        Symphony,
+        Upstox,
+        Zerodha,
+    )
 ]
 
-base = [
-    "Broker",
-    "brokers",
-    "constants",
-]
 
-__all__ = base + errors.__all__ + brokers + constants.__all__
+__all__ = (
+    ["Broker", "brokers", "errors", "constants"]
+    + errors.__all__
+    + constants.__all__
+    + brokers
+)

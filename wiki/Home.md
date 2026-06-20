@@ -1,63 +1,45 @@
-Welcome to the fenix wiki!
+<p align="center">
+  <img src="https://github.com/TheHardeep/fenix/releases/download/2.0.0/FenixLogo.png" alt="Fenix" width="160">
+</p>
 
-## General Information
+# Fenix Wiki
 
-- [Supported Brokers](https://github.com/TheHardeep/fenix/wiki/Supported-Brokers)
+Fenix is a Python trading library for Indian financial markets. Version 2.0
+adds a first-class paper-trading engine, a refactored broker foundation, updated
+broker support, Python 3.10+ packaging, rate-limit throttling, and redacted
+diagnostic logging.
 
-
-## How To Install
+## Start Here
 
 - [Install](https://github.com/TheHardeep/fenix/wiki/Install)
-    - [Python](https://github.com/TheHardeep/fenix/wiki/Install#python)
+- [Supported Brokers](https://github.com/TheHardeep/fenix/wiki/Supported-Brokers)
+- [Manual](https://github.com/TheHardeep/fenix/wiki/Manual)
 
+## Manual Sections
 
-## How To Use
+- [Overview](https://github.com/TheHardeep/fenix/wiki/Manual#overview)
+- [Supported Brokers](https://github.com/TheHardeep/fenix/wiki/Manual#supported-brokers)
+- [Basic Usage](https://github.com/TheHardeep/fenix/wiki/Manual#basic-usage)
+- [Paper Trading](https://github.com/TheHardeep/fenix/wiki/Manual#paper-trading)
+- [Rate Limits](https://github.com/TheHardeep/fenix/wiki/Manual#rate-limits)
+- [Authentication](https://github.com/TheHardeep/fenix/wiki/Manual#authentication)
+- [Instrument Tokens](https://github.com/TheHardeep/fenix/wiki/Manual#instrument-tokens)
+- [Order Methods](https://github.com/TheHardeep/fenix/wiki/Manual#order-methods)
+- [Account and Order Reads](https://github.com/TheHardeep/fenix/wiki/Manual#account-and-order-reads)
+- [Constants](https://github.com/TheHardeep/fenix/wiki/Manual#constants)
+- [Logging and Diagnostics](https://github.com/TheHardeep/fenix/wiki/Manual#logging-and-diagnostics)
+- [Migration Notes](https://github.com/TheHardeep/fenix/wiki/Manual#migration-notes)
 
-- [User Manual](https://github.com/TheHardeep/fenix/wiki/Supported-BrokersManual)
-    - [Overview](https://github.com/TheHardeep/fenix/wiki/Manual#overview)
-    - [Basic Usage](https://github.com/TheHardeep/fenix/wiki/Manual#usage)
-    - [Paper Environment](https://github.com/TheHardeep/fenix/wiki/Manual#paper-testnet-environment)
-    - [Common Broker Attributes](https://github.com/TheHardeep/fenix/wiki/Manual#common-broker-attributes)
-    - [Request Parameters Attributes](https://github.com/TheHardeep/fenix/wiki/Manual#request-parameters-attributes)
-    - [Response Parameter Attrbiutes](https://github.com/TheHardeep/fenix/wiki/Manual#response-parameters-attributes)
-    - [Fenix Constants](https://github.com/TheHardeep/fenix/wiki/Manual#fenix-constants)
-    - [API Methods](https://github.com/TheHardeep/fenix/wiki/Manual#api-methods--endpoints)
-        - [Token Data](https://github.com/TheHardeep/fenix/wiki/Manual#token-data-methods)
-        - [Headers](https://github.com/TheHardeep/fenix/wiki/Manual#headers-method)
-        - [Order Placing](https://github.com/TheHardeep/fenix/wiki/Manual#generalized-order-placing-methods)
-        - [Modify Order](https://github.com/TheHardeep/fenix/wiki/Manual#modify-order)
-        - [Cancel Order](https://github.com/TheHardeep/fenix/wiki/Manual#cancel-order)
-        - [OrderBook/TradeBook](https://github.com/TheHardeep/fenix/wiki/Manual#orderbook--tradebook-methods)
-        - [Single Order Detail](https://github.com/TheHardeep/fenix/wiki/Manual#order--order-history-method)
-        - [PositionBook/Holdings](https://github.com/TheHardeep/fenix/wiki/Manual#positionbook--holdings-methods)
-        - [User Profile](https://github.com/TheHardeep/fenix/wiki/Manual#user-profile-method)
-        - [RMS Limits](https://github.com/TheHardeep/fenix/wiki/Manual#rms-limits-method)
-    - [Broker Token Data Download](https://github.com/TheHardeep/fenix/wiki/Manual#loading-broker-master-scripts)
-        - [Equity Tokens](https://github.com/TheHardeep/fenix/wiki/Manual#clseq_tokens)
-        - [F&O Tokens](https://github.com/TheHardeep/fenix/wiki/Manual#clsnfo_tokens)
-        - [Indices Tokens](https://github.com/TheHardeep/fenix/wiki/Manual#clsindices)
-    - [Generalized Order Functions](https://github.com/TheHardeep/fenix/wiki/Manual#generalized-order-placing-methods)
-        - [Equity Orders](https://github.com/TheHardeep/fenix/wiki/Manual#create_order_eq--)
-        - [F&O Orders](https://github.com/TheHardeep/fenix/wiki/Manual#create_order_fno--)
-        - [Any Segment Orders](https://github.com/TheHardeep/fenix/wiki/Manual#create_order--)
-    - [Orders Based on Order Type](https://github.com/TheHardeep/fenix/wiki/Manual#ordertype-specific-order-placing-methods)
-        - [Market Order](https://github.com/TheHardeep/fenix/wiki/Manual#market-order)
-        - [Limit Order](https://github.com/TheHardeep/fenix/wiki/Manual#limit-order)
-        - [Stoploss Order](https://github.com/TheHardeep/fenix/wiki/Manual#stoploss-order)
-        - [Stoploss-Market Order](https://github.com/TheHardeep/fenix/wiki/Manual#stoploss-market-order)
-    - [Modify Order](https://github.com/TheHardeep/fenix/wiki/Manual#modify-order)
-    - [Cancel Order](https://github.com/TheHardeep/fenix/wiki/Manual#cancel-order)
-    - [OrderBook/TradeBook](https://github.com/TheHardeep/fenix/wiki/Manual#orderbook--tradebook-methods)
-        - [OrderBook Methods](https://github.com/TheHardeep/fenix/wiki/Manual#orderbook-methods)
-        - [TradeBook Method](https://github.com/TheHardeep/fenix/wiki/Manual#tradebook-method)
-        - [OrderBook/TradeBook Structure](https://github.com/TheHardeep/fenix/wiki/Manual#orderbook--tradebook-structure)
-        - [Order & Order History](https://github.com/TheHardeep/fenix/wiki/Manual#order--order-history-method)
-            - [Order Structure](https://github.com/TheHardeep/fenix/wiki/Manual#order-structure)
-            - [Order History Structure](https://github.com/TheHardeep/fenix/wiki/Manual#order-history-structure0)
-    - [PositionBook/Holdings](https://github.com/TheHardeep/fenix/wiki/Manual#positionbook--holdings-methods)
-        - [PositionBook Methods](https://github.com/TheHardeep/fenix/wiki/Manual#postionbook-methods)
-        - [Holdings Method](https://github.com/TheHardeep/fenix/wiki/Manual#holdings-method)
-        - [Position/Holding Structure](https://github.com/TheHardeep/fenix/wiki/Manual#holdings-method)
-    - [User Profile](https://github.com/TheHardeep/fenix/wiki/Manual#user-profile-method)
-        - [Profile Structure](https://github.com/TheHardeep/fenix/wiki/Manual#profile-structure)
-    - [RMS Limits](https://github.com/TheHardeep/fenix/wiki/Manual#rms-limits-method)
+## New In v2.0
+
+- Paper mode through `BrokerClass({"paper_mode": True})`.
+- Tick-driven fills with `on_tick()`.
+- Shared token-bucket rate limiter configured per broker.
+- Redacted HTTP and paper-mode debug logs.
+- Last request/response snapshots for troubleshooting.
+- New broker adapters: `AnandRathi`, `Dhan`, and `Groww`.
+
+## Release Links
+
+- [GitHub release v2.0.0](https://github.com/TheHardeep/fenix/releases/tag/2.0.0)
+- [PyPI package](https://pypi.org/project/fenix/)

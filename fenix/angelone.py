@@ -1,351 +1,436 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
-from typing import Any
+
+from collections import defaultdict
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, NoReturn
+
+from requests.exceptions import HTTPError
 
 from fenix.base.broker import Broker
-
-from fenix.base.constants import Side
-from fenix.base.constants import OrderType
-from fenix.base.constants import ExchangeCode
-from fenix.base.constants import Product
-from fenix.base.constants import Validity
-from fenix.base.constants import Variety
-from fenix.base.constants import Status
-from fenix.base.constants import Order
-from fenix.base.constants import Position
-from fenix.base.constants import Profile
-from fenix.base.constants import Root
-from fenix.base.constants import WeeklyExpiry
-from fenix.base.constants import UniqueID
-
-
-from fenix.base.errors import InputError
-from fenix.base.errors import ResponseError
-from fenix.base.errors import TokenDownloadError
+from fenix.base.constants import (
+    ExchangeCode,
+    Order,
+    OrderType,
+    Position,
+    Product,
+    Profile,
+    RMS,
+    Side,
+    Status,
+    Validity,
+    Variety,
+)
+from fenix.base.errors import (
+    AuthenticationError,
+    BrokerError,
+    InsufficientFundsError,
+    InsufficientHoldingsError,
+    InputError,
+    InvalidOrderError,
+    PermissionDeniedError,
+    OrderNotFoundError,
+    ResponseError,
+)
 
 if TYPE_CHECKING:
     from requests.models import Response
 
 
-class angelone(Broker):
-    """
-    AngelOne fenix Broker Class.
+class AngelOne(Broker):
+    """AngelOne broker adapter for the Fenix trading interface."""
 
-    Returns:
-        fenix.angeloner: fenix AngelOne Broker Object.
-    """
+    _API = {
+        'doc': "https://smartapi.angelbroking.com/docs",
+        'servers': {
+            'rest': 'https://apiconnect.angelbroking.com',
+            'market': 'https://margincalculator.angelone.in',
+        },
+        'paths': {
+            # Auth Flow
+            'token': {
+                'server': 'rest',
+                'path': '/rest/auth/angelbroking/jwt/v1/generateTokens',
+            },
+            'session': {
+                'server': 'rest',
+                'path': '/rest/auth/angelbroking/user/v1/loginByPassword',
+            },
+            'logout': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/user/v1/logout',
+            },
 
-    indices = {}
-    eq_tokens = {}
-    fno_tokens = {}
-    token_params = [
-        "user_id",
-        "pin",
-        "totpstr",
-        "api_key",
-    ]
-    id = "angelone"
-    _session = Broker._create_session()
+            # Order & Portfolio Flow
+            'place_order': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/order/v1/placeOrder',
+            },
+            'modify_order': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/order/v1/modifyOrder',
+            },
+            'cancel_order': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/order/v1/cancelOrder',
+            },
+            'orderbook': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/order/v1/getOrderBook',
+            },
+            'tradebook': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/order/v1/getTradeBook',
+            },
+            'positions': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/order/v1/getPosition',
+            },
+            'holdings': {
+                'server': 'rest',
+                'path': (
+                    '/rest/secure/angelbroking/portfolio/v1/getAllHolding'
+                ),
+            },
+            'profile': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/user/v1/getProfile',
+            },
+            'funds': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/user/v1/getRMS',
+            },
 
-    # Base URLs
-
-    base_urls = {
-        "api_doc": "https://smartapi.angelbroking.com/docs",
-        "access_token": "https://apiconnect.angelbroking.com/rest/auth/angelbroking/user/v1/loginByPassword",
-        "base": "https://apiconnect.angelbroking.com/rest/secure/angelbroking",
-        "market_data": "https://margincalculator.angelone.in/OpenAPI_File/files/OpenAPIScripMaster.json",
+            # Market Data & Others
+            'ltp': {
+                'server': 'rest',
+                'path': '/rest/secure/angelbroking/order/v1/getLtpData',
+            },
+            'historical': {
+                'server': 'rest',
+                'path': (
+                    '/rest/secure/angelbroking/historical/v1/getCandleData'
+                ),
+            },
+            'instruments': {
+                'server': 'market',
+                'path': '/OpenAPI_File/files/OpenAPIScripMaster.json',
+            },
+        }
     }
 
-    # Order Placing URLs
-
-    urls = {
-        "place_order": f"{base_urls['base']}/order/v1/placeOrder",
-        "modify_order": f"{base_urls['base']}/order/v1/modifyOrder",
-        "cancel_order": f"{base_urls['base']}/order/v1/cancelOrder",
-        "orderbook": f"{base_urls['base']}/order/v1/getOrderBook",
-        "tradebook": f"{base_urls['base']}/order/v1/getTradeBook",
-        "positions": f"{base_urls['base']}/order/v1/getPosition",
-        "holdings": f"{base_urls['base']}/portfolio/v1/getAllHolding",
-        "rms_limits": f"{base_urls['base']}/user/v1/getRMS",
-        "profile": f"{base_urls['base']}/user/v1/getProfile",
+    STANDARD_MAPS = {
+        'status': {
+            "open pending": Status.PENDING,
+            "not modified": Status.PENDING,
+            "not cancelled": Status.PENDING,
+            "modify pending": Status.PENDING,
+            "trigger pending": Status.PENDING,
+            "cancel pending": Status.PENDING,
+            "validation pending": Status.PENDING,
+            "put order req received": Status.PENDING,
+            "modify validation pending": Status.PENDING,
+            "after market order req received": Status.PENDING,
+            "modify after market order req received": Status.PENDING,
+            "cancelled": Status.CANCELLED,
+            "cancelled after market order": Status.CANCELLED,
+            "open": Status.OPEN,
+            "complete": Status.FILLED,
+            "rejected": Status.REJECTED,
+            "modified": Status.MODIFIED,
+        },
+        'product': {
+            "DELIVERY": Product.CNC,
+            "CARRYFORWARD": Product.NRML,
+            "MARGIN": Product.MARGIN,
+            "INTRADAY": Product.MIS,
+            "BO": Product.BO,
+        },
+        'order_type': {
+            "MARKET": OrderType.MARKET,
+            "LIMIT": OrderType.LIMIT,
+            "STOPLOSS_LIMIT": OrderType.SL,
+            "STOPLOSS_MARKET": OrderType.SLM
+        },
+        'variety': {
+            "NORMAL": Variety.REGULAR,
+            "STOPLOSS": Variety.STOPLOSS,
+            "AMO": Variety.AMO,
+            "ROBO": Variety.BO,
+        },
+        'exchange': {
+            "NSE": ExchangeCode.NSE,
+            "BSE": ExchangeCode.BSE,
+            "NFO": ExchangeCode.NFO,
+            "BFO": ExchangeCode.BFO,
+            "MCX": ExchangeCode.MCX,
+            "CDS": ExchangeCode.CDS,
+            "NCO": ExchangeCode.NCO,
+            "NCDEX": ExchangeCode.NCX,
+        },
+        "side": {
+            "BUY": Side.BUY,
+            "SELL": Side.SELL,
+        },
+        "validity": {
+            "DAY": Validity.DAY,
+            "IOC": Validity.IOC,
+        }
     }
 
-    # Request Parameters Dictionaries
+    REQUEST_MAPS = {}
 
-    req_exchange = {
-        ExchangeCode.NSE: "NSE",
-        ExchangeCode.BSE: "BSE",
-        ExchangeCode.NFO: "NFO",
-        ExchangeCode.MCX: "MCX",
+    for map_name, mapping_dict in STANDARD_MAPS.items():
+        inverse_map = {v: k for k, v in mapping_dict.items()}
+        REQUEST_MAPS[map_name] = inverse_map
+
+    ERROR_CODE_KEYS = (
+        "errorcode",
+    )
+
+    ERROR_MESSAGE_KEYS = (
+        "message",
+    )
+
+    _ERROR_MESSAGES = {
+        # Auth & Token
+        "AG8001": "Invalid Token",
+        "AG8002": "Token Expired",
+        "AG8003": "Token missing",
+        "AB8050": "Invalid Refresh Token",
+        "AB8051": "Refresh Token Expired",
+        # Login & Account
+        "AB1000": "Invalid Email Or Password",
+        "AB1001": "Invalid Email",
+        "AB1002": "Invalid Password Length",
+        "AB1003": "Client Already Exists",
+        "AB1004": "Something Went Wrong, Please Try After Sometime",
+        "AB1005": "User Type Must Be USER",
+        "AB1006": "Client Is Block For Trading",
+        "AB1007": "AMX Error",
+        "AB1008": "Invalid Order Variety",
+        "AB1009": "Symbol Not Found",
+        "AB1010": "AMX Session Expired",
+        "AB1011": "Client not login",
+        "AB1012": "Invalid Product Type",
+        "AB1013": "Order not found",
+        "AB1014": "Trade not found",
+        "AB1015": "Holding not found",
+        "AB1016": "Position not found",
+        "AB1017": "Position conversion failed",
+        "AB1018": "Failed to get symbol details",
+        "AB1031": "Old Password Mismatch",
+        "AB1032": "User Not Found",
+        "AB2000": "Error not specified",
+        "AB2001": "Internal Error, Please try after sometime",
+        "AB2002": "ROBO order is block",
+        "AB2020": "Insufficient Funds",
+        "AB4008": "ordertag length should be less than 20 characters",
     }
 
-    req_side = {
-        Side.BUY: "BUY",
-        Side.SELL: "SELL",
+    _DIRECT_ERROR_CLASSES = {
+        "AG8001": AuthenticationError,
+        "AG8002": AuthenticationError,
+        "AG8003": AuthenticationError,
+        "AB8050": AuthenticationError,
+        "AB8051": AuthenticationError,
+        "AB1000": AuthenticationError,
+        "AB1001": AuthenticationError,
+        "AB1002": AuthenticationError,
+        "AB1010": AuthenticationError,
+        "AB1011": AuthenticationError,
+        "AB1031": AuthenticationError,
+        "AB1032": AuthenticationError,
+        "AB1006": PermissionDeniedError,
+        "AB1008": InvalidOrderError,
+        "AB1009": InvalidOrderError,
+        "AB1012": InvalidOrderError,
+        "AB1018": InvalidOrderError,
+        "AB2002": InvalidOrderError,
+        "AB4008": InvalidOrderError,
+        "AB1013": OrderNotFoundError,
+        "AB1014": OrderNotFoundError,
+        "AB1015": OrderNotFoundError,
+        "AB1016": OrderNotFoundError,
+        "AB1017": ResponseError,
+        "AB2020": InsufficientFundsError,
     }
 
-    req_product = {
-        Product.MIS: "INTRADAY",
-        Product.NRML: "CARRYFORWARD",
-        Product.CNC: "DELIVERY",
-        Product.MARGIN: "MARGIN",
-        Product.BO: "BO",
-    }
+    _REQUIRED_AUTH_HEADER_KEYS = (
+        "Content-type",
+        "X-ClientLocalIP",
+        "X-ClientPublicIP",
+        "X-MACAddress",
+        "Accept",
+        "X-PrivateKey",
+        "X-UserType",
+        "X-SourceID",
+        "Authorization",
+        "x-api-key",
+        "x-client-code",
+        "x-feed-token",
+    )
 
-    req_order_type = {
-        OrderType.MARKET: "MARKET",
-        OrderType.LIMIT: "LIMIT",
-        OrderType.SL: "STOPLOSS_LIMIT",
-        OrderType.SLM: "STOPLOSS_MARKET",
-    }
+    def describe(self) -> dict:
+        """Return broker metadata consumed by the base broker class."""
+        return {
+            "id": "AngelOne",
+            "tokenParams": [
+                "user_id",
+                "pin",
+                "totpstr",
+                "api_key",
+            ],
+            "proxies": {},
+            "sensitiveLogKeysIncludeDefault": True,
+            "sensitiveLogKeys": [
+                # Login request body
+                "clientcode",
+                "user_id",
+                "totpstr",
+                # Auth response tokens
+                "jwtToken",
+                "refreshToken",
+                "feedToken",
+                # Authenticated request headers
+                "X-PrivateKey",
+                "x-api-key",
+                "x-client-code",
+                "x-feed-token",
+            ],
+            "enableRateLimit": True,
+            "rateLimits": {
+                "auth": [
+                    {
+                        "period": 1,
+                        "capacity": 1,
+                        "cost": 1.0
+                    },
+                    {
+                        "period": 3600,
+                        "capacity": 1000,
+                        "cost": 1.0
+                    },
+                ],
+                "orders": [
+                    {
+                        "period": 1,
+                        "capacity": 20,
+                        "cost": 1.0
+                    },
+                    {
+                        "period": 60,
+                        "capacity": 500,
+                        "cost": 1.0
+                    },
+                    {
+                        "period": 3600,
+                        "capacity": 1000,
+                        "cost": 1.0
+                    },
+                ],
+                "post_trade": {
+                    "period": 1,
+                    "capacity": 1,
+                    "cost": 1.0
+                },
+                "user": {
+                    "period": 1,
+                    "capacity": 3,
+                    "cost": 1.0
+                },
+                "funds": {
+                    "period": 1,
+                    "capacity": 2,
+                    "cost": 1.0
+                },
+                "market": [
+                    {
+                        "period": 1,
+                        "capacity": 10,
+                        "cost": 1.0
+                    },
+                    {
+                        "period": 60,
+                        "capacity": 500,
+                        "cost": 1.0
+                    },
+                    {
+                        "period": 3600,
+                        "capacity": 1000,
+                        "cost": 1.0
+                    },
+                ],
+                "historical": [
+                    {
+                        "period": 1,
+                        "capacity": 3,
+                        "cost": 1.0
+                    },
+                    {
+                        "period": 60,
+                        "capacity": 180,
+                        "cost": 1.0
+                    },
+                    {
+                        "period": 3600,
+                        "capacity": 5000,
+                        "cost": 1.0
+                    },
+                ],
+                "default": {
+                    "period": 1,
+                    "capacity": 1,
+                    "cost": 1.0
+                },
+            }
+        }
 
-    req_variety = {
-        Variety.REGULAR: "NORMAL",
-        Variety.STOPLOSS: "STOPLOSS",
-        Variety.AMO: "AMO",
-        Variety.BO: "ROBO",
-    }
+    def __init__(self, config: dict | None = None):
+        """Initialize the AngelOne broker adapter.
 
-    req_validity = {
-        Validity.DAY: "DAY",
-        Validity.IOC: "IOC",
-    }
-
-    # Response Parameters Dictionaries
-
-    resp_status = {
-        "open pending": Status.PENDING,
-        "not modified": Status.PENDING,
-        "not cancelled": Status.PENDING,
-        "modify pending": Status.PENDING,
-        "trigger pending": Status.PENDING,
-        "cancel pending": Status.PENDING,
-        "validation pending": Status.PENDING,
-        "put order req received": Status.PENDING,
-        "modify validation pending": Status.PENDING,
-        "after market order req received": Status.PENDING,
-        "modify after market order req received": Status.PENDING,
-        "cancelled": Status.CANCELLED,
-        "cancelled after market order": Status.CANCELLED,
-        "open": Status.OPEN,
-        "complete": Status.FILLED,
-        "rejected": Status.REJECTED,
-        "modified": Status.MODIFIED,
-    }
-
-    resp_order_type = {
-        "MARKET": OrderType.MARKET,
-        "LIMIT": OrderType.LIMIT,
-        "STOPLOSS_LIMIT": OrderType.SL,
-        "STOPLOSS_MARKET": OrderType.SLM,
-    }
-
-    resp_product = {
-        "DELIVERY": Product.CNC,
-        "CARRYFORWARD": Product.NRML,
-        "MARGIN": Product.MARGIN,
-        "INTRADAY": Product.MIS,
-        "BO": Product.BO,
-    }
-
-    resp_variety = {
-        "NORMAL": Variety.REGULAR,
-        "STOPLOSS": Variety.STOPLOSS,
-        "AMO": Variety.AMO,
-        "ROBO": Variety.BO,
-    }
-
-    # NFO Script Fetch
-
-    @classmethod
-    def create_eq_tokens(cls) -> dict:
+        Args:
+            config: Optional broker configuration passed to the base class.
         """
-        Downlaods NSE & BSE Equity Info for F&O Segment.
-        Stores them in the angelone.indices Dictionary.
+        super().__init__(config)
+
+    def authenticate(
+        self,
+        params: dict | None = None,
+        headers: dict[str, str] | None = None,
+        force: bool = False,
+    ) -> dict[str, str]:
+        """Authenticate with AngelOne and return request headers.
+
+        Args:
+            params: Login credentials and API keys required by AngelOne.
+            headers: Previously authenticated headers to reuse.
+            force: Whether to ignore cached headers and run the login flow.
 
         Returns:
-            dict: Unified fenix indices format.
-        """
-        df = cls.data_reader(cls.base_urls["market_data"], filetype="json")
-
-        df["tick_size"] = df["tick_size"].astype(int) / 100
-
-        df_bse = df[df["exch_seg"] == ExchangeCode.BSE][
-            ["symbol", "token", "tick_size", "lotsize", "exch_seg"]
-        ]
-        df_bse.rename(
-            {
-                "symbol": "Symbol",
-                "token": "Token",
-                "tick_size": "TickSize",
-                "lotsize": "LotSize",
-                "exch_seg": "Exchange",
-            },
-            axis=1,
-            inplace=True,
-        )
-
-        df_bse["Token"] = df_bse["Token"].astype(int)
-        df_bse.set_index(df_bse["Symbol"], inplace=True)
-        df_bse.drop_duplicates(subset=["Symbol"], keep="first", inplace=True)
-
-        df_nse = df[df["symbol"].str.endswith("-EQ")][
-            ["name", "symbol", "token", "tick_size", "lotsize", "exch_seg"]
-        ]
-        df_nse.rename(
-            {
-                "name": "Index",
-                "symbol": "Symbol",
-                "token": "Token",
-                "tick_size": "TickSize",
-                "lotsize": "LotSize",
-                "exch_seg": "Exchange",
-            },
-            axis=1,
-            inplace=True,
-        )
-
-        df_nse["Token"] = df_nse["Token"].astype(int)
-        df_nse.set_index(df_nse["Index"], inplace=True)
-        df_nse.drop(columns="Index", inplace=True)
-
-        cls.eq_tokens[ExchangeCode.NSE] = df_nse.to_dict(orient="index")
-        cls.eq_tokens[ExchangeCode.BSE] = df_bse.to_dict(orient="index")
-
-        return cls.eq_tokens
-
-    @classmethod
-    def create_indices(cls) -> dict:
-        """
-        Downloads all the Broker Indices Token data.
-        Stores them in the angelone.indices Dictionary.
-
-        Returns:
-            dict: Unified fenix indices format.
-        """
-        df = cls.data_reader(cls.base_urls["market_data"], filetype="json")
-        df = df[df["instrumenttype"] == "AMXIDX"][["symbol", "token", "exch_seg"]]
-
-        df.rename(
-            {"symbol": "Symbol", "token": "Token", "exch_seg": "Exchange"},
-            axis=1,
-            inplace=True,
-        )
-        df.index = df["Symbol"]
-        df["Token"] = df["Token"].astype(int)
-
-        indices = df.to_dict(orient="index")
-
-        indices[Root.BNF] = indices["Nifty Bank"]
-        indices[Root.NF] = indices["Nifty 50"]
-        indices[Root.FNF] = indices["Nifty Fin Service"]
-        indices[Root.MIDCPNF] = indices["NIFTY MID SELECT"]
-
-        cls.indices = indices
-
-        return indices
-
-    @classmethod
-    def create_fno_tokens(cls) -> dict:
-        """
-        Downloades Token Data for the FNO Segment for the 3 latest Weekly Expiries.
-        Stores them in the angelone.fno_tokens Dictionary.
+            Headers that can authenticate subsequent AngelOne API calls.
 
         Raises:
-            TokenDownloadError: Any Error Occured is raised through this Error Type.
+            KeyError: If neither credentials nor reusable headers are provided,
+                or if a required credential is missing.
         """
-        try:
-            df = cls.data_reader(cls.base_urls["market_data"], filetype="json")
+        if self.paper_mode:
+            self._headers = {"paper": "true"}
+            return self._headers
 
-            df.rename(
-                {
-                    "token": "Token",
-                    "name": "Root",
-                    "expiry": "Expiry",
-                    "symbol": "Symbol",
-                    "tick_size": "TickSize",
-                    "lotsize": "LotSize",
-                    "strike": "StrikePrice",
-                    "exch_seg": "Exchange",
-                },
-                axis=1,
-                inplace=True,
-            )
+        if headers is not None:
+            return self.use_headers(headers)
 
-            df_nfo = df[
-                (
-                    (df["Root"] == "BANKNIFTY")
-                    | (df["Root"] == "NIFTY")
-                    | (df["Root"] == "FINNIFTY")
-                    | (df["Root"] == "MIDCPNIFTY")
-                )
-                & (df["Exchange"] == ExchangeCode.NFO)
-                & (df["instrumenttype"] == "OPTIDX")
-            ]
+        if self._headers and not force:
+            return self._headers
 
-            df_bfo = df[
-                ((df["Root"] == "SENSEX") | (df["Root"] == "BANKEX"))
-                & (df["Exchange"] == ExchangeCode.BFO)
-                & (df["instrumenttype"] == "OPTIDX")
-            ]
+        if params is None:
+            raise KeyError("Please provide params or headers")
 
-            df = cls.concat_df([df_nfo, df_bfo])
-
-            df["Option"] = df["Symbol"].str.extract(r"(CE|PE)")
-            df["StrikePrice"] = (df["StrikePrice"] // 100).astype(str)
-            df["TickSize"] = df["TickSize"] / 100
-            df["Token"] = df["Token"].astype(int)
-
-            df = df[
-                [
-                    "Token",
-                    "Symbol",
-                    "Expiry",
-                    "Option",
-                    "StrikePrice",
-                    "LotSize",
-                    "Root",
-                    "TickSize",
-                    "Exchange",
-                ]
-            ]
-
-            df["Expiry"] = cls.pd_datetime(df["Expiry"]).dt.date.astype(str)
-
-            expiry_data = cls.jsonify_expiry(data_frame=df)
-
-            cls.fno_tokens = expiry_data
-
-            return expiry_data
-
-        except Exception as exc:
-            raise TokenDownloadError({"Error": exc.args}) from exc
-
-    # Headers & Json Parsers
-
-    @classmethod
-    def create_headers(
-        cls,
-        params: dict,
-    ) -> dict[str, str]:
-        """
-        Generate Headers used to access Endpoints in AngelOne.
-
-        Parameters:
-            params (dict) : A dictionary which should consist the following keys:
-                user_id (str): User ID of the Account.
-                pin (str): pin of the Account Holder.
-                totpstr (str): String of characters used to generate TOTP.
-                api_key (str): API Key of the Account.
-
-        Returns:
-            dict[str, str]: AngelOne Headers.
-        """
-        for key in cls.token_params:
+        for key in self.tokenParams:
             if key not in params:
                 raise KeyError(f"Please provide {key}")
 
-        totp = cls.totp_creator(params["totpstr"])
+        totp = self.totp_creator(params["totpstr"])
 
         headers = {
             "Content-type": "application/json",
@@ -364,258 +449,1148 @@ class angelone(Broker):
             "totp": totp,
         }
 
-        response = cls.fetch(
+        response = self.fetch(
             method="POST",
-            url=cls.base_urls["access_token"],
+            url=self.get_url("session"),
+            endpoint_group="auth",
             json=json_data,
             headers=headers,
         )
-        response = cls._json_parser(response)
 
-        headers = {
-            "headers": {
-                "Content-type": "application/json",
-                "X-ClientLocalIP": "127.0.0.1",
-                "X-ClientPublicIP": "106.193.147.98",
-                "X-MACAddress": "00:00:00:00:00:00",
-                "Accept": "application/json",
-                "X-PrivateKey": params["api_key"],
-                "X-UserType": "USER",
-                "X-SourceID": "WEB",
-                "Authorization": f"Bearer {response['data']['jwtToken']}",
-                "x-api-key": "nBmFCnuK",
-                "x-client-code": params["user_id"],
-                "x-feed-token": response["data"]["feedToken"],
-            }
+        response = self._parse_json_response(response)
+
+        self._headers = {
+            "Content-type": "application/json",
+            "X-ClientLocalIP": "127.0.0.1",
+            "X-ClientPublicIP": "106.193.147.98",
+            "X-MACAddress": "00:00:00:00:00:00",
+            "Accept": "application/json",
+            "X-PrivateKey": params["api_key"],
+            "X-UserType": "USER",
+            "X-SourceID": "WEB",
+            "Authorization": f"Bearer {response['jwtToken']}",
+            "x-api-key": "nBmFCnuK",
+            "x-client-code": params["user_id"],
+            "x-feed-token": response["feedToken"],
         }
 
-        cls._session = cls._create_session()
+        self.reset_session()
 
-        return headers
+        return self._headers
 
-    @classmethod
-    def _json_parser(
-        cls,
-        response: Response,
-    ) -> dict[Any, Any] | list[dict[Any, Any]]:
-        """
-        Parses the Json Repsonse Obtained from Broker.
+    # Script Fetch
 
-        Parameters:
-            response (Response): Json Response Obtained from Broker.
+    def load_equity_tokens(
+        self,
+        data: dict[str, list] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Load NSE and BSE equity token metadata.
+
+        Args:
+            data: Optional pre-fetched contract-master data keyed by
+                ``"NSE"`` and ``"BSE"``.
+
+        Returns:
+            A tuple containing the unified equity token map and an all-token
+            lookup keyed by ``"{token}_{exchange}"``.
 
         Raises:
-            ResponseError: Raised if any error received from broker.
+            KeyError: If supplied contract-master data is missing an exchange.
+        """
+        if not data:
+            response = self.fetch(
+                method="GET",
+                url=self.get_url("instruments"),
+                endpoint_group="default",
+            )
+
+            eq_data = self._parse_json_response(response)
+
+        else:
+            eq_data = data
+
+        nse_dict = {}
+        bse_dict = {}
+        alltoken_dict = {}
+
+        for tok_data in eq_data:
+
+            if (
+                tok_data['exch_seg'] == 'NSE'
+                and tok_data['instrumenttype'] == ''
+            ):
+                name = tok_data['name']
+                token = tok_data['token']
+                exchange = tok_data["exch_seg"]
+
+                if "NSETEST" in name:
+                    continue
+
+                record = {
+                    "Token": token,
+                    "Exchange": exchange,
+                    "Symbol": tok_data["symbol"],
+                    "ScriptName": name,
+                    "LotSize": tok_data["lotsize"],
+                    "TickSize": str(float(tok_data["tick_size"]) / 100),
+                }
+
+                nse_dict[name] = record
+
+                token_key = f"{token}_{exchange}"
+                alltoken_dict[token_key] = record
+
+            elif (
+                tok_data['exch_seg'] == 'BSE'
+                and tok_data['instrumenttype'] == ''
+            ):
+                name = tok_data['name']
+                token = tok_data['token']
+                exchange = tok_data["exch_seg"]
+
+                record = {
+                    "Token": token,
+                    "Exchange": exchange,
+                    "Symbol": tok_data["symbol"],
+                    "ScriptName": name,
+                    "LotSize": tok_data["lotsize"],
+                    "TickSize": str(float(tok_data["tick_size"]) / 100),
+                }
+
+                bse_dict[name] = record
+
+                token_key = f"{token}_{exchange}"
+                alltoken_dict[token_key] = record
+
+        self.token_json["Equity"].update({
+            "NSE": nse_dict,
+            "BSE": bse_dict,
+        })
+
+        self.alltoken_json.update(alltoken_dict)
+
+        return (
+            {
+                "Equity": {"NSE": nse_dict, "BSE": bse_dict},
+            },
+            alltoken_dict,
+        )
+
+    def load_index_tokens(
+        self,
+        data: dict[str, list] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Load index token metadata for NSE, BSE, and MCX.
+
+        Args:
+            data: Optional pre-fetched contract-master data keyed by
+                ``"NSE"``, ``"BSE"``, and ``"MCX"``.
 
         Returns:
-            dict: json response obtained from exchange.
+            A tuple containing the unified index token map and an all-token
+            lookup keyed by ``"{token}_{exchange}"``.
+
+        Raises:
+            KeyError: If supplied contract-master data is missing an exchange.
         """
-        json_response = cls.on_json_response(response)
-        # print(json_response)
-        if json_response["status"]:
-            return json_response
+        if not data:
+            response = self.fetch(
+                method="GET",
+                url=self.get_url("instruments"),
+                endpoint_group="default",
+            )
 
-        raise ResponseError(cls.id + " " + json_response["message"])
+            idx_data = self._parse_json_response(response)
 
-    @classmethod
-    def _orderbook_json_parser(
-        cls,
+        else:
+            idx_data = data
+
+        nse_dict = {}
+        bse_dict = {}
+        mcx_dict = {}
+        ncd_dict = {}
+        token_dict = {}
+
+        for tok_data in idx_data:
+            if tok_data['instrumenttype'] == 'AMXIDX':
+
+                name = tok_data['name']
+                token = tok_data['token']
+                exchange = tok_data['exch_seg']
+                record = {
+                    "Token": token,
+                    "Exchange": exchange,
+                    "Symbol": tok_data["symbol"],
+                    "ScriptName": name,
+                }
+
+                if exchange == 'NCDEX':
+                    tk = f"{token}_{exchange}"
+                    ncd_dict[name] = record
+                elif exchange == 'NSE':
+                    tk = f"{token}_{exchange}"
+                    nse_dict[name] = record
+
+                elif exchange == 'BSE':
+                    tk = f"{token}_{exchange}"
+                    bse_dict[name] = record
+
+                elif exchange == 'MCX':
+                    tk = f"{token}_{exchange}"
+                    mcx_dict[name] = record
+                else:
+                    continue
+
+                token_dict[tk] = record
+
+        self.token_json["Indices"].update({
+            "NSE": nse_dict,
+            "BSE": bse_dict,
+            "MCX": mcx_dict,
+            "NCD": ncd_dict,
+        })
+
+        self.alltoken_json.update(token_dict)
+
+        return (
+            {
+                "Indices": {"NSE": nse_dict, "BSE": bse_dict,
+                            "MCX": mcx_dict, "NCD": ncd_dict,
+                            },
+            },
+            token_dict,
+        )
+
+    def load_fno_tokens(
+        self,
+        data: dict[str, list] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Load futures and options token metadata for NFO and BFO.
+
+        Args:
+            data: Optional pre-fetched contract-master data keyed by
+                ``"NFO"`` and ``"BFO"``.
+
+        Returns:
+            A tuple containing unified futures/options token maps and an
+            all-token lookup keyed by ``"{token}_{exchange}"``.
+
+        Raises:
+            KeyError: If supplied contract-master data is missing an exchange.
+            TokenDownloadError: If the base fetch layer raises a token download
+                failure while retrieving contract-master data.
+        """
+        if not data:
+            response = self.fetch(
+                method="GET",
+                url=self.get_url("instruments"),
+                endpoint_group="default",
+            )
+
+            fno_data = self._parse_json_response(response)
+
+        else:
+            fno_data = data
+
+        fut_nse = defaultdict(list)
+        fut_bse = defaultdict(list)
+        opt_nse = defaultdict(list)
+        opt_bse = defaultdict(list)
+        token_dict = {}
+
+        opt_series = ["OPTIDX", "OPTSTK"]
+        fut_series = ["FUTSTK", "FUTIDX"]
+        dt_dict = {}
+
+        for tok_data in fno_data:
+
+            expiry_raw = tok_data["expiry"]
+            root = tok_data["name"]
+            instrument_type = tok_data["instrumenttype"]
+            exchange = tok_data["exch_seg"]
+            token = tok_data["token"]
+
+            if "NSETEST" in root:
+                continue
+
+            if exchange in ["NFO", "BFO"]:
+
+                if expiry_raw not in dt_dict:
+                    dt = datetime.strptime(expiry_raw, "%d%b%Y")
+                    expiry = dt.strftime("%Y-%m-%d")
+                    exdp = dt.strftime('%d-%b').upper()
+                    dt_dict[expiry_raw] = (expiry, exdp)
+
+                else:
+                    (expiry, exdp) = dt_dict[expiry_raw]
+
+                if instrument_type in fut_series:
+                    record = {
+                        "Exchange": exchange,
+                        "Token": token,
+                        "Root": root,
+                        "Symbol": tok_data["symbol"],
+                        "TickSize": str(float(tok_data["tick_size"]) / 100),
+                        "LotSize": tok_data["lotsize"],
+                        "Expiry": expiry,
+                        "ScriptName": f"{root} {exdp} FUT",
+                    }
+
+                    if exchange == "NFO":
+                        fut_nse[root].append(record)
+                    else:
+                        fut_bse[root].append(record)
+
+                elif instrument_type in opt_series:
+                    option = tok_data["symbol"][-2:]
+                    strike = self._format_strike(float(tok_data["strike"]) // 100)
+                    record = {
+                        "Exchange": exchange,
+                        "Token": token,
+                        "Root": root,
+                        "Symbol": tok_data["symbol"],
+                        "TickSize": str(float(tok_data["tick_size"]) / 100),
+                        "LotSize": tok_data["lotsize"],
+                        "Expiry": expiry,
+                        "StrikePrice": strike,
+                        "Option": option,
+                        "ScriptName": f"{root} {exdp} {strike} {option}",
+                    }
+
+                    if exchange == "NFO":
+                        opt_nse[root].append(record)
+                    else:
+                        opt_bse[root].append(record)
+
+                else:
+                    continue
+
+                tk = f"{token}_{exchange}"
+                token_dict[tk] = record
+
+        self.token_json["Futures"].update({"NFO": fut_nse, "BFO": fut_bse})
+        self.token_json["Options"].update({"NFO": opt_nse, "BFO": opt_bse})
+
+        self.alltoken_json.update(token_dict)
+
+        return (
+            {
+                "Futures": {"NFO": fut_nse, "BFO": fut_bse},
+                "Options": {"NFO": opt_nse, "BFO": opt_bse},
+            },
+            token_dict,
+        )
+
+    def load_mcx_tokens(
+        self,
+        data: dict[str, list] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Load MCX futures, options, and index token metadata.
+
+        Args:
+            data: Optional pre-fetched contract-master data keyed by
+                ``"MCX"``.
+
+        Returns:
+            A tuple containing unified MCX token maps and an all-token lookup
+            keyed by ``"{token}_{exchange}"``.
+
+        Raises:
+            KeyError: If supplied contract-master data does not include MCX.
+            TokenDownloadError: If the base fetch layer raises a token download
+                failure while retrieving contract-master data.
+        """
+        if not data:
+            response = self.fetch(
+                method="GET",
+                url=self.get_url("instruments"),
+                endpoint_group="default",
+            )
+
+            mcx_data = self._parse_json_response(response)
+
+        else:
+            mcx_data = data
+
+        fut_mcx = defaultdict(list)
+        opt_mcx = defaultdict(list)
+        token_dict = {}
+
+        opt_series = ['OPTIDX', 'OPTFUT']
+        fut_series = ['FUTIDX', 'FUTCOM']
+        all_series = opt_series + fut_series
+        dt_dict = {}
+
+        for tok_data in mcx_data:
+
+            expiry_raw = tok_data["expiry"]
+            root = tok_data["name"]
+            instrument_type = tok_data["instrumenttype"]
+            exchange = tok_data["exch_seg"]
+            token = tok_data["token"]
+
+            if exchange == "MCX":
+
+                if instrument_type not in all_series:
+                    continue
+
+                if expiry_raw not in dt_dict:
+                    dt = datetime.strptime(expiry_raw, "%d%b%Y")
+                    expiry = dt.strftime("%Y-%m-%d")
+                    exdp = dt.strftime('%d-%b').upper()
+                    dt_dict[expiry_raw] = (expiry, exdp)
+
+                else:
+                    (expiry, exdp) = dt_dict[expiry_raw]
+
+                if instrument_type in fut_series:
+                    record = {
+                        "Exchange": exchange,
+                        "Token": token,
+                        "Root": root,
+                        "Symbol": tok_data["symbol"],
+                        "TickSize": str(float(tok_data["tick_size"]) / 100),
+                        "LotSize": tok_data["lotsize"],
+                        "Expiry": expiry,
+                        "ScriptName": f"{root} {exdp} FUT",
+                    }
+
+                    fut_mcx[root].append(record)
+
+                elif instrument_type in opt_series:
+                    option = tok_data["symbol"][-2:]
+                    if root == "ZINC":
+                        strike = self._format_strike(float(tok_data["strike"]) / 100)
+                    else:
+                        strike = self._format_strike(float(tok_data["strike"]) // 100)
+                    record = {
+                        "Exchange": exchange,
+                        "Token": token,
+                        "Root": root,
+                        "Symbol": tok_data["symbol"],
+                        "TickSize": str(float(tok_data["tick_size"]) / 100),
+                        "LotSize": tok_data["lotsize"],
+                        "Expiry": expiry,
+                        "StrikePrice": strike,
+                        "Option": option,
+                        "ScriptName": f"{root} {exdp} {strike} {option}",
+                    }
+
+                    opt_mcx[root].append(record)
+
+                else:
+                    continue
+
+                tk = f"{token}_{exchange}"
+                token_dict[tk] = record
+
+        self.token_json["Futures"].update({"MCX": fut_mcx})
+        self.token_json["Options"].update({"MCX": opt_mcx})
+
+        self.alltoken_json.update(token_dict)
+
+        return (
+            {
+                "Futures": {"MCX": fut_mcx},
+                "Options": {"MCX": opt_mcx},
+            },
+            token_dict,
+        )
+
+    def load_cds_tokens(
+        self,
+        data: dict[str, list] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Load currency derivatives token metadata for CDS.
+
+        Args:
+            data: Optional pre-fetched contract-master data keyed by
+                ``"CDS"``.
+
+        Returns:
+            A tuple containing unified currency futures/options token maps and
+            an all-token lookup keyed by ``"{token}_{exchange}"``.
+
+        Raises:
+            KeyError: If supplied contract-master data is missing an exchange.
+            TokenDownloadError: If the base fetch layer raises a token download
+                failure while retrieving contract-master data.
+        """
+        if not data:
+            response = self.fetch(
+                method="GET",
+                url=self.get_url("instruments"),
+                endpoint_group="default",
+            )
+
+            cds_data = self._parse_json_response(response)
+
+        else:
+            cds_data = data
+
+        fut_cds = defaultdict(list)
+        opt_cds = defaultdict(list)
+        token_dict = {}
+
+        opt_series = ["OPTCUR", "OPTIRC"]
+        fut_series = ["FUTCUR", "FUTIRC", "FUTIRT"]
+        all_series = opt_series + fut_series
+        dt_dict = {}
+
+        for tok_data in cds_data:
+
+            expiry_raw = tok_data["expiry"]
+            root = tok_data["name"]
+            instrument_type = tok_data["instrumenttype"]
+            exchange = tok_data["exch_seg"]
+            token = tok_data["token"]
+
+            if exchange == "CDS":
+
+                if "NSETEST" in root:
+                    continue
+
+                if instrument_type not in all_series:
+                    continue
+
+                if expiry_raw not in dt_dict:
+                    dt = datetime.strptime(expiry_raw, "%d%b%Y")
+                    expiry = dt.strftime("%Y-%m-%d")
+                    exdp = dt.strftime('%d-%b').upper()
+                    dt_dict[expiry_raw] = (expiry, exdp)
+
+                else:
+                    (expiry, exdp) = dt_dict[expiry_raw]
+
+                if instrument_type in fut_series:
+                    record = {
+                        "Exchange": exchange,
+                        "Token": token,
+                        "Root": root,
+                        "Symbol": tok_data["symbol"],
+                        "TickSize": str(float(tok_data["tick_size"]) / 100),
+                        "LotSize": tok_data["lotsize"],
+                        "Expiry": expiry,
+                        "ScriptName": f"{root} {exdp} FUT",
+                    }
+
+                    fut_cds[root].append(record)
+
+                elif instrument_type in opt_series:
+                    option = tok_data["symbol"][-2:]
+                    strike = self._format_strike(float(tok_data["strike"]) / 100)
+                    record = {
+                        "Exchange": exchange,
+                        "Token": token,
+                        "Root": root,
+                        "Symbol": tok_data["symbol"],
+                        "TickSize": str(float(tok_data["tick_size"]) / 100),
+                        "LotSize": tok_data["lotsize"],
+                        "Expiry": expiry,
+                        "StrikePrice": strike,
+                        "Option": option,
+                        "ScriptName": f"{root} {exdp} {strike} {option}",
+                    }
+
+                    opt_cds[root].append(record)
+
+                else:
+                    continue
+
+                tk = f"{token}_{exchange}"
+                token_dict[tk] = record
+
+        self.token_json["Futures"].update({"CDS": fut_cds})
+        self.token_json["Options"].update({"CDS": opt_cds})
+
+        self.alltoken_json.update(token_dict)
+
+        return (
+            {
+                "Futures": {"CDS": fut_cds},
+                "Options": {"CDS": opt_cds},
+            },
+            token_dict,
+        )
+
+    def load_ncx_tokens(
+        self,
+        data: dict[str, list] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Load NCDEX commodity futures token metadata.
+
+        Args:
+            data: Optional pre-fetched contract-master data keyed by
+                ``"NCDEX"``.
+
+        Returns:
+            A tuple containing the unified NCDEX futures token map and an
+            all-token lookup keyed by ``"{token}_{exchange}"``.
+
+        Raises:
+            KeyError: If supplied contract-master data is missing an exchange.
+            TokenDownloadError: If the base fetch layer raises a token download
+                failure while retrieving contract-master data.
+        """
+        if not data:
+            response = self.fetch(
+                method="GET",
+                url=self.get_url("instruments"),
+                endpoint_group="default",
+            )
+
+            ncd_data = self._parse_json_response(response)
+
+        else:
+            ncd_data = data
+
+        fut_ncd = defaultdict(list)
+        fut_series = ["OPTFUT", "FUTCOM"]
+        token_dict = {}
+        dt_dict = {}
+
+        for tok_data in ncd_data:
+
+            expiry_raw = tok_data["expiry"]
+            root = tok_data["name"]
+            instrument_type = tok_data["instrumenttype"]
+            exchange = tok_data["exch_seg"]
+            token = tok_data["token"]
+
+            if exchange == "NCDEX":
+
+                if instrument_type not in fut_series:
+                    continue
+
+                if expiry_raw not in dt_dict:
+                    dt = datetime.strptime(expiry_raw, "%d%b%Y")
+                    expiry = dt.strftime("%Y-%m-%d")
+                    exdp = dt.strftime('%d-%b').upper()
+                    dt_dict[expiry_raw] = (expiry, exdp)
+
+                else:
+                    (expiry, exdp) = dt_dict[expiry_raw]
+
+                if instrument_type in fut_series:
+                    record = {
+                        "Exchange": exchange,
+                        "Token": token,
+                        "Root": root,
+                        "Symbol": tok_data["symbol"],
+                        "TickSize": str(float(tok_data["tick_size"]) / 100),
+                        "LotSize": tok_data["lotsize"],
+                        "Expiry": expiry,
+                        "ScriptName": f"{root} {exdp} FUT",
+                    }
+
+                    fut_ncd[root].append(record)
+                    tk = f"{token}_{exchange}"
+                    token_dict[tk] = record
+
+                else:
+                    continue
+
+        self.token_json["Futures"].update({"NCX": fut_ncd})
+
+        self.alltoken_json.update(token_dict)
+
+        return (
+            {
+                "Futures": {"NCX": fut_ncd},
+            },
+            token_dict,
+        )
+
+    def load_nco_tokens(
+        self,
+        data: dict[str, list] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Load NCO (NSE commodity) futures and options token metadata.
+
+        Args:
+            data: Optional pre-fetched contract-master data keyed by
+                ``"NCO"``.
+
+        Returns:
+            A tuple containing unified NCO futures/options token maps and
+            an all-token lookup keyed by ``"{token}_{exchange}"``.
+
+        Raises:
+            KeyError: If supplied contract-master data is missing an exchange.
+            TokenDownloadError: If the base fetch layer raises a token download
+                failure while retrieving contract-master data.
+        """
+        if not data:
+            response = self.fetch(
+                method="GET",
+                url=self.get_url("instruments"),
+                endpoint_group="default",
+            )
+
+            nco_data = self._parse_json_response(response)
+
+        else:
+            nco_data = data
+
+        fut_nco = defaultdict(list)
+        opt_nco = defaultdict(list)
+        token_dict = {}
+
+        opt_series = ['OPTBLN', 'OPTFUT']
+        fut_series = ['FUTBAS', 'OPTBLN', 'FUTBLN', 'FUTENR']
+        all_series = opt_series + fut_series
+        dt_dict = {}
+
+        for tok_data in nco_data:
+
+            expiry_raw = tok_data["expiry"]
+            root = tok_data["name"]
+            instrument_type = tok_data["instrumenttype"]
+            exchange = tok_data["exch_seg"]
+            token = tok_data["token"]
+
+            if exchange == "NCO":
+
+                if "NSETEST" in root:
+                    continue
+
+                if instrument_type not in all_series:
+                    continue
+
+                if expiry_raw not in dt_dict:
+                    dt = datetime.strptime(expiry_raw, "%d%b%Y")
+                    expiry = dt.strftime("%Y-%m-%d")
+                    exdp = dt.strftime('%d-%b').upper()
+                    dt_dict[expiry_raw] = (expiry, exdp)
+
+                else:
+                    (expiry, exdp) = dt_dict[expiry_raw]
+
+                if instrument_type in fut_series:
+                    record = {
+                        "Exchange": exchange,
+                        "Token": token,
+                        "Root": root,
+                        "Symbol": tok_data["symbol"],
+                        "TickSize": str(float(tok_data["tick_size"]) / 100),
+                        "LotSize": tok_data["lotsize"],
+                        "Expiry": expiry,
+                        "ScriptName": f"{root} {exdp} FUT",
+                    }
+
+                    fut_nco[root].append(record)
+
+                elif instrument_type in opt_series:
+                    option = tok_data["symbol"][-2:]
+                    if root == "ZINC":
+                        strike = self._format_strike(float(tok_data["strike"]) / 100)
+                    else:
+                        strike = self._format_strike(float(tok_data["strike"]) // 100)
+                    record = {
+                        "Exchange": exchange,
+                        "Token": token,
+                        "Root": root,
+                        "Symbol": tok_data["symbol"],
+                        "TickSize": str(float(tok_data["tick_size"]) / 100),
+                        "LotSize": tok_data["lotsize"],
+                        "Expiry": expiry,
+                        "StrikePrice": strike,
+                        "Option": option,
+                        "ScriptName": f"{root} {exdp} {strike} {option}",
+                    }
+
+                    opt_nco[root].append(record)
+                else:
+                    continue
+
+                tk = f"{token}_{exchange}"
+                token_dict[tk] = record
+
+        self.token_json["Futures"].update({"NCO": fut_nco})
+        self.token_json["Options"].update({"NCO": opt_nco})
+
+        self.alltoken_json.update(token_dict)
+
+        return (
+            {
+                "Futures": {"NCO": fut_nco},
+                "Options": {"NCO": opt_nco},
+            },
+            token_dict,
+        )
+
+    # Json Parsers
+
+    def _extract_angelone_error_code(self, payload: Any) -> str | None:
+        """Extract a documented AngelOne error code from a payload."""
+        error_code = self._extract_error_code(payload)
+        if error_code:
+            error_code = error_code.upper()
+            if error_code in self._ERROR_MESSAGES:
+                return error_code
+            if error_code.startswith(("AB", "AG")):
+                return error_code
+
+        payload_text = self._stringify_error_payload(payload).upper()
+        for documented_code in self._ERROR_MESSAGES:
+            if documented_code in payload_text:
+                return documented_code
+
+        return None
+
+    def _extract_angelone_error_message(
+        self,
+        payload: Any,
+        error_code: str | None,
+    ) -> str | None:
+        """Extract the most useful AngelOne error message for a payload."""
+        error_message = self._extract_error_message(payload)
+        documented_message = self._ERROR_MESSAGES.get(error_code or "")
+
+        if documented_message and not error_message:
+            return documented_message
+        if documented_message and error_message == error_code:
+            return documented_message
+        if error_message:
+            return error_message
+        return documented_message
+
+    def _angelone_error_class(
+        self,
+        error_code: str | None,
+        error_message: str | None,
+        status_code: int | None = None,
+    ) -> type[BrokerError]:
+        """Resolve an AngelOne payload to a Fenix error class."""
+        if error_code in self._DIRECT_ERROR_CLASSES:
+            return self._DIRECT_ERROR_CLASSES[error_code]
+
+        message = (error_message or "").lower()
+        if any(token in message for token in ("session", "token", "login")):
+            return AuthenticationError
+        if (
+            "block" in message
+            or "permission" in message
+            or "read-only" in message
+        ):
+            return PermissionDeniedError
+        if "insufficient fund" in message or "margin" in message:
+            return InsufficientFundsError
+        if "insufficient" in message and (
+                "quantity" in message or "holding" in message):
+            return InsufficientHoldingsError
+        if "order not found" in message or "not in your order book" in message:
+            return OrderNotFoundError
+        if error_code in self._ERROR_MESSAGES:
+            if any(
+                token in message
+                for token in (
+                    "order",
+                    "price",
+                    "quantity",
+                    "symbol")):
+                return InvalidOrderError
+            return InputError
+
+        return self._http_error_class(status_code)
+
+    def _payload_indicates_error(self, payload: Any) -> bool:
+        """Return whether a decoded AngelOne payload represents an error."""
+        if isinstance(payload, list):
+            if not payload:
+                return False
+            return self._payload_indicates_error(payload[0])
+
+        if isinstance(payload, dict):
+            status = payload.get("success") or payload.get("status")
+            if isinstance(status, bool):
+                return status is False
+            if isinstance(status, str):
+                return status.lower() == "false"
+
+            return self._extract_angelone_error_code(payload) is not None
+
+        return self._extract_angelone_error_code(payload) is not None
+
+    def _raise_angelone_error(
+        self,
+        payload: Any,
+        response: Response | None = None,
+        cause: Exception | None = None,
+    ) -> NoReturn:
+        """Raise the mapped Fenix exception for an AngelOne error payload."""
+        context = self._http_error_context(response, payload)
+        error_code = self._extract_angelone_error_code(payload)
+        error_message = self._extract_angelone_error_message(
+            payload,
+            error_code,
+        )
+
+        context["error_code"] = error_code
+        context["error_message"] = error_message
+        error_cls = self._angelone_error_class(
+            error_code,
+            error_message,
+            context.get("status_code"),
+        )
+
+        error = error_cls(
+            self._format_http_error_message(context),
+            broker=self.id,
+            error_code=error_code,
+            status_code=context.get("status_code"),
+            payload=payload,
+            url=context.get("url"),
+            method=context.get("method"),
+            response=response,
+        )
+        if cause is None:
+            raise error
+        raise error from cause
+
+    def handle_http_error(self, exc: HTTPError) -> NoReturn:
+        """Handle HTTP errors and raise broker-specific exceptions."""
+        payload = self._response_error_payload(exc.response)
+        if self._payload_indicates_error(payload):
+            self._raise_angelone_error(
+                payload, response=exc.response, cause=exc)
+
+        super().handle_http_error(exc)
+
+    def _parse_json_response(self, response: Response) -> Any:
+        """Decode an HTTP response and raise broker-specific payload errors.
+
+        AngelOne wraps authenticated responses in a ``{success, message,
+        errorcode, data}`` envelope. Public endpoints (e.g. the instrument
+        master) return raw lists. This method normalises both shapes:
+        wrapped envelopes are validated and unwrapped to the ``data`` payload,
+        while raw payloads are returned untouched.
+        """
+        json_response = self._json_parser(response)
+
+        if isinstance(
+                json_response, dict) and (
+                "success" in json_response or "status" in json_response):
+            if self._payload_indicates_error(json_response):
+                self._raise_angelone_error(
+                    json_response,
+                    response=response,
+                )
+            return json_response.get("data")
+
+        return json_response
+
+    def _parse_orderbook(
+        self,
         order: dict,
     ) -> dict[Any, Any]:
-        """
-        Parse Orderbook Order Json Response.
+        """Convert an AngelOne order-book row to a unified order record.
 
-        Parameters:
-            order (dict): Orderbook Order Json Response from Broker.
+        Args:
+            order: Raw order-book row returned by AngelOne.
 
         Returns:
-            dict: Unified fenix Order Response.
+            Unified Fenix order record.
         """
         parsed_order = {
             Order.ID: order["orderid"],
-            Order.USERID: order["ordertag"],
-            Order.TIMESTAMP: cls.datetime_strp(
+            Order.USER_ID: order["ordertag"],
+            Order.TIMESTAMP: datetime.strptime(
                 order["updatetime"], "%d-%b-%Y %H:%M:%S"
             ),
             Order.SYMBOL: order["tradingsymbol"],
             Order.TOKEN: int(order["symboltoken"]),
-            Order.SIDE: cls.req_side.get(
-                order["transactiontype"], order["transactiontype"]
+            Order.SIDE: self._parse_from_broker(
+                "side", order["transactiontype"]
             ),
-            Order.TYPE: cls.resp_order_type.get(order["ordertype"], order["ordertype"]),
-            Order.AVGPRICE: order["averageprice"],
+            Order.TYPE: self._parse_from_broker(
+                "order_type", order["ordertype"]
+            ),
+            Order.AVG_PRICE: order["averageprice"],
             Order.PRICE: order["price"],
-            Order.TRIGGERPRICE: order["triggerprice"],
-            Order.TARGETPRICE: order["squareoff"],
-            Order.STOPLOSSPRICE: order["stoploss"],
-            Order.TRAILINGSTOPLOSS: order["trailingstoploss"],
+            Order.TRIGGER_PRICE: order["triggerprice"],
+            Order.TARGET_PRICE: order["squareoff"],
+            Order.STOPLOSS_PRICE: order["stoploss"],
+            Order.TRAILING_STOPLOSS: order["trailingstoploss"],
             Order.QUANTITY: int(order["quantity"]),
-            Order.FILLEDQTY: int(order["filledshares"]),
-            Order.REMAININGQTY: int(order["unfilledshares"]),
-            Order.CANCELLEDQTY: int(order["cancelsize"]),
-            Order.STATUS: cls.resp_status.get(order["status"], order["status"]),
-            Order.REJECTREASON: order["text"],
-            Order.DISCLOSEDQUANTITY: int(order["disclosedquantity"]),
-            Order.PRODUCT: cls.resp_product.get(
-                order["producttype"], order["producttype"]
+            Order.FILLED_QTY: int(order["filledshares"]),
+            Order.REMAINING_QTY: int(order["unfilledshares"]),
+            Order.CANCELLED_QTY: int(order["cancelsize"]),
+            Order.STATUS: self._parse_from_broker("status", order["status"]),
+            Order.REJECT_REASON: order["text"],
+            Order.DISCLOSED_QUANTITY: int(order["disclosedquantity"]),
+            Order.PRODUCT: self._parse_from_broker(
+                "product", order["producttype"]
             ),
-            Order.EXCHANGE: cls.req_exchange.get(order["exchange"], order["exchange"]),
-            Order.SEGMENT: cls.req_exchange.get(order["exchange"], order["exchange"]),
-            Order.VALIDITY: cls.req_validity.get(order["duration"], order["duration"]),
-            Order.VARIETY: cls.resp_variety.get(order["variety"], order["variety"]),
+            Order.EXCHANGE: self._parse_from_broker(
+                "exchange", order["exchange"]
+            ),
+            Order.SEGMENT: self._parse_from_broker(
+                "exchange", order["exchange"]
+            ),
+            Order.VALIDITY: self._parse_from_broker(
+                "validity", order["duration"]
+            ),
+            Order.VARIETY: self._parse_from_broker("variety", order["variety"]),
             Order.INFO: order,
         }
 
         return parsed_order
 
-    @classmethod
-    def _tradebook_json_parser(
-        cls,
+    def _parse_tradebook(
+        self,
         order: dict,
     ) -> dict[Any, Any]:
-        """
-        Parse Tradebook Order Json Response.
+        """Convert an AngelOne trade-book row to a unified order record.
 
-        Parameters:
-            order (dict): Tradebook Order Json Response from Broker.
+        AngelOne tradebook rows describe executed fills, not orders. The
+        response shape is intentionally narrower than the orderbook (e.g. no
+        ``ordertype``, ``variety``, ``status``, ``triggerprice``, etc.) and
+        uses ``fillprice``/``fillsize``/``fillid``/``filltime`` in place of
+        the orderbook's price/quantity fields.
+
+        Args:
+            order: Raw trade-book row returned by AngelOne.
 
         Returns:
-            dict: Unified fenix Order Response.
+            Unified Fenix order-like fill record.
         """
+        fill_quantity = int(order.get("fillsize") or 0)
+
         parsed_order = {
             Order.ID: order["orderid"],
-            Order.USERID: "",
-            Order.TIMESTAMP: cls.datetime_strp(
-                order["updatetime"], "%d-%b-%Y %H:%M:%S"
-            ),
+            Order.USER_ID: "",
+            Order.TIMESTAMP: order.get("filltime", ""),
             Order.SYMBOL: order["tradingsymbol"],
-            Order.TOKEN: int(order["symboltoken"]),
-            Order.SIDE: cls.req_side.get(
-                order["transactiontype"], order["transactiontype"]
+            Order.TOKEN: int(order.get("symboltoken") or 0),
+            Order.SIDE: self._parse_from_broker(
+                "side", order["transactiontype"]
             ),
-            Order.TYPE: cls.resp_order_type.get(order["ordertype"], order["ordertype"]),
-            Order.AVGPRICE: order["averageprice"],
-            Order.PRICE: order["price"],
-            Order.TRIGGERPRICE: order["triggerprice"],
-            Order.TARGETPRICE: order["squareoff"],
-            Order.STOPLOSSPRICE: order["stoploss"],
-            Order.TRAILINGSTOPLOSS: order["trailingstoploss"],
-            Order.QUANTITY: int(order["quantity"]),
-            Order.FILLEDQTY: int(order["filledshares"]),
-            Order.REMAININGQTY: int(order["unfilledshares"]),
-            Order.CANCELLEDQTY: int(order["cancelsize"]),
-            Order.STATUS: cls.resp_status.get(order["status"], order["status"]),
-            Order.REJECTREASON: order["text"],
-            Order.DISCLOSEDQUANTITY: int(order["disclosedquantity"]),
-            Order.PRODUCT: cls.resp_product.get(
-                order["producttype"], order["producttype"]
+            Order.TYPE: "",
+            Order.AVG_PRICE: float(order.get("fillprice") or 0.0),
+            Order.PRICE: float(order.get("fillprice") or 0.0),
+            Order.TRIGGER_PRICE: 0.0,
+            Order.TARGET_PRICE: 0.0,
+            Order.STOPLOSS_PRICE: 0.0,
+            Order.TRAILING_STOPLOSS: 0.0,
+            Order.QUANTITY: fill_quantity,
+            Order.FILLED_QTY: fill_quantity,
+            Order.REMAINING_QTY: 0,
+            Order.CANCELLED_QTY: 0,
+            Order.STATUS: Status.FILLED,
+            Order.REJECT_REASON: "",
+            Order.DISCLOSED_QUANTITY: 0,
+            Order.PRODUCT: self._parse_from_broker(
+                "product", order["producttype"]
             ),
-            Order.EXCHANGE: cls.req_exchange.get(order["exchange"], order["exchange"]),
-            Order.SEGMENT: cls.req_exchange.get(order["exchange"], order["exchange"]),
-            Order.VALIDITY: cls.req_validity.get(order["duration"], order["duration"]),
-            Order.VARIETY: cls.resp_variety.get(order["variety"], order["variety"]),
+            Order.EXCHANGE: self._parse_from_broker(
+                "exchange", order["exchange"]
+            ),
+            Order.SEGMENT: self._parse_from_broker(
+                "exchange", order["exchange"]
+            ),
+            Order.VALIDITY: "",
+            Order.VARIETY: "",
             Order.INFO: order,
         }
 
         return parsed_order
 
-    @classmethod
-    def _position_json_parser(
-        cls,
+    def _parse_position(
+        self,
         position: dict,
     ) -> dict[Any, Any]:
-        """
-        Parse Acoount Position Json Response.
+        """Convert an AngelOne position row to a unified position record.
 
-        Parameters:
-            order (dict): Acoount Position Json Response from Broker.
+        Args:
+            position: Raw position row returned by AngelOne.
 
         Returns:
-            dict: Unified fenix Position Response.
+            Unified Fenix position record.
         """
         parsed_position = {
             Position.SYMBOL: position["tradingsymbol"],
             Position.TOKEN: int(position["symboltoken"]),
-            Position.NETQTY: int(position["netqty"]),
-            Position.AVGPRICE: float(position["netprice"]),
+            Position.NET_QTY: int(position["netqty"]),
+            Position.AVG_PRICE: float(position["netprice"]),
             Position.MTM: None,
             Position.PNL: None,
-            Position.BUYQTY: int(position["buyqty"]),
-            Position.BUYPRICE: float(position["totalbuyavgprice"]),
-            Position.SELLQTY: int(position["sellqty"]),
-            Position.SELLPRICE: float(position["totalsellavgprice"]),
+            Position.BUY_QTY: int(position["buyqty"]),
+            Position.BUY_PRICE: float(position["totalbuyavgprice"]),
+            Position.SELL_QTY: int(position["sellqty"]),
+            Position.SELL_PRICE: float(position["totalsellavgprice"]),
             Position.LTP: None,
-            Position.PRODUCT: cls.resp_product.get(
-                position["producttype"], position["producttype"]
+            Order.PRODUCT: self._parse_from_broker(
+                "product", position["producttype"]
             ),
-            Position.EXCHANGE: cls.req_exchange.get(
-                position["exchange"], position["exchange"]
+            Position.EXCHANGE: self._parse_from_broker(
+                "exchange", position["exchange"]
             ),
             Position.INFO: position,
         }
 
         return parsed_position
 
-    @classmethod
-    def _profile_json_parser(
-        cls,
+    def _parse_profile(
+        self,
         profile: dict,
     ) -> dict[Any, Any]:
-        """
-        Parse User Profile Json Response.
+        """Convert an AngelOne profile payload to a unified profile record.
 
-        Parameters:
-            profile (dict): User Profile Json Response from Broker.
+        Args:
+            profile: Raw profile payload returned by AngelOne.
 
         Returns:
-            dict: Unified fenix Profile Response.
+            Unified Fenix profile record.
         """
         parsed_profile = {
-            Profile.CLIENTID: profile["clientcode"],
+            Profile.CLIENT_ID: profile["clientcode"],
             Profile.NAME: profile["name"],
-            Profile.EMAILID: profile["email"],
-            Profile.MOBILENO: profile["mobileno"],
+            Profile.EMAIL_ID: profile["email"],
+            Profile.MOBILE_NO: profile["mobileno"],
             Profile.PAN: "",
             Profile.ADDRESS: "",
-            Profile.BANKNAME: "",
-            Profile.BANKBRANCHNAME: None,
-            Profile.BANKACCNO: "",
-            Profile.EXHCNAGESENABLED: profile["exchanges"],
+            Profile.BANK_NAME: "",
+            Profile.BANK_BRANCH_NAME: None,
+            Profile.BANK_ACC_NO: "",
+            Profile.EXCHANGES_ENABLED: profile["exchanges"],
             Profile.ENABLED: True,
             Profile.INFO: profile,
         }
 
         return parsed_profile
 
-    @classmethod
-    def _create_order_parser(
-        cls,
-        response: Response,
-        headers: dict,
-    ) -> dict[Any, Any]:
-        """
-        Parse Json Response Obtained from Broker After Placing Order to get order_id
-        and fetching the json repsone for the said order_id.
+    def _parse_rms(self, rms: dict) -> dict[Any, Any]:
+        """Convert an AngelOne RMS payload to a unified margin record."""
+        parsed_rms = {
+            RMS.MARGINUSED: float(rms.get("utiliseddebits", 0.0)),
+            RMS.MARGINAVAIL: float(rms["net"]),
+            RMS.INFO: rms
+        }
 
-        Parameters:
-            response (Response): Json Repsonse Obtained from broker after Placing an Order.
-            headers (dict): headers to send order request with.
+        return parsed_rms
+
+    def _parse_place_order_response(
+        self,
+        response: Response,
+    ) -> dict[Any, Any]:
+        """Extract the order id from an AngelOne order response.
+
+        Args:
+            response: HTTP response returned after placing, modifying, or
+                cancelling an order.
 
         Returns:
-            dict: Unified fenix Order Response.
+            Unified order-id record.
         """
-        info = cls._json_parser(response)
+        info = self._parse_json_response(response)
 
-        order_id = info["data"]["orderid"]
-        order = cls.fetch_order(order_id=order_id, headers=headers)
-
-        return order
+        return {Order.ID: info["orderid"]}
 
     # Order Functions
 
-    @classmethod
-    def create_order(
-        cls,
+    def _build_place_order_payload(
+        self,
         token_dict: dict,
         quantity: int,
         side: str,
@@ -623,1556 +1598,508 @@ class angelone(Broker):
         validity: str,
         variety: str,
         unique_id: str,
-        headers: dict,
-        price: float = 0,
-        trigger: float = 0,
-        target: float = 0,
-        stoploss: float = 0,
-        trailing_sl: float = 0,
-    ) -> dict[Any, Any]:
-        """
-        Place an Order.
-
-        Parameters:
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            product (str, optional): Order product.
-            validity (str, optional): Order validity.
-            variety (str, optional): Order variety.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            price (float): Order price
-            trigger (float): order trigger price
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not price and trigger:
-            order_type = OrderType.SLM
-            variety = (
-                cls.req_variety[Variety.STOPLOSS]
-                if variety == cls.req_variety[Variety.REGULAR]
-                else variety
-            )
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-            variety = (
-                cls.req_variety[Variety.STOPLOSS]
-                if variety == cls.req_variety[Variety.REGULAR]
-                else variety
-            )
-
-        if not target:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": price,
-                "triggerprice": trigger,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[order_type],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        else:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": price,
-                "triggerprice": trigger,
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[order_type],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls.req_variety[Variety.BO],
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def market_order(
-        cls,
-        token_dict: dict,
-        quantity: int,
-        side: str,
-        unique_id: str,
-        headers: dict,
-        target: float = 0.0,
-        stoploss: float = 0.0,
-        trailing_sl: float = 0.0,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.REGULAR,
-    ) -> dict[Any, Any]:
-        """
-        Place Market Order.
-
-        Parameters:
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not target:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": "0",
-                "triggerprice": "0",
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[OrderType.MARKET],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-        else:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": "0",
-                "triggerprice": "0",
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[OrderType.MARKET],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls.req_variety[Variety.BO],
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def limit_order(
-        cls,
-        token_dict: dict,
-        price: float,
-        quantity: int,
-        side: str,
-        unique_id: str,
-        headers: dict,
-        target: float = 0.0,
-        stoploss: float = 0.0,
-        trailing_sl: float = 0.0,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.REGULAR,
-    ) -> dict[Any, Any]:
-        """
-        Place Limit Order.
-
-        Parameters:
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
-            price (float): Order price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not target:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": price,
-                "triggerprice": "0",
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[OrderType.LIMIT],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        else:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": price,
-                "triggerprice": "0",
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[OrderType.LIMIT],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls.req_variety[Variety.BO],
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def sl_order(
-        cls,
-        token_dict: dict,
-        price: float,
-        trigger: float,
-        quantity: int,
-        side: str,
-        unique_id: str,
-        headers: dict,
-        target: float = 0.0,
-        stoploss: float = 0.0,
-        trailing_sl: float = 0.0,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.STOPLOSS,
-    ) -> dict[Any, Any]:
-        """
-        Place Stoploss Order.
-
-        Parameters:
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
-            price (float): Order price.
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not target:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": price,
-                "triggerprice": trigger,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[OrderType.SL],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        else:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": price,
-                "triggerprice": trigger,
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[OrderType.SL],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls.req_variety[Variety.BO],
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def slm_order(
-        cls,
-        token_dict: dict,
-        trigger: float,
-        quantity: int,
-        side: str,
-        unique_id: str,
-        headers: dict,
-        target: float = 0.0,
-        stoploss: float = 0.0,
-        trailing_sl: float = 0.0,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.STOPLOSS,
-    ) -> dict[Any, Any]:
-        """
-        Place Stoploss-Market Order.
-
-        Parameters:
-            token_dict (dict): a dictionary with details of the Ticker. Obtianed from eq_tokens or fno_tokens.
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            target (float, optional): Order Target price. Defaults to 0.
-            stoploss (float, optional): Order Stoploss price. Defaults to 0.
-            trailing_sl (float, optional): Order Trailing Stoploss percent. Defaults to 0.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not target:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": "0",
-                "triggerprice": trigger,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[OrderType.SLM],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        else:
-            json_data = {
-                "symboltoken": token_dict["Token"],
-                "exchange": cls._key_mapper(
-                    cls.req_exchange, token_dict["Exchange"], "exchange"
-                ),
-                "tradingsymbol": token_dict["Symbol"],
-                "price": "0",
-                "triggerprice": trigger,
-                "squareoff": target,
-                "stoploss": stoploss,
-                "trailingStopLoss": trailing_sl,
-                "quantity": quantity,
-                "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-                "ordertype": cls.req_order_type[OrderType.SLM],
-                "producttype": cls._key_mapper(cls.req_product, product, "product"),
-                "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-                "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-                "ordertag": unique_id,
-                "disclosedquantity": "0",
-            }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    # Equity Order Functions
-
-    @classmethod
-    def create_order_eq(
-        cls,
-        exchange: str,
-        symbol: str,
-        quantity: int,
-        side: str,
-        product: str,
-        validity: str,
-        variety: str,
-        unique_id: str,
-        headers: dict,
-        price: float = 0,
-        trigger: float = 0,
-    ) -> dict[Any, Any]:
-        """
-        Place an Order in NSE/BSE Equity Segment.
-
-        Parameters:
-            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
-            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            product (str, optional): Order product.
-            validity (str, optional): Order validity.
-            variety (str, optional): Order variety.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            price (float): Order price
-            trigger (float): order trigger price
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not cls.eq_tokens:
-            cls.create_eq_tokens()
-
-        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
-        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
-        token = detail["Token"]
-        symbol = detail["Symbol"]
-
-        if not price and trigger:
-            order_type = OrderType.SLM
-            variety = (
-                cls.req_variety[Variety.STOPLOSS]
-                if variety == cls.req_variety[Variety.REGULAR]
-                else variety
-            )
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
-        else:
-            order_type = OrderType.SL
-            variety = (
-                cls.req_variety[Variety.STOPLOSS]
-                if variety == cls.req_variety[Variety.REGULAR]
-                else variety
-            )
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": exchange,
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": trigger,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[order_type],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls.req_variety[Variety.BO],
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def market_order_eq(
-        cls,
-        exchange: str,
-        symbol: str,
-        quantity: int,
-        side: str,
-        unique_id: str,
-        headers: dict,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.REGULAR,
-    ) -> dict[Any, Any]:
-        """
-        Place Market Order in NSE/BSE Equity Segment.
-
-        Parameters:
-            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
-            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not cls.eq_tokens:
-            cls.create_eq_tokens()
-
-        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
-        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
-        token = detail["Token"]
-        symbol = detail["Symbol"]
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": exchange,
-            "tradingsymbol": symbol,
-            "price": "0",
-            "triggerprice": "0",
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[OrderType.MARKET],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def limit_order_eq(
-        cls,
-        exchange: str,
-        symbol: str,
-        price: float,
-        quantity: int,
-        side: str,
-        unique_id: str,
-        headers: dict,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.REGULAR,
-    ) -> dict[Any, Any]:
-        """
-        Place Limit Order in NSE/BSE Equity Segment.
-
-        Parameters:
-            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
-            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
-            price (float): Order price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not cls.eq_tokens:
-            cls.create_eq_tokens()
-
-        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
-        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
-        token = detail["Token"]
-        symbol = detail["Symbol"]
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": exchange,
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": "0",
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[OrderType.LIMIT],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def sl_order_eq(
-        cls,
-        exchange: str,
-        symbol: str,
-        price: float,
-        trigger: float,
-        quantity: int,
-        side: str,
-        unique_id: str,
-        headers: dict,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.STOPLOSS,
-    ) -> dict[Any, Any]:
-        """
-        Place Stoploss Order in NSE/BSE Equity Segment.
-
-        Parameters:
-            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
-            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
-            price (float): Order price.
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not cls.eq_tokens:
-            cls.create_eq_tokens()
-
-        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
-        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
-        token = detail["Token"]
-        symbol = detail["Symbol"]
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": exchange,
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": trigger,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[OrderType.SL],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def slm_order_eq(
-        cls,
-        exchange: str,
-        symbol: str,
-        trigger: float,
-        quantity: int,
-        side: str,
-        unique_id: str,
-        headers: dict,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.STOPLOSS,
-    ) -> dict[Any, Any]:
-        """
-        Place Stoploss-Market Order in NSE/BSE Equity Segment.
-
-        Parameters:
-            exchange (str): Exchange to place the order in. Possible Values: NSE, BSE.
-            symbol (str): Trading symbol, the same one you use on TradingView. Ex: "RELIANCE", "BHEL"
-            trigger (float): order trigger price.
-            quantity (int): Order quantity.
-            side (str): Order Side: BUY, SELL.
-            unique_id (str): Unique user order_id.
-            headers (dict): headers to send order request with.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity. Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.REGULAR.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not cls.eq_tokens:
-            cls.create_eq_tokens()
-
-        exchange = cls._key_mapper(cls.req_exchange, exchange, "exchange")
-        detail = cls._eq_mapper(cls.eq_tokens[exchange], symbol)
-        token = detail["Token"]
-        symbol = detail["Symbol"]
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": exchange,
-            "tradingsymbol": symbol,
-            "price": "0",
-            "triggerprice": trigger,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[OrderType.SLM],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    # NFO Order Functions
-
-    @classmethod
-    def create_order_fno(
-        cls,
-        exchange: str,
-        root: str,
-        expiry: str,
-        option: str,
-        strike_price: str,
-        quantity: int,
-        side: str,
-        product: str,
-        validity: str,
-        variety: str,
-        unique_id: str,
-        headers: dict,
         price: float = 0.0,
         trigger: float = 0.0,
-    ) -> dict[Any, Any]:
-        """
-        Place an Order in F&O Segment.
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+    ) -> dict[str, Any]:
+        """Build the AngelOne API payload for a place-order request.
 
-        Parameters:
-            exchange (str):  Exchange to place the order in.
-            root (str): Derivative: BANKNIFTY, NIFTY.
-            expiry (str): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'.
-            option (str): Option Type: 'CE', 'PE'.
-            strike_price (str): Strike Price of the Option.
-            quantity (int): Order quantity.
-            side (str): Order Side: 'BUY', 'SELL'.
-            product (str): Order product.
-            validity (str): Order validity.
-            variety (str): Order variety.
-            unique_id (str): Unique user orderid.
-            headers (dict): headers to send order request with.
-            price (float): price of the order.
-            trigger (float): trigger price of the order.
-
-        Raises:
-            KeyError: If Strike Price Does not Exist.
+        Args:
+            token_dict: Token metadata for the instrument being ordered.
+            quantity: Number of units to order.
+            side: Transaction side in Fenix format.
+            product: Product code in Fenix format.
+            validity: Order validity in Fenix format.
+            variety: Order variety in Fenix format.
+            unique_id: Client-provided order tag.
+            price: Limit price, or zero for market orders.
+            trigger: Stop-loss trigger price, or zero when not applicable.
+            target: Bracket-order target price, or zero when not applicable.
+            stoploss: Bracket-order stop-loss price.
+            trailing_sl: Bracket-order trailing stop-loss amount.
 
         Returns:
-            dict: fenix Unified Order Response.
+            AngelOne place-order payload.
         """
-        if not cls.fno_tokens:
-            cls.create_fno_tokens()
+        order_type = self._resolve_order_type(price, trigger)
 
-        detail = cls.fno_tokens[expiry][root][option]
-        detail = detail.get(strike_price, None)
+        # AngelOne requires STOPLOSS variety for SL/SLM orders when the caller
+        # leaves the variety as REGULAR.
+        if (
+            order_type in (OrderType.SL, OrderType.SLM)
+            and variety == Variety.REGULAR
+        ):
+            variety = Variety.STOPLOSS
 
-        if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
+        payload = {
+            "symboltoken": token_dict["Token"],
+            "exchange": token_dict["Exchange"],
+            "tradingsymbol": token_dict["Symbol"],
+            "price": price,
+            "triggerprice": trigger,
+            "quantity": quantity,
+            "transactiontype": self._format_for_broker("side", side),
+            "ordertype": self._format_for_broker("order_type", order_type),
+            "producttype": self._format_for_broker("product", product),
+            "duration": self._format_for_broker("validity", validity),
+            "ordertag": unique_id,
+            "disclosedquantity": "0",
+        }
 
-        token = detail["Token"]
-        symbol = detail["Symbol"]
-
-        if not price and trigger:
-            order_type = OrderType.SLM
-            variety = (
-                cls.req_variety[Variety.STOPLOSS]
-                if variety == cls.req_variety[Variety.REGULAR]
-                else variety
-            )
-        elif not price:
-            order_type = OrderType.MARKET
-        elif not trigger:
-            order_type = OrderType.LIMIT
+        if not target:
+            payload["variety"] = self._format_for_broker("variety", variety)
         else:
-            order_type = OrderType.SL
-            variety = (
-                cls.req_variety[Variety.STOPLOSS]
-                if variety == cls.req_variety[Variety.REGULAR]
-                else variety
+            payload.update(
+                {
+                    "squareoff": target,
+                    "stoploss": stoploss,
+                    "trailingStopLoss": trailing_sl,
+                }
+            )
+            payload["variety"] = self._format_for_broker("variety", Variety.BO)
+
+        return payload
+
+    def place_order(
+        self,
+        token_dict: dict,
+        quantity: int,
+        side: str,
+        product: str,
+        validity: str,
+        variety: str,
+        unique_id: str,
+        price: float = 0.0,
+        trigger: float = 0.0,
+        target: float = 0.0,
+        stoploss: float = 0.0,
+        trailing_sl: float = 0.0,
+    ) -> dict[Any, Any]:
+        """Place an order through AngelOne.
+
+        Args:
+            token_dict: Token metadata for the instrument being ordered.
+            quantity: Number of units to order.
+            side: Transaction side in Fenix format.
+            product: Product code in Fenix format.
+            validity: Order validity in Fenix format.
+            variety: Order variety in Fenix format.
+            unique_id: Client-provided order tag.
+            price: Limit price, or zero for market orders.
+            trigger: Stop-loss trigger price, or zero when not applicable.
+            target: Bracket-order target price, or zero when not applicable.
+            stoploss: Bracket-order stop-loss price.
+            trailing_sl: Bracket-order trailing stop-loss amount.
+
+        Returns:
+            Unified order-id record for the placed order.
+        """
+        if self.paper_mode and self._paper is not None:
+            return self._paper.place_order(
+                token_dict=token_dict,
+                quantity=quantity,
+                side=side,
+                product=product,
+                validity=validity,
+                variety=variety,
+                unique_id=unique_id,
+                price=price,
+                trigger=trigger,
+                target=target,
+                stoploss=stoploss,
+                trailing_sl=trailing_sl,
             )
 
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": trigger,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[order_type],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
+        self._validate_order_inputs(
+            quantity=quantity,
+            price=price,
+            trigger=trigger,
+            target=target,
+            stoploss=stoploss,
+            trailing_sl=trailing_sl,
         )
 
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def market_order_fno(
-        cls,
-        option: str,
-        strike_price: str,
-        quantity: int,
-        side: str,
-        headers: dict,
-        root: str = Root.BNF,
-        expiry: str = WeeklyExpiry.CURRENT,
-        exchange: str = ExchangeCode.NFO,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.REGULAR,
-        unique_id: str = UniqueID.MARKETORDER,
-    ) -> dict[Any, Any]:
-        """
-        Place Market Order in F&O Segment.
-
-        Parameters:
-            option (str): Option Type: 'CE', 'PE'.
-            strike_price (str): Strike Price of the Option.
-            quantity (int): Order quantity.
-            side (str): Order Side: 'BUY', 'SELL'.
-            headers (dict): headers to send order request with.
-            root (str): Derivative: BANKNIFTY, NIFTY.
-            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.DAY.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-
-        Raises:
-            KeyError: If Strike Price Does not Exist.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not cls.fno_tokens:
-            cls.create_fno_tokens()
-
-        detail = cls.fno_tokens[expiry][root][option]
-        detail = detail.get(strike_price, None)
-
-        if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
-
-        symbol = detail["Symbol"]
-        token = detail["Token"]
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
-            "tradingsymbol": symbol,
-            "price": "0",
-            "triggerprice": "0",
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[OrderType.MARKET],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
+        json_data = self._build_place_order_payload(
+            token_dict=token_dict,
+            quantity=quantity,
+            side=side,
+            product=product,
+            validity=validity,
+            variety=variety,
+            unique_id=unique_id,
+            price=price,
+            trigger=trigger,
+            target=target,
+            stoploss=stoploss,
+            trailing_sl=trailing_sl,
         )
 
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def limit_order_fno(
-        cls,
-        option: str,
-        strike_price: str,
-        price: float,
-        quantity: int,
-        side: str,
-        headers: dict,
-        root: str = Root.BNF,
-        expiry: str = WeeklyExpiry.CURRENT,
-        exchange: str = ExchangeCode.NFO,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.REGULAR,
-        unique_id: str = UniqueID.LIMITORDER,
-    ) -> dict[Any, Any]:
-        """
-        Place Limit Order in F&O Segment.
-
-        Parameters:
-            option (str): Option Type: 'CE', 'PE'.
-            strike_price (str): Strike Price of the Option.
-            price (float): price of the order.
-            quantity (int): Order quantity.
-            side (str): Order Side: 'BUY', 'SELL'.
-            headers (dict): headers to send order request with.
-            root (str): Derivative: BANKNIFTY, NIFTY.
-            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.DAY.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-
-        Raises:
-            KeyError: If Strike Price Does not Exist.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not cls.fno_tokens:
-            cls.fno_tokens()
-
-        detail = cls.fno_tokens[expiry][root][option]
-        detail = detail.get(strike_price, None)
-
-        if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
-
-        symbol = detail["Symbol"]
-        token = detail["Token"]
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": "0",
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[OrderType.LIMIT],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
+        response = self.fetch(
             method="POST",
-            url=cls.urls["place_order"],
+            url=self.get_url("place_order"),
+            endpoint_group="orders",
             json=json_data,
-            headers=headers["headers"],
+            headers=self._headers,
         )
 
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def sl_order_fno(
-        cls,
-        option: str,
-        strike_price: str,
-        price: float,
-        trigger: float,
-        quantity: int,
-        side: str,
-        headers: dict,
-        root: str = Root.BNF,
-        expiry: str = WeeklyExpiry.CURRENT,
-        exchange: str = ExchangeCode.NFO,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.STOPLOSS,
-        unique_id: str = UniqueID.SLORDER,
-    ) -> dict[Any, Any]:
-        """
-        Place Stoploss Order in F&O Segment.
-
-        Parameters:
-            option (str): Option Type: 'CE', 'PE'.
-            strike_price (str): Strike Price of the Option.
-            price (float): price of the order.
-            trigger (float): trigger price of the order.
-            quantity (int): Order quantity.
-            side (str): Order Side: 'BUY', 'SELL'.
-            headers (dict): headers to send order request with.
-            root (str): Derivative: BANKNIFTY, NIFTY.
-            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.DAY.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-
-        Raises:
-            KeyError: If Strike Price Does not Exist.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not cls.fno_tokens:
-            cls.create_fno_tokens()
-
-        detail = cls.fno_tokens[expiry][root][option]
-        detail = detail.get(strike_price, None)
-
-        if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
-
-        symbol = detail["Symbol"]
-        token = detail["Token"]
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
-            "tradingsymbol": symbol,
-            "price": price,
-            "triggerprice": trigger,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[OrderType.SL],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
-
-    @classmethod
-    def slm_order_fno(
-        cls,
-        option: str,
-        strike_price: str,
-        trigger: float,
-        quantity: int,
-        side: str,
-        headers: dict,
-        root: str = Root.BNF,
-        expiry: str = WeeklyExpiry.CURRENT,
-        exchange: str = ExchangeCode.NFO,
-        product: str = Product.MIS,
-        validity: str = Validity.DAY,
-        variety: str = Variety.STOPLOSS,
-        unique_id: str = UniqueID.SLORDER,
-    ) -> dict[Any, Any]:
-        """
-        Place Stoploss-Market Order in F&O Segment.
-
-        Parameters:
-            option (str): Option Type: 'CE', 'PE'.
-            strike_price (str): Strike Price of the Option.
-            trigger (float): trigger price of the order.
-            quantity (int): Order quantity.
-            side (str): Order Side: 'BUY', 'SELL'.
-            headers (dict): headers to send order request with.
-            root (str): Derivative: BANKNIFTY, NIFTY.
-            expiry (str, optional): Expiry of the Option: 'CURRENT', 'NEXT', 'FAR'. Defaults to WeeklyExpiry.CURRENT.
-            exchange (str, optional):  Exchange to place the order in. Defaults to ExchangeCode.NFO.
-            product (str, optional): Order product. Defaults to Product.MIS.
-            validity (str, optional): Order validity Defaults to Validity.DAY.
-            variety (str, optional): Order variety Defaults to Variety.DAY.
-            unique_id (str, optional): Unique user orderid. Defaults to UniqueID.MARKETORDER.
-
-        Raises:
-            KeyError: If Strike Price Does not Exist.
-
-        Returns:
-            dict: fenix Unified Order Response.
-        """
-        if not cls.fno_tokens:
-            cls.create_fno_tokens()
-
-        detail = cls.fno_tokens[expiry][root][option]
-        detail = detail.get(strike_price, None)
-
-        if not detail:
-            raise KeyError(f"StrikePrice: {strike_price} Does not Exist")
-
-        symbol = detail["Symbol"]
-        token = detail["Token"]
-
-        json_data = {
-            "symboltoken": token,
-            "exchange": cls._key_mapper(cls.req_exchange, exchange, "exchange"),
-            "tradingsymbol": symbol,
-            "price": "0",
-            "triggerprice": trigger,
-            "quantity": quantity,
-            "transactiontype": cls._key_mapper(cls.req_side, side, "side"),
-            "ordertype": cls.req_order_type[OrderType.SLM],
-            "producttype": cls._key_mapper(cls.req_product, product, "product"),
-            "duration": cls._key_mapper(cls.req_validity, validity, "validity"),
-            "variety": cls._key_mapper(cls.req_variety, variety, "variety"),
-            "ordertag": unique_id,
-            "disclosedquantity": "0",
-        }
-
-        response = cls.fetch(
-            method="POST",
-            url=cls.urls["place_order"],
-            json=json_data,
-            headers=headers["headers"],
-        )
-
-        return cls._create_order_parser(response=response, headers=headers)
+        return self._parse_place_order_response(response=response)
 
     # Order Details, OrderBook & TradeBook
 
-    @classmethod
     def fetch_raw_orderbook(
-        cls,
-        headers: dict,
+        self,
     ) -> list[dict]:
-        """
-        Fetch Raw Orderbook Details, without any Standardaization.
-
-        Parameters:
-            headers (dict): headers to send fetch_orders request with.
+        """Fetch raw AngelOne order-book rows.
 
         Returns:
-            list[dict]:Raw Broker Orderbook Response.
+            Raw broker order-book rows. Empty result-set responses are returned
+            as an empty list.
         """
-        response = cls.fetch(
-            method="GET",
-            url=cls.urls["orderbook"],
-            headers=headers["headers"],
-        )
-        info = cls._json_parser(response)
-        return info["data"]
+        if self.paper_mode and self._paper is not None:
+            return self._paper.fetch_orderbook()
 
-    @classmethod
+        response = self.fetch(
+            method="GET",
+            url=self.get_url("orderbook"),
+            endpoint_group="post_trade",
+            headers=self._headers,
+        )
+
+        return self._parse_json_response(response) or []
+
     def fetch_orderbook(
-        cls,
-        headers: dict,
+        self,
     ) -> list[dict]:
-        """
-        Fetch Orderbook Details.
-
-        Parameters:
-            headers (dict): headers to send fetch_orders request with.
+        """Fetch the order book in the unified Fenix format.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
+            Unified order records.
         """
-        info = cls.fetch_raw_orderbook(headers=headers)
+        if self.paper_mode and self._paper is not None:
+            return self._paper.fetch_orderbook()
+
+        info = self.fetch_raw_orderbook()
         orders = []
 
-        if info:
-            for order in info:
-                detail = cls._orderbook_json_parser(order)
-                orders.append(detail)
+        for order in info:
+            detail = self._parse_orderbook(order)
+            orders.append(detail)
 
         return orders
 
-    @classmethod
     def fetch_tradebook(
-        cls,
-        headers: dict,
+        self,
     ) -> list[dict]:
-        """
-        Fetch Tradebook Details.
-
-        Parameters:
-            headers (dict): headers to send fetch_orders request with.
+        """Fetch the trade book in the unified Fenix format.
 
         Returns:
-            list[dict]: List of dicitonaries of orders using fenix Unified Order Response.
+            Unified order-like fill records. Empty result-set responses are
+            returned as an empty list.
         """
-        response = cls.fetch(
+        if self.paper_mode and self._paper is not None:
+            return self._paper.fetch_tradebook()
+
+        response = self.fetch(
             method="GET",
-            url=cls.urls["tradebook"],
-            headers=headers["headers"],
+            url=self.get_url("tradebook"),
+            endpoint_group="post_trade",
+            headers=self._headers,
         )
-        info = cls._json_parser(response)
+        info = self._parse_json_response(response) or []
 
         orders = []
-        if info["data"]:
-            for order in info["data"]:
-                detail = cls._tradebook_json_parser(order)
-                orders.append(detail)
+        for order in info:
+            detail = self._parse_tradebook(order)
+            orders.append(detail)
 
         return orders
 
-    @classmethod
     def fetch_orders(
-        cls,
-        headers: dict,
+        self,
     ) -> list[dict]:
-        """
-        Fetch OrderBook Details which is unified across all brokers.
-        Use This if you want Avg price, etc. values which sometimes unavailable
-        thorugh fetch_orderbook.
-
-        Paramters:
-            order_id (str): id of the order.
-
-        Raises:
-            InputError: If order does not exist.
+        """Fetch unified orders.
 
         Returns:
-            dict: fenix Unified Order Response.
+            Unified order records from the order book.
         """
-        return cls.fetch_orderbook(headers=headers)
+        return self.fetch_orderbook()
 
-    @classmethod
     def fetch_order(
-        cls,
+        self,
         order_id: str,
-        headers: dict,
     ) -> dict[Any, Any]:
-        """
-        Fetch Order Details.
+        """Fetch one order from the current order book.
 
-        Paramters:
-            order_id (str): id of the order.
+        Args:
+            order_id: Broker order id to find.
 
         Raises:
-            InputError: If order does not exist.
+            OrderNotFoundError: If the order id is absent from the order book.
 
         Returns:
-            dict: fenix Unified Order Response.
+            Unified Fenix order record.
         """
-        info = cls.fetch_raw_orderbook(headers=headers)
+        if self.paper_mode and self._paper is not None:
+            return self._paper.fetch_order(order_id)
+
+        info = self.fetch_raw_orderbook()
 
         if info:
             for order in info:
                 if order["orderid"] == order_id:
-                    detail = cls._orderbook_json_parser(order)
+                    detail = self._parse_orderbook(order)
                     return detail
 
-        raise InputError({"This orderid does not exist."})
+        raise OrderNotFoundError("This order_id does not exist.")
 
     # Order Modification
 
-    @classmethod
     def modify_order(
-        cls,
+        self,
         order_id: str,
-        headers: dict,
         price: float | None = None,
         trigger: float | None = None,
         quantity: int | None = None,
         order_type: str | None = None,
         validity: str | None = None,
+        raw_order_json: dict | None = None,
+        extra_params: dict = {},
     ) -> dict[Any, Any]:
-        """
-        Modify an open order.
+        """Modify an open AngelOne order.
 
-        Parameters:
-            order_id (str): id of the order to modify.
-            headers (dict): headers to send modify_order request with.
-            price (float | None, optional): price of t.he order. Defaults to None.
-            trigger (float | None, optional): trigger price of the order. Defaults to None.
-            quantity (int | None, optional): order quantity. Defaults to None.
-            order_type (str | None, optional): Type of Order. defaults to None
-            validity (str | None, optional): Order validity Defaults to None.
+        Args:
+            order_id: Broker order id to modify.
+            price: Replacement limit price. Existing price is reused when
+                omitted.
+            trigger: Replacement trigger price. Existing trigger is reused when
+                omitted.
+            quantity: Replacement quantity. Existing quantity is reused when
+                omitted.
+            order_type: Replacement order type in Fenix format. Existing type
+                is reused when omitted.
+            validity: Replacement validity. Existing validity is reused when
+                omitted.
+            raw_order_json: Optional raw order row to avoid refetching the
+                order book.
+            extra_params: Reserved for broker-specific extensions.
 
         Returns:
-            dict: fenix Unified Order Response.
+            Unified order-id record for the modified order.
         """
-        order_info = cls.fetch_order(order_id=order_id, headers=headers)
+        if self.paper_mode and self._paper is not None:
+            return self._paper.modify_order(
+                order_id=order_id,
+                price=price,
+                trigger=trigger,
+                quantity=quantity,
+                order_type=order_type,
+                validity=validity,
+                raw_order_json=raw_order_json,
+                extra_params=extra_params,
+            )
+
+        if raw_order_json:
+            order_info = raw_order_json
+        else:
+            order_info = self.fetch_order(order_id=order_id)
+            order_info = order_info["info"]
 
         json_data = {
             "orderid": order_id,
-            "symboltoken": order_info[Order.TOKEN],
-            "exchange": order_info[Order.EXCHANGE],
-            "tradingsymbol": order_info[Order.SYMBOL],
-            "price": price or order_info[Order.PRICE],
-            "quantity": quantity or order_info[Order.QUANTITY],
+            "symboltoken": order_info["symboltoken"],
+            "exchange": order_info["exchange"],
+            "tradingsymbol": order_info["tradingsymbol"],
+            # "price": price or order_info["price"],
+            "quantity": quantity or order_info["quantity"],
             "ordertype": (
-                cls._key_mapper(cls.req_order_type, order_type, "order_type")
+                self._format_for_broker('order_type', order_type)
                 if order_type
-                else cls.req_order_type[order_info[Order.TYPE]]
+                else order_info["ordertype"]
             ),
-            "producttype": cls.req_product.get(
-                order_info[Order.PRODUCT], order_info[Order.PRODUCT]
-            ),
+            "producttype": order_info["producttype"],
             "duration": (
-                cls._key_mapper(cls.req_validity, validity, "validity")
+                self._format_for_broker('validity', validity)
                 if validity
-                else cls.req[order_info[Order.VALIDITY]]
+                else order_info["duration"]
             ),
-            "variety": cls.req_variety.get(
-                order_info[Order.VARIETY], order_info[Order.VARIETY]
-            ),
+            "variety": order_info["variety"],
         }
 
-        response = cls.fetch(
+        if json_data["ordertype"] == self._format_for_broker(
+                'order_type', OrderType.LIMIT):
+            json_data["price"] = price or order_info["price"]
+            json_data["triggerprice"] = 0
+
+        elif json_data["ordertype"] == self._format_for_broker(
+            'order_type',
+            OrderType.SL,
+        ):
+            json_data["price"] = price or order_info["price"]
+            json_data["triggerprice"] = trigger or order_info["triggerprice"]
+
+        elif json_data["ordertype"] == self._format_for_broker(
+            'order_type',
+            OrderType.MARKET,
+        ):
+            json_data["price"] = 0
+            json_data["triggerprice"] = 0
+
+        elif json_data["ordertype"] == self._format_for_broker(
+            'order_type',
+            OrderType.SLM,
+        ):
+            json_data["price"] = 0
+            json_data["triggerprice"] = trigger or order_info["triggerprice"]
+
+        response = self.fetch(
             method="POST",
-            url=cls.urls["modify_order"],
+            url=self.get_url("modify_order"),
+            endpoint_group="orders",
             json=json_data,
-            headers=headers["headers"],
+            headers=self._headers,
         )
 
-        return cls._create_order_parser(response=response, headers=headers)
+        return self._parse_place_order_response(response=response)
 
-    @classmethod
     def cancel_order(
-        cls,
+        self,
         order_id: str,
-        headers: dict,
+        extra_params: dict = {}
     ) -> dict[Any, Any]:
-        """
-        Cancel an open order.
+        """Cancel an open AngelOne order.
 
-        Parameters:
-            order_id (str): id of the order.
-            headers (dict): headers to send cancel_order request with.
+        Args:
+            order_id: Broker order id to cancel.
+            extra_params: Optional broker-specific values. When it contains an
+                ``"order"`` key, that normalized order record is reused.
 
         Returns:
-            dict: fenix Unified Order Response.
+            None. AngelOne acknowledges cancellation without returning a
+            normalized order record.
         """
-        curr_order = cls.fetch_order(order_id=order_id, headers=headers)
+        if self.paper_mode and self._paper is not None:
+            return self._paper.cancel_order(
+                order_id=order_id,
+                extra_params=extra_params,
+            )
+
+        if extra_params.get("order"):
+            variety = extra_params["order"]["info"]["variety"]
+        else:
+            curr_order = self.fetch_order(order_id=order_id)
+            variety = curr_order["info"]["variety"]
 
         json_data = {
             "orderid": order_id,
-            "variety": cls.req_variety.get(
-                curr_order[Order.VARIETY], curr_order[Order.VARIETY]
-            ),
+            "variety": variety,
         }
 
-        response = cls.fetch(
+        self.fetch(
             method="POST",
-            url=cls.urls["cancel_order"],
+            url=self.get_url("cancel_order"),
+            endpoint_group="orders",
             json=json_data,
-            headers=headers["headers"],
+            headers=self._headers,
         )
 
-        info = cls._json_parser(response)
-        return cls.fetch_order(order_id=info["data"]["orderid"], headers=headers)
+        # return self.fetch_order(order_id=info["data"]["orderid"])
+        return None
 
     # Positions, Account Limits & Profile
 
-    @classmethod
-    def fetch_day_positions(
-        cls,
-        headers: dict,
-    ) -> dict[Any, Any]:
-        """
-        Fetch the Day's Account Positions.
-
-        Args:
-            headers (dict): headers to send rms_limits request with.
+    def fetch_day_positions(self) -> list[Any]:
+        """Fetch intraday account positions.
 
         Returns:
-            dict[Any, Any]: fenix Unified Position Response.
+            Unified Fenix position records. Empty result-set responses are
+            returned as an empty list.
         """
-        response = cls.fetch(
+        if self.paper_mode and self._paper is not None:
+            return self._paper.fetch_positions()
+
+        response = self.fetch(
             method="GET",
-            url=cls.urls["positions"],
-            headers=headers["headers"],
+            url=self.get_url("positions"),
+            endpoint_group="post_trade",
+            headers=self._headers,
         )
-        info = cls._json_parser(response)
+        info = self._parse_json_response(response) or []
 
         positions = []
-        if info["data"]:
-            for position in info["data"]:
-                detail = cls._position_json_parser(position)
-                positions.append(detail)
+        for position in info:
+            detail = self._parse_position(position)
+            positions.append(detail)
 
         return positions
 
-    @classmethod
-    def fetch_net_positions(
-        cls,
-        headers: dict,
-    ) -> dict[Any, Any]:
-        """
-        Fetch Total Account Positions.
-
-        Args:
-            headers (dict): headers to send rms_limits request with.
+    def fetch_net_positions(self) -> dict[Any, Any]:
+        """Fetch net account positions.
 
         Returns:
-            dict[Any, Any]: fenix Unified Position Response.
+            Unified Fenix position records.
         """
-        return cls.fetch_day_positions(headers=headers)
+        if self.paper_mode and self._paper is not None:
+            return self._paper.fetch_positions()
 
-    @classmethod
-    def fetch_positions(
-        cls,
-        headers: dict,
-    ) -> dict[Any, Any]:
-        """
-        Fetch Day & Net Account Positions.
+        return self.fetch_day_positions()
 
-        Args:
-            headers (dict): headers to send rms_limits request with.
+    def fetch_holdings(self) -> dict[Any, Any]:
+        """Fetch account holdings.
 
         Returns:
-            dict[Any, Any]: fenix Unified Position Response.
+            Raw AngelOne holding rows. Empty result-set responses are returned
+            as an empty list.
         """
-        return cls.fetch_day_positions(headers=headers)
+        if self.paper_mode and self._paper is not None:
+            return self._paper.fetch_holdings()
 
-    @classmethod
-    def fetch_holdings(
-        cls,
-        headers: dict,
-    ) -> dict[Any, Any]:
-        """
-        Fetch Account Holdings.
-
-        Args:
-            headers (dict): headers to send rms_limits request with.
-
-        Returns:
-            dict[Any, Any]: fenix Unified Positions Response.
-        """
-        response = cls.fetch(
+        response = self.fetch(
             method="GET",
-            url=cls.urls["holdings"],
-            headers=headers["headers"],
+            url=self.get_url("holdings"),
+            endpoint_group="post_trade",
+            headers=self._headers,
         )
-        return cls._json_parser(response)["data"]
+        data = self._parse_json_response(response) or {}
 
-    @classmethod
-    def rms_limits(
-        cls,
-        headers: dict,
-    ) -> dict[Any, Any]:
-        """
-        Fetch Risk Management System Limits.
+        return data.get("holdings") or []
 
-        Parameters:
-            headers (dict): headers to send rms_limits request with.
+    def fetch_margin_limits(self) -> dict[Any, Any]:
+        """Fetch account margin limits.
 
         Returns:
-            dict: fenix Unified RMS Limits Response.
+            Unified Fenix RMS limits record.
         """
-        response = cls.fetch(
+        if self.paper_mode and self._paper is not None:
+            return self._paper.fetch_margin_limits()
+
+        response = self.fetch(
             method="GET",
-            url=cls.urls["rms_limits"],
-            headers=headers["headers"],
+            url=self.get_url("funds"),
+            endpoint_group="funds",
+            headers=self._headers,
         )
-        return cls._json_parser(response)["data"]
+        response = self._parse_json_response(response)
 
-    @classmethod
-    def profile(
-        cls,
-        headers: dict,
-    ) -> dict[Any, Any]:
-        """
-        Fetch Profile Limits of the User.
+        return self._parse_rms(response)
 
-        Parameters:
-            headers (dict): headers to send profile request with.
+    def fetch_profile(self) -> dict[Any, Any]:
+        """Fetch account profile details.
 
         Returns:
-            dict: fenix Unified Profile Response.
+            Unified Fenix profile record.
         """
-        response = cls.fetch(
+        if self.paper_mode and self._paper is not None:
+            return self._paper.fetch_profile()
+
+        response = self.fetch(
             method="GET",
-            url=cls.urls["profile"],
-            headers=headers["headers"],
+            url=self.get_url("profile"),
+            endpoint_group="user",
+            headers=self._headers,
         )
-        info = cls._json_parser(response)
-        profile = cls._profile_json_parser(info["data"])
+        info = self._parse_json_response(response)
+        profile = self._parse_profile(info)
 
         return profile

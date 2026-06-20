@@ -7,19 +7,15 @@ name = "fenix"
 dynamic = ["version"]
 dependencies = [
     "cryptography>=42.0.5",
-    "numpy>=1.24.4",
     "pandas>=2.0.3",
     "pycryptodome>=3.20.0",
-    "PyJWT>=2.8.0",
     "pyotp>=2.9.0",
     "requests>=2.31.0",
     "requests-oauthlib>=1.4.0",
     "selenium>=4.18.1",
     "urllib3>=2.2.1",
-    "webdriver-manager>=4.0.1",
-    "undetected-chromedriver>=3.5.5",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
     {name = "Hardeep Singh", email = "hardeep.hd13@gmail.com"}
 ]
@@ -33,20 +29,19 @@ keywords = [
     "fenix",
     "aliceblue",
     "angelone",
-    "choice",
+    "anandrathi",
+    "dhan",
     "finvasia",
     "fivepaisa",
     "fyers",
+    "groww",
     "iifl",
-    "kotak",
     "kotakneo",
-    "kunjee",
     "mastertrust",
     "motilaloswal",
     "paper",
     "symphony",
     "upstox",
-    "vpc",
     "zerodha",
     "finance",
     "broker",
@@ -95,10 +90,9 @@ classifiers = [
     'Topic :: Software Development :: Build Tools',
     'Topic :: Office/Business :: Financial :: Investment',
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    'Programming Language :: Python :: 3.8',
-    'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
     'Operating System :: OS Independent',
     'Environment :: Console'
 ]
@@ -107,3 +101,8 @@ classifiers = [
 Homepage = "https://fenix.hardeep.tech"
 Documentation = "https://github.com/TheHardeep/fenix/fenix/wiki"
 Repository = "https://github.com/TheHardeep/fenix.git"
+
+# Ship PEP 561 marker so downstream type checkers pick up fenix's type
+# annotations (e.g. the TYPE_CHECKING stubs on Broker).
+[tool.setuptools.package-data]
+fenix = ["py.typed"]

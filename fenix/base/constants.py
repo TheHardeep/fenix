@@ -12,6 +12,7 @@ __all__ = [
     "Order",
     "Position",
     "Profile",
+    "RMS",
     "UniqueID",
 ]
 
@@ -27,7 +28,7 @@ class Side:
 
 class Root:
     """
-    BANKNIFTY & NIFTY Constants.
+    Underlying (root) symbol constants for indices and commodities.
     """
 
     BNF = "BANKNIFTY"
@@ -36,6 +37,17 @@ class Root:
     MIDCPNF = "MIDCPNIFTY"
     SENSEX = "SENSEX"
     BANKEX = "BANKEX"
+
+    SILVER = "SILVER"
+    SILVERM = "SILVERM"
+    GOLD = "GOLD"
+    GOLDM = "GOLDM"
+    COPPER = "COPPER"
+    ZINC = "ZINC"
+    NATURALGAS = "NATURALGAS"
+    NATGASMINI = "NATGASMINI"
+    CRUDEOIL = "CRUDEOIL"
+    CRUDEOILM = "CRUDEOILM"
 
 
 class WeeklyExpiry:
@@ -47,7 +59,7 @@ class WeeklyExpiry:
     NEXT = "NEXT"
     FAR = "FAR"
     EXPIRY = "Expiry"
-    LOTSIZE = "LotSize"
+    LOT_SIZE = "LotSize"
 
 
 class Option:
@@ -80,10 +92,11 @@ class ExchangeCode:
     BSE = "BSE"  # BSE Equity
     BFO = "BFO"  # BSE F&O
     NCO = "NCO"  # NSE Commodities
-    BCO = "BCO"  # BSE Commodities
+    BCO = "BCD"  # BSE Commodities
     BCD = "BCD"  #
     MCX = "MCX"  # Multi Commodity Exchange F&O
-    CDS = "CDS"  #
+    CDS = "NCD"  #
+    NCX = "NCDEX"
 
 
 class Product:
@@ -94,6 +107,7 @@ class Product:
     CNC = "CNC"
     NRML = "NRML"
     MARGIN = "MARGIN"
+    MTF = "MTF"
     MIS = "MIS"
     BO = "BO"
     CO = "CO"
@@ -102,7 +116,7 @@ class Product:
 
 class Validity:
     """
-    Order Validity Constnats.
+    Order Validity Constants.
     """
 
     DAY = "DAY"
@@ -134,7 +148,7 @@ class Status:
 
     PENDING = "PENDING"
     OPEN = "OPEN"
-    PARTIALLYFILLED = "PARTIALLYFILLED"
+    PARTIALLY_FILLED = "PARTIALLYFILLED"
     FILLED = "FILLED"
     REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
@@ -143,30 +157,31 @@ class Status:
 
 class Order:
     """
-    Unified Order Response Dicitonary Keys Constants.
+    Unified Order Response Dictionary Keys Constants.
     """
 
     ID = "id"
-    USERID = "userOrderId"
-    CLIENTID = "clientId"
+    USER_ID = "userOrderId"
+    CLIENT_ID = "clientId"
     TIMESTAMP = "timestamp"
     SYMBOL = "symbol"
     TOKEN = "token"
+    EXCHANGE_TOKEN = "exchange_token"
     SIDE = "side"
     TYPE = "type"
-    AVGPRICE = "avgPrice"
+    AVG_PRICE = "avgPrice"
     PRICE = "price"
-    TRIGGERPRICE = "triggerPrice"
-    TARGETPRICE = "targetPrice"
-    STOPLOSSPRICE = "stoplossPrice"
-    TRAILINGSTOPLOSS = "trailingStoploss"
+    TRIGGER_PRICE = "triggerPrice"
+    TARGET_PRICE = "targetPrice"
+    STOPLOSS_PRICE = "stoplossPrice"
+    TRAILING_STOPLOSS = "trailingStoploss"
     QUANTITY = "quantity"
-    FILLEDQTY = "filled"
-    REMAININGQTY = "remaining"
-    CANCELLEDQTY = "cancelleldQty"
+    FILLED_QTY = "filled"
+    REMAINING_QTY = "remaining"
+    CANCELLED_QTY = "cancelleldQty"
     STATUS = "status"
-    REJECTREASON = "rejectReason"
-    DISCLOSEDQUANTITY = "disclosedQuantity"
+    REJECT_REASON = "rejectReason"
+    DISCLOSED_QUANTITY = "disclosedQuantity"
     PRODUCT = "product"
     SEGMENT = "segment"
     EXCHANGE = "exchange"
@@ -177,19 +192,21 @@ class Order:
 
 class Position:
     """
-    Unified Account Positions Response Dicitonary Keys Constants.
+    Unified Account Positions Response Dictionary Keys Constants.
     """
 
     SYMBOL = "symbol"
     TOKEN = "token"
-    NETQTY = "netQty"
-    AVGPRICE = "avgPrice"
+    NET_QTY = "netQty"
+    AVG_PRICE = "avgPrice"
     MTM = "mtm"
     PNL = "pnl"
-    BUYQTY = "buyQty"
-    BUYPRICE = "buyPrice"
-    SELLQTY = "sellQty"
-    SELLPRICE = "sellPrice"
+    REALISED_PNL = "realised_pnl"
+    UNREALISED_PNL = "unrealised_pnl"
+    BUY_QTY = "buyQty"
+    BUY_PRICE = "buyPrice"
+    SELL_QTY = "sellQty"
+    SELL_PRICE = "sellPrice"
     LTP = "ltp"
     PRODUCT = "product"
     EXCHANGE = "exchange"
@@ -198,20 +215,33 @@ class Position:
 
 class Profile:
     """
-    Unified Account Profile Response Dicitonary Keys Constants.
+    Unified Account Profile Response Dictionary Keys Constants.
     """
 
-    CLIENTID = "clientId"
+    CLIENT_ID = "clientId"
     NAME = "name"
-    EMAILID = "emailId"
-    MOBILENO = "mobileNo"
+    EMAIL_ID = "emailId"
+    MOBILE_NO = "mobileNo"
     PAN = "pan"
     ADDRESS = "address"
-    BANKNAME = "bankName"
-    BANKBRANCHNAME = "bankBranchName"
-    BANKACCNO = "bankAccNo"
-    EXHCNAGESENABLED = "exchangesEnabled"
+    BANK_NAME = "bankName"
+    BANK_BRANCH_NAME = "bankBranchName"
+    BANK_ACC_NO = "bankAccNo"
+    EXCHANGES_ENABLED = "exchangesEnabled"
     ENABLED = "enabled"
+    INFO = "info"
+
+
+class RMS:
+    """
+    Unified Account RMS Response Dictionary Keys Constants.
+    """
+    MARGINUSED = "marginUsed"
+    MARGINAVAIL = "marginAvail"
+    CASHMARGIN = "cashMargin"
+    SPANMARGIN = "spanMargin"
+    VARIABLEMARGIN = "variableMargin"
+    COLLATERAL = "collateral"
     INFO = "info"
 
 
@@ -220,13 +250,13 @@ class UniqueID:
     Default Unique Order ID Constants.
     """
 
-    DEFORDER = "FenixOrder"
-    MARKETORDER = "MarketOrder"
-    LIMITORDER = "LIMITOrder"
-    SLORDER = "SLOrder"
-    SLMORDER = "SLMOrder"
-    DEFORDERNO = 100
-    MARKETORDERNO = 101
-    LIMITORDERNO = 102
-    SLORDERNO = 102
-    SLMORDERNO = 103
+    DEF_ORDER = "FenixOrder"
+    MARKET_ORDER = "MarketOrder"
+    LIMIT_ORDER = "LIMITOrder"
+    SL_ORDER = "SLOrder"
+    SLM_ORDER = "SLMOrder"
+    DEF_ORDER_NO = 100
+    MARKET_ORDER_NO = 101
+    LIMIT_ORDER_NO = 102
+    SL_ORDER_NO = 102
+    SLM_ORDER_NO = 103

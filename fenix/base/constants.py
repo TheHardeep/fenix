@@ -92,7 +92,6 @@ class ExchangeCode:
     BSE = "BSE"  # BSE Equity
     BFO = "BFO"  # BSE F&O
     NCO = "NCO"  # NSE Commodities
-    BCO = "BCD"  # BSE Commodities
     BCD = "BCD"  #
     MCX = "MCX"  # Multi Commodity Exchange F&O
     CDS = "NCD"  #
@@ -148,7 +147,7 @@ class Status:
 
     PENDING = "PENDING"
     OPEN = "OPEN"
-    PARTIALLY_FILLED = "PARTIALLYFILLED"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
     FILLED = "FILLED"
     REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
@@ -166,7 +165,7 @@ class Order:
     TIMESTAMP = "timestamp"
     SYMBOL = "symbol"
     TOKEN = "token"
-    EXCHANGE_TOKEN = "exchange_token"
+    EXCHANGE_TOKEN = "exchangeToken"
     SIDE = "side"
     TYPE = "type"
     AVG_PRICE = "avgPrice"
@@ -178,7 +177,7 @@ class Order:
     QUANTITY = "quantity"
     FILLED_QTY = "filled"
     REMAINING_QTY = "remaining"
-    CANCELLED_QTY = "cancelleldQty"
+    CANCELLED_QTY = "cancelledQty"
     STATUS = "status"
     REJECT_REASON = "rejectReason"
     DISCLOSED_QUANTITY = "disclosedQuantity"
@@ -201,8 +200,8 @@ class Position:
     AVG_PRICE = "avgPrice"
     MTM = "mtm"
     PNL = "pnl"
-    REALISED_PNL = "realised_pnl"
-    UNREALISED_PNL = "unrealised_pnl"
+    REALISED_PNL = "realisedPnl"
+    UNREALISED_PNL = "unrealisedPnl"
     BUY_QTY = "buyQty"
     BUY_PRICE = "buyPrice"
     SELL_QTY = "sellQty"
@@ -258,5 +257,5 @@ class UniqueID:
     DEF_ORDER_NO = 100
     MARKET_ORDER_NO = 101
     LIMIT_ORDER_NO = 102
-    SL_ORDER_NO = 102
-    SLM_ORDER_NO = 103
+    SL_ORDER_NO = 103
+    SLM_ORDER_NO = 104

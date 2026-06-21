@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/fenix-logo.png" alt="Fenix" width="180">
+  <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/fenix-logo.png" alt="Fenix" width="180">
 </p>
 
 <h1 align="center">Fenix</h1>
@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-GPLv3-blue?color=%234ec820"></a>
+  <a href="https://github.com/TheHardeep/fenix/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-GPLv3-blue?color=%234ec820"></a>
   <a href="https://pypi.org/project/fenix/"><img alt="PyPI" src="https://img.shields.io/pypi/v/fenix"></a>
   <img alt="Python" src="https://img.shields.io/pypi/pyversions/fenix">
   <a href="https://fenix.hardeep.tech"><img alt="Docs" src="https://img.shields.io/badge/docs-fenix.hardeep.tech-orange"></a>
@@ -176,21 +176,21 @@ The **Class** name is the public identifier — it is exactly what `fenix.broker
 
 | | Broker | Class |
 |---|--------|-------|
-| <img src="assets/brokers/aliceblue.svg" alt="AliceBlue" height="22"> | AliceBlue | `AliceBlue` |
-| <img src="assets/brokers/angelone.svg" alt="Angel One" height="22"> | Angel One | `AngelOne` |
-| <img src="assets/brokers/anandrathi.jpeg" alt="Anand Rathi" height="22"> | Anand Rathi | `AnandRathi` |
-| <img src="assets/brokers/dhan.svg" alt="Dhan" height="22"> | Dhan | `Dhan` |
-| <img src="assets/brokers/finvasia.svg" alt="Finvasia" height="22"> | Finvasia / Shoonya | `Finvasia` |
-| <img src="assets/brokers/fivepaisa.svg" alt="5paisa" height="22"> | 5paisa | `FivePaisa` |
-| <img src="assets/brokers/fyers.svg" alt="Fyers" height="22"> | Fyers | `Fyers` |
-| <img src="assets/brokers/groww.svg" alt="Groww" height="22"> | Groww | `Groww` |
-| <img src="assets/brokers/iifl.svg" alt="IIFL" height="22"> | IIFL | `Iifl` |
-| <img src="assets/brokers/kotakneo.svg" alt="Kotak Neo" height="22"> | Kotak Neo | `KotakNeo` |
-| <img src="assets/brokers/mastertrust.svg" alt="Master Trust" height="22"> | Master Trust | `MasterTrust` |
-| <img src="assets/brokers/motilaloswal.jpeg" alt="Motilal Oswal" height="22"> | Motilal Oswal | `MotilalOswal` |
-| <img src="assets/brokers/symphony.svg" alt="Symphony" height="22"> | Symphony | `Symphony` |
-| <img src="assets/brokers/upstox.svg" alt="Upstox" height="22"> | Upstox | `Upstox` |
-| <img src="assets/brokers/zerodha.svg" alt="Zerodha" height="22"> | Zerodha | `Zerodha` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/aliceblue.svg" alt="AliceBlue" height="22"> | AliceBlue | `AliceBlue` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/angelone.svg" alt="Angel One" height="22"> | Angel One | `AngelOne` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/anandrathi.jpeg" alt="Anand Rathi" height="22"> | Anand Rathi | `AnandRathi` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/dhan.svg" alt="Dhan" height="22"> | Dhan | `Dhan` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/finvasia.svg" alt="Finvasia" height="22"> | Finvasia / Shoonya | `Finvasia` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/fivepaisa.svg" alt="5paisa" height="22"> | 5paisa | `FivePaisa` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/fyers.svg" alt="Fyers" height="22"> | Fyers | `Fyers` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/groww.svg" alt="Groww" height="22"> | Groww | `Groww` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/iifl.svg" alt="IIFL" height="22"> | IIFL | `Iifl` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/kotakneo.svg" alt="Kotak Neo" height="22"> | Kotak Neo | `KotakNeo` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/mastertrust.svg" alt="Master Trust" height="22"> | Master Trust | `MasterTrust` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/motilaloswal.jpeg" alt="Motilal Oswal" height="22"> | Motilal Oswal | `MotilalOswal` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/symphony.svg" alt="Symphony" height="22"> | Symphony | `Symphony` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/upstox.svg" alt="Upstox" height="22"> | Upstox | `Upstox` |
+| <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/brokers/zerodha.svg" alt="Zerodha" height="22"> | Zerodha | `Zerodha` |
 
 ```python
 import fenix
@@ -290,12 +290,12 @@ constants, and a reference page per broker — lives at **[fenix.hardeep.tech](h
 
 ## License
 
-Fenix is released under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) for
+Fenix is released under the **GNU General Public License v3.0**. See [LICENSE](https://github.com/TheHardeep/fenix/blob/master/LICENSE) for
 details.
 
 ---
 
 <p align="center">
-  <img src="assets/fenix-logo-sm.png" alt="Fenix" width="48"><br>
+  <img src="https://cdn.jsdelivr.net/gh/TheHardeep/fenix@master/assets/fenix-logo-sm.png" alt="Fenix" width="48"><br>
   <sub>Built for the Indian markets · <a href="https://fenix.hardeep.tech">fenix.hardeep.tech</a></sub>
 </p>

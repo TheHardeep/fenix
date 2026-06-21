@@ -1,0 +1,97 @@
+name: Publish to PyPI
+
+# Two ways to release:
+#   1. Dry-run  -> Actions tab -> "Run workflow" -> target: testpypi (default).
+#      Publishes to test.pypi.org so you can eyeball the rendered README first.
+#   2. Real     -> push a version tag, e.g.  git tag v2.0.1 && git push origin v2.0.1
+#      Builds, verifies the tag matches __version__, and publishes to PyPI.
+#
+# Auth uses PyPI "Trusted Publishing" (OIDC) — no API tokens stored in the repo.
+# One-time setup is described in RELEASING.md.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to publish"
+        type: choice
+        default: testpypi
+        options:
+          - testpypi
+          - pypi
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade build twine
+
+      - name: Verify tag matches __version__
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          PKG_VERSION=$(python -c "import re,pathlib; print(re.search(r'__version__ = \"([^\"]+)\"', pathlib.Path('fenix/__init__.py').read_text()).group(1))")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "package=$PKG_VERSION tag=$TAG_VERSION"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag '$TAG_VERSION' does not match __version__ '$PKG_VERSION'"
+            exit 1
+          fi
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Check that metadata/README render
+        run: python -m twine check --strict dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-testpypi:
+    name: Publish to TestPyPI (dry run)
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write   # required for Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # required for Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

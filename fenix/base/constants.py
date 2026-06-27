@@ -87,15 +87,16 @@ class ExchangeCode:
     Exchange Code Constants.
     """
 
-    NSE = "NSE"  # NSE Equity
-    NFO = "NFO"  # NSE F&O
-    BSE = "BSE"  # BSE Equity
-    BFO = "BFO"  # BSE F&O
-    NCO = "NCO"  # NSE Commodities
-    BCD = "BCD"  #
-    MCX = "MCX"  # Multi Commodity Exchange F&O
-    CDS = "NCD"  #
-    NCX = "NCDEX"
+    NSE = "NSE"   # NSE Equity
+    NFO = "NFO"   # NSE F&O
+    BSE = "BSE"   # BSE Equity
+    BFO = "BFO"   # BSE F&O
+    NCO = "NCO"   # NSE Commodities
+    BCO = "BCO"   # BSE Commodities
+    CDS = "CDS"   # NSE Currency Derivatives
+    BCD = "BCD"   # BSE Currency Derivatives
+    MCX = "MCX"   # Multi Commodity Exchange F&O
+    NCX = "NCDEX" # Agricultural Commodities
 
 
 class Product:

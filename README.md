@@ -13,6 +13,7 @@
 <p align="center">
   <a href="https://github.com/TheHardeep/fenix/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-GPLv3-blue?color=%234ec820"></a>
   <a href="https://pypi.org/project/fenix/"><img alt="PyPI" src="https://img.shields.io/pypi/v/fenix"></a>
+  <a href="https://pepy.tech/projects/fenix"><img src="https://static.pepy.tech/personalized-badge/fenix?period=total&units=INTERNATIONAL_SYSTEM&left_color=GREY&right_color=RED&left_text=downloads" alt="PyPI Downloads"></a>
   <img alt="Python" src="https://img.shields.io/pypi/pyversions/fenix">
   <a href="https://fenix.hardeep.tech"><img alt="Docs" src="https://img.shields.io/badge/docs-fenix.hardeep.tech-orange"></a>
 </p>

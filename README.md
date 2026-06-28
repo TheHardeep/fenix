@@ -72,7 +72,7 @@ pip install fenix
 To install a specific release:
 
 ```shell
-pip install fenix==2.0.0
+pip install fenix==2.0.2
 ```
 
 Verify the installation and inspect the broker registry:
@@ -80,7 +80,7 @@ Verify the installation and inspect the broker registry:
 ```python
 import fenix
 
-print(fenix.__version__)   # 2.0.0
+print(fenix.__version__)   # 2.0.2
 print(fenix.brokers)       # ['AliceBlue', 'AngelOne', 'AnandRathi', ...]
 ```
 
